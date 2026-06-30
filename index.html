@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sportzstat Pro</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="animContainer" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9999; overflow:hidden;"></div>
+<datalist id="savedTeamsList"></datalist>
+
+<div class="container">
+    <div id="setupView" class="setup-screen">
+        <h1 class="text-center text-primary mb-30">Pre Match Registry</h1>
+        <div class="admin-grid">
+            <div class="input-group btn-col-2"><label>Tournament Name</label><input type="text" id="setupTournament" placeholder="Tournament Name"></div>
+            <div class="input-group btn-col-2" style="background:rgba(59,130,246,0.1); padding:8px; border-radius:8px; border:1px solid var(--primary);"><label style="color:var(--primary);">Venue / Ground (Used for Live Link)</label><input type="text" id="setupVenue" placeholder="e.g. Ground A" style="font-weight:bold; border-color:var(--primary);"></div>
+            <div class="input-group"><label>Match Date</label><input type="date" id="setupDate" onchange="generateMatchId()" onclick="this.showPicker && this.showPicker()"></div>
+            <div class="input-group"><label>Match ID (Auto-Generated)</label><input type="text" id="setupMatchId" readonly placeholder="Select Date First..." style="background: rgba(16, 185, 129, 0.1); border-color: var(--success); color: var(--success); font-weight: bold; letter-spacing: 1px;"></div>
+            <div class="input-group"><label>Match Type</label><select id="setupMatchType"><option value="t20">T-20</option><option value="oneday">One Day</option><option value="multiday">Multi-Day</option></select></div>
+            <div class="input-group"><label>Category</label><select id="setupCategory"><option value="men">Men</option><option value="women">Women</option></select></div>
+            <div class="input-group btn-col-2"><label>Host Organization</label><input type="text" id="setupHost"></div>
+            <div class="input-group"><label>Venue In-Charge</label><input type="text" id="setupIncharge"></div>
+            <div class="input-group"><label>Observer / Referee</label><input type="text" id="setupObsRef" placeholder="Observer / Referee Name"></div>
+            <div class="input-group"><label>Umpire 1</label><input type="text" id="u1"></div>
+            <div class="input-group"><label>Umpire 2</label><input type="text" id="u2"></div>
+            <div class="input-group"><label>TV Umpire</label><input type="text" id="tvUmpire"></div>
+            <div class="input-group"><label>4th Umpire</label><input type="text" id="u4"></div>
+            
+            <div class="input-group">
+                <label>Selectors Count</label>
+                <select id="selCount" onchange="updMatchSel()">
+                    <option value="0">None</option><option value="1">1 Selector</option><option value="2">2 Selectors</option>
+                    <option value="3">3 Selectors</option><option value="4">4 Selectors</option><option value="5">5 Selectors</option>
+                    <option value="6">6 Selectors</option><option value="7">7 Selectors</option><option value="8">8 Selectors</option>
+                </select>
+            </div>
+            <div class="input-group"><label>Scorer (Offline)</label><input type="text" id="s1"></div>
+            <div class="input-group"><label>Scorer (Online)</label><input type="text" id="s2"></div>
+            
+            <div class="input-group hidden" id="sel-grp-1"><label class="text-accent">Selector 1</label><input type="text" id="msel-1"></div>
+            <div class="input-group hidden" id="sel-grp-2"><label class="text-accent">Selector 2</label><input type="text" id="msel-2"></div>
+            <div class="input-group hidden" id="sel-grp-3"><label class="text-accent">Selector 3</label><input type="text" id="msel-3"></div>
+            <div class="input-group hidden" id="sel-grp-4"><label class="text-accent">Selector 4</label><input type="text" id="msel-4"></div>
+            <div class="input-group hidden" id="sel-grp-5"><label class="text-accent">Selector 5</label><input type="text" id="msel-5"></div>
+            <div class="input-group hidden" id="sel-grp-6"><label class="text-accent">Selector 6</label><input type="text" id="msel-6"></div>
+            <div class="input-group hidden" id="sel-grp-7"><label class="text-accent">Selector 7</label><input type="text" id="msel-7"></div>
+            <div class="input-group hidden" id="sel-grp-8"><label class="text-accent">Selector 8</label><input type="text" id="msel-8"></div>
+        </div>
+        
+        <h2>Squad Registration</h2>
+        <div class="tabs">
+            <input type="text" id="nameTeamA" class="tab-input active" placeholder="Enter Team A Name" list="savedTeamsList" onfocus="toggleTeam('A')" oninput="updateTeamNames()" onchange="loadTeamRoster('A', this.value)">
+            <input type="text" id="nameTeamB" class="tab-input" placeholder="Enter Team B Name" list="savedTeamsList" onfocus="toggleTeam('B')" oninput="updateTeamNames()" onchange="loadTeamRoster('B', this.value)">
+        </div>
+        <div id="boxA" class="team-box"><table class="roster-table"><tbody id="rosterA"></tbody></table></div>
+        <div id="boxB" class="team-box hidden"><table class="roster-table"><tbody id="rosterB"></tbody></table></div>
+        
+        <div class="toss-box mt-20">Toss Winner: <select id="tossWinner"><option value="A">Team A</option><option value="B">Team B</option></select> Decision: <select id="tossDecision"><option value="bat">Bat First</option><option value="bowl">Bowl First</option></select></div>
+        
+        <button type="button" onclick="confirmStart()" class="btn-launch mt-20">🚀 CALL 'PLAY' & INITIALIZE MATCH</button>
+        <div class="flex-row gap-10 mt-10">
+            <button type="button" onclick="hardResetSystem()" class="btn-action w-100" style="background:#b91c1c; padding:12px;">⚠️ Emergency Clear Match</button>
+            <button type="button" onclick="openManualEntryView()" class="btn-action w-100" style="background:#4f46e5; padding:12px;">📝 LOG PAST MATCH (MANUAL DATA ENTRY)</button>
+        </div>
+    </div>
+
+    <div id="manualEntryView" class="setup-screen hidden">
+        <h1 class="text-center text-primary mb-10">Manual Data Entry Sync</h1>
+        <p class="text-center text-muted mb-20" style="font-size:0.85rem;">Use this portal to enter stats for historical matches not scored live on the app. Data will sync directly to your Google Sheet.</p>
+        
+        <div class="admin-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="input-group"><label>Match Date</label><input type="date" id="meDate" onclick="this.showPicker && this.showPicker()"></div>
+            <div class="input-group"><label>Tournament Name</label><input type="text" id="meTourn" placeholder="Tournament Name"></div>
+            <div class="input-group"><label>Match Type</label><select id="meType"><option value="T20">T-20</option><option value="ONEDAY">One Day</option><option value="MULTIDAY">Multi-Day</option></select></div>
+            <div class="input-group"><label>Match ID (Custom or Auto)</label><input type="text" id="meId" placeholder="e.g. FINAL-01"></div>
+            <div class="input-group"><label class="text-accent">Team A Name</label><input type="text" id="meTeamA" placeholder="Team A"></div>
+            <div class="input-group"><label class="text-accent">Team B Name</label><input type="text" id="meTeamB" placeholder="Team B"></div>
+        </div>
+
+        <button type="button" class="btn-action w-100 mt-10" style="background:var(--success); padding:12px; font-size:1.1rem;" onclick="generateManualGrids()">1. Create Data Grids for Teams</button>
+
+        <div id="meGridsContainer" class="hidden">
+            <div class="manual-grid">
+                <div class="stat-card" style="border-color:var(--border);">
+                    <h3 class="mt-0 text-accent" id="meTitleA">Team A Stats</h3>
+                    <div class="custom-scroll" style="overflow-x: auto; padding-bottom: 10px;">
+                        <table class="manual-table"><tbody id="meGridA"></tbody></table>
+                    </div>
+                </div>
+                <div class="stat-card" style="border-color:var(--border);">
+                    <h3 class="mt-0 text-accent" id="meTitleB">Team B Stats</h3>
+                    <div class="custom-scroll" style="overflow-x: auto; padding-bottom: 10px;">
+                        <table class="manual-table"><tbody id="meGridB"></tbody></table>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-row gap-10 mt-20">
+                <button type="button" class="btn-action w-100" style="background:#334155; padding:15px;" onclick="closeManualEntryView()">🔙 Back to Setup</button>
+                <button type="button" class="btn-action w-100" style="background:#0284c7; padding:15px; font-size:1.1rem;" onclick="syncManualMatchData()">☁️ 2. Sync Manual Match to Cloud</button>
+            </div>
+        </div>
+        <div id="meNoGridsBtn" class="mt-20"><button type="button" class="btn-action" style="background:#334155; width:200px;" onclick="closeManualEntryView()">🔙 Back to Setup</button></div>
+    </div>
+    <div id="scoringView" class="scoring-screen hidden">
+        <aside>
+            <h3 id="dispBatTeamName" class="text-accent mt-0" style="text-transform: uppercase;">BATTING TEAM</h3>
+            <div id="battersContainer"></div>
+        </aside>
+        
+        <main>
+            <div class="score-display">
+                <div id="freeHitBadge" class="free-hit-badge hidden">🚨 FREE HIT 🚨</div>
+                <div id="inningsBadge" class="innings-badge">INNINGS 1</div>
+                <p id="displayTournament" class="text-primary font-bold mt-0 mb-0" style="font-size:0.9rem;"></p>
+                <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px; margin-bottom:5px;">📍 <span id="dispGroundName"></span> | Batting: <span id="dispBatTeamNameTop" class="text-accent font-bold"></span></div>
+                <div id="targetDisplayBox" class="target-box hidden" onclick="openEditTarget()" title="Edit Target"><span style="font-size:1.2rem;">🎯</span> <span id="dispTargetText" style="font-size:1rem;"></span> <span style="font-size:0.7rem; opacity:0.6;">✏️</span></div>
+                <div id="inningsHistoryText"></div>
+                
+                <div style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 5px; margin: 10px 0;">
+                    <div id="miniLiveBatters" style="text-align: left; font-size: 0.8rem; line-height: 1.4; padding-left: 5px; overflow: hidden;"></div>
+                    <div style="text-align: center;">
+                        <h1 class="big-score" style="margin-bottom: 5px;"><span id="liveRuns">0</span>/<span id="liveWkts" style="color: var(--danger);">0</span></h1>
+                        <p class="font-bold text-success mt-0 mb-0" style="font-size:0.85rem;">🏏 P'ship: <span id="livePartnership">0 (0)</span></p>
+                    </div>
+                    <div id="miniLiveBowler" style="text-align: right; font-size: 0.8rem; line-height: 1.4; padding-right: 5px; overflow: hidden;"></div>
+                </div>
+
+                <div id="leadTrailBox"></div>
+                <p style="font-size:1.3rem;" class="mt-5 mb-0">Overs: <span id="liveOvers" class="font-bold">0.0</span> <span class="text-muted ml-10" style="font-size:0.9rem;">CRR: <span id="liveCrr" class="text-white font-bold">0.00</span></span><span id="rrrBox" class="text-muted ml-10 hidden" style="font-size:0.9rem;">| Req: <span id="liveReq"></span> | RRR: <span id="liveRrr" class="text-accent font-bold">0.00</span></span></p>
+                <p style="font-size:0.75rem;" class="text-muted mt-5">Extras: <span id="liveExtras">0</span> (W:<span id="exW">0</span>, NB:<span id="exNB">0</span>, B:<span id="exB">0</span>, LB:<span id="exLB">0</span>) <span class="text-accent font-bold">| PEN: <span id="livePenalties">0</span></span></p>
+            </div>
+            
+            <div class="recent-balls-box flex-row gap-5" style="justify-content: center;"><span style="font-size:0.65rem; text-transform:uppercase;" class="text-muted font-bold">Recent:</span><div id="recentBallsData" class="flex-row gap-5" style="flex-wrap: wrap; justify-content: center;"></div></div>
+
+            <div id="scoringEventsBox">
+                <div class="btn-grid">
+                    <div class="section-label">Scoring Events</div>
+                    <button type="button" class="btn-action" onclick="ballScored(0, false)">0</button><button type="button" class="btn-action" onclick="ballScored(1, false)">1</button><button type="button" class="btn-action" onclick="ballScored(2, false)">2</button><button type="button" class="btn-action" onclick="ballScored(3, false)">3</button>
+                    <button type="button" class="btn-action btn-col-2" style="background:var(--manual);" onclick="openManualRun()">Manual</button><button type="button" class="btn-action" style="background:var(--b4);" onclick="ballScored(4, true)">4</button><button type="button" class="btn-action" style="background:var(--b6);" onclick="ballScored(6, true)">6</button>
+                    <button type="button" class="btn-action" style="background:#0891b2;" onclick="openExtra('W')">WIDE</button><button type="button" class="btn-action" style="background:#0891b2;" onclick="openExtra('NB')">NO BALL</button><button type="button" class="btn-action" style="background:#0891b2;" onclick="openExtra('B')">BYES</button><button type="button" class="btn-action" style="background:#0891b2;" onclick="openExtra('LB')">LEG BYES</button>
+                    
+                    <button type="button" class="btn-action btn-col-2" style="background:var(--danger);" onclick="openWicket()">🚨 WICKET</button>
+                    <button type="button" class="btn-action" style="background: #ea580c;" onclick="openRetire()">🏃 RETIRE</button>
+                    <button type="button" class="btn-action" style="background: #d97706;" onclick="manualEndOver()">🛑 CALL OVER</button>
+                    
+                    <div class="section-label">Match Control</div>
+                    <button type="button" class="btn-action" style="font-size:0.85rem; background:#475569;" onclick="manualRotateUI()">Rotate 🔄</button>
+                    <button type="button" class="btn-action" style="font-size:0.85rem; background:#8b5cf6;" onclick="openRemarkModal()">📝 REMARK</button>
+                    <button type="button" class="btn-action" style="font-size:0.85rem; background:#b91c1c;" onclick="openPenalty()">⚠️ PENALTY</button>
+                    <button type="button" class="btn-action" style="font-size:0.85rem; background:#0f766e;" onclick="openChangeWK()">🧤 CHANGE WK</button>
+                    
+                    <button type="button" class="btn-action btn-col-2" style="background: #334155; padding:10px; font-size:1rem;" onclick="undoLastAction()">↩️ UNDO</button>
+                    <button type="button" id="fsBtn" class="btn-action" style="background: #334155; padding:10px;" onclick="toggleFullScreen()">🔲 FULL</button>
+                    <button type="button" class="btn-action" style="background: #2563eb; padding:10px;" onclick="showMatchGraphs()">📈 GRAPHS</button>
+                    
+                    <button type="button" class="btn-action btn-col-2" style="background: #ca8a04; padding:10px;" onclick="openPlayerSwap()">🔄 INJURY SUB</button>
+                    <button type="button" class="btn-action btn-col-2" style="background: #4f46e5; padding:10px;" onclick="openEditSquad()">🛠️ EDIT SQUAD</button>
+                    
+                    <div style="grid-column: span 4; display: flex; gap: 6px;">
+                        <button type="button" id="breakBtn" class="btn-action hidden" style="flex: 1; background: #fb923c; color:black; padding:12px; font-size:0.95rem;" onclick="openBreakModal()">⏱️ STUMPS / BREAK</button>
+                        <button type="button" class="btn-action" style="flex: 1; background: #38bdf8; color:black; padding:12px; font-size:0.95rem;" onclick="openInterruptionModal()">⛈️ DELAY</button>
+                    </div>
+                    <button type="button" class="btn-action" style="grid-column: span 4; font-size:1rem; background: #047857; padding:12px;" onclick="endInnings()">🏁 DECLARE / END INNINGS</button>
+                </div>
+            </div>
+
+            <div id="breakOverlayBox" class="hidden" style="background: rgba(245, 158, 11, 0.1); border: 2px dashed var(--accent); padding: 30px 15px; border-radius: 12px; text-align: center; margin-top: 15px;">
+                <h2 id="breakTitle" class="text-accent mt-0" style="text-transform: uppercase;">MATCH PAUSED</h2>
+                <div id="breakSubtitle" class="mb-20 font-bold" style="color:var(--text-muted); font-size:1.1rem;"></div>
+                <p class="text-muted mb-20">Scoring is temporarily locked during this interval.</p>
+                <button type="button" class="btn-action w-100" style="background: var(--success); font-size: 1.2rem; padding: 20px;" onclick="openResumeModal()">▶️ RESTART</button>
+            </div>
+        </main>
+        
+        <aside>
+            <h3 id="dispBowlTeamName" class="text-primary mt-0" style="text-transform: uppercase;">BOWLING TEAM</h3>
+            <div class="stat-card" style="border-color:var(--primary); background:rgba(59,130,246,0.1)">
+                <label class="text-primary">ACTIVE BOWLER</label>
+                <div id="activeBowlerNameRight" style="font-weight:bold; font-size:1.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">Select...</div>
+                <div id="activeBowlerProgress" class="bowler-progress"></div>
+                <button type="button" class="btn-action w-100 mt-10" style="background:var(--danger); font-size:0.85rem; padding:8px;" onclick="openSelector('bowler', '🚑 Mid-Over Swap')">🚑 Swap Bowler</button>
+            </div>
+            <div class="table-wrapper custom-scroll">
+                <table class="bowler-table" style="font-size: 0.75rem; margin-top:10px; white-space: nowrap; min-width: 100%;">
+                    <thead><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Ex</th><th>NB</th><th>WD</th></tr></thead>
+                    <tbody id="bowlStatsBody"></tbody>
+                </table>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<div id="dynamicModal" class="modal-overlay hidden"><div id="modalBoxElement" class="modal-box"><h3 id="modalHeading" class="text-primary mt-0">Modal</h3><div id="modalBody"></div><div class="flex-row gap-10 mt-15"><button type="button" id="modalCancelBtn" class="btn-action w-100" style="background:transparent; border:1px solid var(--border);" onclick="closeModal()">Cancel</button><button type="button" id="modalConfirmBtn" class="btn-action w-100" style="background:var(--success);">Confirm</button></div></div></div>
+
+<script src="app.js"></script>
+</body>
+</html>
