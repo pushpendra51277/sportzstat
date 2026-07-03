@@ -1,8 +1,8 @@
 // ==========================================
 // SUPABASE CLOUD DATABASE CONFIGURATION
 // ==========================================
-const SUPABASE_URL = https://cavkoylkbcyhsifrsjyd.supabase.co/rest/v1/;   // We will get this from your dashboard
-const SUPABASE_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhdmtveWxrYmN5aHNpZnJzanlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwODM3NzUsImV4cCI6MjA5ODY1OTc3NX0.UtIqqpS8X-W5K4UCKaFx67iTOXgcVha8kzi3nL2X-vo; // We will get this from your dashboard
+const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co/rest/v1/";   // We will get this from your dashboard
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhdmtveWxrYmN5aHNpZnJzanlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwODM3NzUsImV4cCI6MjA5ODY1OTc3NX0.UtIqqpS8X-W5K4UCKaFx67iTOXgcVha8kzi3nL2X-vo"; // We will get this from your dashboard
 
 // Initialize the Supabase Client (Fails gracefully if running offline)
 const supabaseClient = (typeof supabase !== 'undefined' && SUPABASE_URL.includes("supabase.co")) 
