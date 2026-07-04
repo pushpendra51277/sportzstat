@@ -4,12 +4,13 @@
 const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co/rest/v1/";   // We will get this from your dashboard
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhdmtveWxrYmN5aHNpZnJzanlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwODM3NzUsImV4cCI6MjA5ODY1OTc3NX0.UtIqqpS8X-W5K4UCKaFx67iTOXgcVha8kzi3nL2X-vo"; // We will get this from your dashboard
 
-// Initialize the Supabase Client (Fails gracefully if running offline)
-const supabaseClient = (typeof supabase !== 'undefined' && SUPABASE_URL.includes("supabase.co")) 
-    ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) 
+// FIX 2: Added window. prefix for proper initialization
+const supabaseClient = (typeof window.supabase !== 'undefined' && SUPABASE_URL.includes("supabase.co")) 
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) 
     : null;
 
-const LIVE_VIEWER_URL = "file:///C:/Users/pushp/Desktop/scoring/fan%20app/2.html";
+// FIX 1: Removed hardcoded file:/// path, using relative path for deployment
+const LIVE_VIEWER_URL = "./2.html";
 
 if (typeof window.Chart !== 'undefined') { Chart.defaults.color = '#cbd5e1'; Chart.defaults.borderColor = '#334155'; } window.matchChart = null; 
 const el = id => document.getElementById(id); const getBatTeam = () => state.teams[state.battingKey]; const getBowlTeam = () => state.teams[state.bowlingKey]; const formatOver = balls => Math.floor(balls/6) + "." + (balls%6); const getBadgeHtml = b => b.type === 'divider' ? `<span class="over-divider">/</span>` : `<div class="ball-badge ball-${b.type}">${b.label}</div>`;
@@ -106,7 +107,33 @@ function generateManualGrids() {
     el('meGridA').innerHTML = buildGridRows(tA); el('meGridB').innerHTML = buildGridRows(tB); el('meNoGridsBtn').classList.add('hidden'); el('meGridsContainer').classList.remove('hidden');
 }
 
-function syncManualMatchData() { alert("Cloud syncing disabled until Supabase Tables are configured."); }
+// FIX 3: Fully wired up the Manual Sync Function to log to your completed_matches table
+async function syncManualMatchData() { 
+    if (!supabaseClient) {
+        alert("Supabase is not connected! Please verify your keys.");
+        return;
+    }
+    
+    let manualMatchId = el('meId').value || "MANUAL-" + Date.now();
+    let manualDataStr = JSON.stringify({
+        isManualSync: true,
+        date: el('meDate').value,
+        tournament: el('meTourn').value,
+        teamA: el('meTeamA').value,
+        teamB: el('meTeamB').value
+    });
+
+    try {
+        const { error } = await supabaseClient.from('completed_matches').upsert(
+            { match_id: manualMatchId, final_data: manualDataStr }, 
+            { onConflict: 'match_id' }
+        );
+        if (error) throw error;
+        alert("Success! Manual match data has been synced to Supabase.");
+    } catch(e) {
+        alert("Failed to sync: " + e.message);
+    }
+}
 
 function saveState() { try { stateHistory.push(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value)); if (stateHistory.length > 300) stateHistory.shift(); } catch(e) { console.warn("State save failed"); } }
 function undoLastAction() { if (stateHistory.length > 0) { let prevState = JSON.parse(stateHistory.pop()); prevState.current.lastOverBowlers = new Set(prevState.current.lastOverBowlers); prevState.current.bowlersInCurrentOver = new Set(prevState.current.bowlersInCurrentOver); state = prevState; updateUI(); } else { alert("Nothing to undo!"); } }
@@ -158,6 +185,13 @@ function executeLockAndStart() {
 
 function openMatchStartModal() {
     let bI = []; getBatTeam().players.forEach((p, i) => { if(p.isPlayingXI) bI.push(i); });
+    
+    // FIX 4: Safety check to prevent app crash if no playing 11 are selected
+    if (bI.length < 2) {
+        alert("Please ensure at least 2 players are selected in the Playing XI via the Edit Squad menu before starting.");
+        return;
+    }
+
     let sO = getBatTeam().players.map((p, i) => p.isPlayingXI ? `<option value="${i}" ${i===bI[0]?'selected':''}>${p.name}</option>` : '').join('');
     let nsO = getBatTeam().players.map((p, i) => p.isPlayingXI ? `<option value="${i}" ${i===bI[1]?'selected':''}>${p.name}</option>` : '').join('');
     let bowlOpts = getBowlTeam().players.map((p, i) => p.isPlayingXI ? `<option value="${i}">${p.name}</option>` : '').join('');
@@ -341,8 +375,17 @@ function processWicketSubmit() {
         logBallEvent(s, b, 0, 0, 'None', true, wType, oB); // Supabase Hook
     } 
     else {
-        cur.wkts++; oB.out = true; let runsScored = 0, runType = 'bat'; let runsExt = 0; let exLabel = 'None';
-        if (['RunOut', 'ObstructingField'].includes(wType)) { runsScored = parseInt(el('wRuns') ? el('wRuns').value : 0) || 0; runType = extraType === 'wide' ? 'wide' : (el('wRunType') ? el('wRunType').value : 'bat'); }
+        cur.wkts++; oB.out = true; 
+        let runsScored = 0, runType = 'bat'; let runsExt = 0; let exLabel = 'None';
+        
+        // FIX 5: Safely parse Wicket Runs and handle NaN defaults
+        if (['RunOut', 'ObstructingField'].includes(wType)) { 
+            let runsInput = el('wRuns') ? el('wRuns').value : "0";
+            runsScored = parseInt(runsInput, 10);
+            if (isNaN(runsScored)) runsScored = 0; 
+            runType = extraType === 'wide' ? 'wide' : (el('wRunType') ? el('wRunType').value : 'bat'); 
+        }
+        
         if (extraType === 'wide') { cur.runs += 1; cur.runsInThisOver += 1; cur.extras.w += 1; b.rc += 1; b.wd += 1; runsExt += 1; exLabel = 'Wide'; } else if (extraType === 'noball') { cur.runs += 1; cur.runsInThisOver += 1; cur.extras.nb += 1; b.rc += 1; b.nb += 1; s.b++; cur.currPartnership.balls++; if (state.matchSettings.matchType !== 'multiday') cur.isFreeHit = true; runsExt += 1; exLabel = 'No-Ball'; } else if (wType !== 'TimedOut') { s.b++; cur.balls++; b.o++; cur.currPartnership.balls++; cur.isFreeHit = false; }
         
         let runsBat = 0;
@@ -363,7 +406,14 @@ function processWicketSubmit() {
     oB.outTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     cur.fow.push({ wktNum: cur.wkts, runs: cur.runs, overs: formatOver(cur.balls), outBatter: oB.name, partner: getBatTeam().players[isSO ? cur.nsIdx : cur.sIdx].name, pRuns: cur.currPartnership.runs, pBalls: cur.currPartnership.balls }); cur.currPartnership = { runs: 0, balls: 0 };
     
-    let runsScoredRotate = ['RunOut', 'ObstructingField'].includes(wType) ? (parseInt(el('wRuns') ? el('wRuns').value : 0) || 0) : 0;
+    // FIX 5: Safely parse Rotate runs 
+    let runsScoredRotate = 0;
+    if (['RunOut', 'ObstructingField'].includes(wType)) {
+        let rotInput = el('wRuns') ? el('wRuns').value : "0";
+        runsScoredRotate = parseInt(rotInput, 10);
+        if (isNaN(runsScoredRotate)) runsScoredRotate = 0;
+    }
+
     if (['RunOut', 'ObstructingField'].includes(wType)) { if (runsScoredRotate % 2 === 0) manualRotate(); } else { if (runsScoredRotate % 2 !== 0 && !['Caught', 'Bowled', 'LBW', 'Stumped', 'HitWicket', 'TimedOut'].includes(wType)) { manualRotate(); } }
     
     if (checkTargetReached()) { if(cur.bIdx !== null) finalizeOver(true); closeModal(); setTimeout(endInnings, 100); return; }
