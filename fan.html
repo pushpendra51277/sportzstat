@@ -4,13 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sportzstat - Live Cricket Match Center</title>
-    <!-- Connects to your existing style.css in the root folder -->
     <link rel="stylesheet" href="style.css">
-    <!-- Load Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* Injected our tournament banner styles here to keep style.css clean for now */
         .tournament-banner {
             background: var(--card-bg);
             border-left: 6px solid var(--tourney-color);
@@ -84,15 +81,12 @@
         <p class="text-muted">Select an active tournament match to view live ball-by-ball updates</p>
     </div>
 
-    <!-- The live match banners will inject here later -->
     <div id="live-matches-container">
         <div class="text-center text-muted mt-20">No active matches at the moment. Check back on match day!</div>
     </div>
 </div>
 
 <script>
-    // We will wire up the dynamic database fetching script here 
-    // once we configure Supabase Auth and Roles!
     console.log("Fan View Landing Page Initialized.");
 </script>
 
