@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sportzstat - Portal Authentication</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Load Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div class="container" style="max-width: 450px; margin-top: 10vh;">
+    <div class="setup-screen">
+        <h2 id="auth-title" class="text-primary text-center mb-10">PORTAL LOGIN</h2>
+        <p id="auth-subtitle" class="text-muted text-center mb-15">Enter your credentials to access your dashboard</p>
+
+        <!-- Google OAuth Button -->
+        <button type="button" id="btn-google" class="btn-action mb-15" style="background: white; color: #333; padding: 12px; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <svg width="20" height="20" viewBox="0 0 48 48">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.73 17.74 9.5 24 9.5z"></path>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+            </svg>
+            Continue with Google
+        </button>
+
+        <div class="text-center text-muted mb-15" style="font-size: 0.75rem; letter-spacing: 2px;">— OR EMAIL —</div>
+
+        <form id="auth-form">
+            <!-- Role Selection (Only visible during Registration) -->
+            <div id="role-group" class="input-group mb-10 hidden">
+                <label for="user-role">Account Type / Role</label>
+                <select id="user-role">
+                    <option value="fan">Fan / Viewer (Free 30-min Live Feed)</option>
+                    <option value="selector">Talent Selector / Scout (10 Player Career Limit)</option>
+                    <option value="scorer">Official Match Scorer</option>
+                    <option value="admin">Tournament Administrator</option>
+                </select>
+            </div>
+
+            <!-- Email Address -->
+            <div class="input-group mb-10">
+                <label for="user-email">Email Address</label>
+                <input type="email" id="user-email" placeholder="name@domain.com" required>
+            </div>
+
+            <!-- Password -->
+            <div class="input-group mb-15">
+                <label for="user-password">Password</label>
+                <input type="password" id="user-password" placeholder="••••••••" required>
+            </div>
+
+            <!-- Primary Action Button -->
+            <button type="submit" id="btn-submit" class="btn-launch mb-10">Sign In with Email</button>
+        </form>
+
+        <!-- Toggle between Login and Registration Mode -->
+        <div class="text-center mt-10">
+            <span id="toggle-text" class="text-muted" style="font-size: 0.85rem;">Don't have an account? </span>
+            <a href="#" id="auth-toggle" class="text-accent font-bold" style="text-decoration: none; font-size: 0.85rem;">Create Account</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Initialize Supabase (You will add your keys here later)
+    const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
+    const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Form Elements
+    const authForm = document.getElementById('auth-form');
+    const authTitle = document.getElementById('auth-title');
+    const authSubtitle = document.getElementById('auth-subtitle');
+    const roleGroup = document.getElementById('role-group');
+    const btnSubmit = document.getElementById('btn-submit');
+    const authToggle = document.getElementById('auth-toggle');
+    const toggleText = document.getElementById('toggle-text');
+    const btnGoogle = document.getElementById('btn-google');
+
+    let isSignUpMode = false;
+
+    // Toggle logic
+    authToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        isSignUpMode = !isSignUpMode;
+
+        if (isSignUpMode) {
+            authTitle.innerText = "CREATE ACCOUNT";
+            authSubtitle.innerText = "Register your profile and select your subscription tier";
+            roleGroup.classList.remove('hidden');
+            btnSubmit.innerText = "Register via Email";
+            toggleText.innerText = "Already have an account? ";
+            authToggle.innerText = "Log In";
+        } else {
+            authTitle.innerText = "PORTAL LOGIN";
+            authSubtitle.innerText = "Enter your credentials to access your dashboard";
+            roleGroup.classList.add('hidden');
+            btnSubmit.innerText = "Sign In with Email";
+            toggleText.innerText = "Don't have an account? ";
+            authToggle.innerText = "Create Account";
+        }
+    });
+
+    // ----------------------------------------------------
+    // SUPABASE AUTHENTICATION LOGIC
+    // ----------------------------------------------------
+
+    // 1. Google Login (OAuth)
+    btnGoogle.addEventListener('click', async () => {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: window.location.origin + '/index.html' // Sends them to homepage after login
+            }
+        });
+        if (error) {
+            console.error("Google Login Error:", error.message);
+            alert("Error logging in with Google: " + error.message);
+        }
+    });
+
+    // 2. Email Login / Registration
+    authForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        console.log("Email form submitted. Mode: " + (isSignUpMode ? "Sign Up" : "Sign In"));
+        // We will add the supabase.auth.signUp() and signInWithPassword() logic here!
+    });
+</script>
+
+</body>
+</html>

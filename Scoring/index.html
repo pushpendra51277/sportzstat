@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sportzstat - Live Cricket Match Center</title>
+    <!-- Connects to your existing style.css in the root folder -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Load Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        /* Injected our tournament banner styles here to keep style.css clean for now */
+        .tournament-banner {
+            background: var(--card-bg);
+            border-left: 6px solid var(--tourney-color);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-top: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+            transition: transform 0.2s ease;
+            cursor: pointer;
+        }
+        .tournament-banner:hover {
+            transform: translateY(-3px);
+            border-left-width: 10px;
+        }
+        .banner-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+        .tourney-name { color: var(--tourney-color); }
+        .banner-teams {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .team-name {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--text);
+            width: 40%;
+            text-align: center;
+        }
+        .vs-badge {
+            background: #020617;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+        .banner-footer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border-top: 1px dashed var(--border);
+            padding-top: 10px;
+        }
+        .live-indicator {
+            color: var(--danger);
+            font-weight: bold;
+            animation: pulseHit 1.5s infinite;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="text-center mb-15">
+        <h1 class="text-primary mt-10">LIVE MATCH CENTER</h1>
+        <p class="text-muted">Select an active tournament match to view live ball-by-ball updates</p>
+    </div>
+
+    <!-- The live match banners will inject here later -->
+    <div id="live-matches-container">
+        <div class="text-center text-muted mt-20">No active matches at the moment. Check back on match day!</div>
+    </div>
+</div>
+
+<script>
+    // We will wire up the dynamic database fetching script here 
+    // once we configure Supabase Auth and Roles!
+    console.log("Fan View Landing Page Initialized.");
+</script>
+
+</body>
+</html>
