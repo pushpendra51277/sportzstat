@@ -113,7 +113,7 @@
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin + '/index.html' // Sends them to homepage after login
+                redirectTo: window.location.origin + '/fan.html' // Sends them to homepage after login
             }
         });
         if (error) {
