@@ -179,24 +179,28 @@
 
                 <!-- SUB-TAB 3: KNOCKOUT MAPPING -->
                 <div id="tab-knockouts" class="sub-tab-pane">
-                    <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">Map pool toppers or tournament survivors into Quarter-Finals, Semi-Finals, and Finals using dynamic rank placeholders.</p>
-                    <div id="knockout-mapping-container">
-                        <div class="canvas-row">
-                            <div class="canvas-header"><span class="canvas-match-id">KO-1</span><input type="text" class="canvas-name-input" value="Semi-Final 1"></div>
-                            <div class="canvas-teams">
-                                <select class="postings-select"><option>Pool A - 1st Place</option><option>Pool B - 2nd Place</option></select>
-                                <span style="color: white; font-weight: bold;">VS</span>
-                                <select class="postings-select"><option>Pool B - 1st Place</option><option>Pool A - 2nd Place</option></select>
-                            </div>
-                        </div>
+                    <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 15px;">Generate tournament playoffs. League matches remain safely stored and active.</p>
+                    
+                    <div style="background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
+                        <label style="color: #f8fafc; font-weight: bold; font-size: 0.9rem;">Auto-Generate Bracket:</label>
+                        <select id="ko-size-select" class="postings-select" style="width: auto;">
+                            <option value="4">4 Teams (Semi-Finals to Final)</option>
+                            <option value="8">8 Teams (Quarter-Finals to Final)</option>
+                        </select>
+                        <button type="button" class="btn-action" style="background: #3b82f6; padding: 8px 15px; font-size: 0.85rem;" onclick="generateKnockoutBracket()">Build Structure</button>
                     </div>
-                    <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #10b981; width: 100%; padding: 12px; color: #10b981; font-weight: bold;" onclick="addKnockoutMatch()">+ Add Knockout Match</button>
+
+                    <div id="knockout-mapping-container">
+                        <!-- Dynamic KO rows injected here -->
+                    </div>
+                    
+                    <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #10b981; width: 100%; padding: 12px; color: #10b981; font-weight: bold; margin-top: 10px;" onclick="addCustomKnockoutMatch()">+ Add Custom Knockout Stage</button>
                     <button type="button" class="btn-launch full-width mt-20" style="background: #f59e0b;" onclick="lockKnockoutsAndProceed()">Lock Knockouts & Proceed to Postings</button>
                 </div>
 
                 <!-- SUB-TAB 4: VISUAL TOURNAMENT TREE -->
                 <div id="tab-tree" class="sub-tab-pane">
-                    <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">Graphical hierarchy of your tournament structure and progression flow.</p>
+                    <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">Graphical hierarchy of your complete tournament progression.</p>
                     <div id="bracket-tree-canvas" style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; min-height: 300px; display: flex; justify-content: space-around; align-items: center; overflow-x: auto;">
                         <span style="color: #94a3b8; font-size: 0.9rem;">Configure your matches in previous tabs to render the tree.</span>
                     </div>
@@ -209,7 +213,7 @@
         <div id="step4" class="dashboard-section">
             <div class="admin-form" style="overflow-x: auto;">
                 <h3 style="border-bottom: 1px solid #334155; padding-bottom: 10px;">4. Official Assignments (Postings)</h3>
-                <p style="color:#94a3b8; font-size:0.8rem; margin-bottom: 15px;">Assign your officials to the generated draw.</p>
+                <p style="color:#94a3b8; font-size:0.8rem; margin-bottom: 15px;">Assign your officials to the complete generated draw.</p>
                 
                 <table class="postings-grid">
                     <thead>
@@ -236,8 +240,14 @@
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let activeTeams = []; 
-        let manualMatches = []; 
         let poolsData = {}; 
+        
+        // Storage for different match generation stages
+        let manualMatches = []; 
+        let poolGeneratedMatches = [];
+        let koGeneratedMatches = [];
+        
+        // Master unified list
         let finalLockedMatches = []; 
 
         window.onload = () => { 
@@ -261,6 +271,14 @@
             btn.classList.add('active');
         }
 
+        function updateFinalLockedMatches() {
+            let mMatches = manualMatches.map(m => ({ matchNum: m.id, matchName: m.name, team1: m.t1 || "TBD", team2: m.t2 || "TBD" }));
+            let koMatches = koGeneratedMatches.map(m => ({ matchNum: m.id, matchName: m.name, team1: m.t1 || "TBD", team2: m.t2 || "TBD" }));
+            
+            finalLockedMatches = [...mMatches, ...poolGeneratedMatches, ...koMatches];
+            buildPostingsGrid();
+        }
+
         function addTeamField(forceCount = null) {
             const count = forceCount || document.querySelectorAll('.tourney-team-input').length + 1;
             const container = document.getElementById('team-inputs-container');
@@ -271,7 +289,7 @@
         }
 
         // ==========================================
-        // STEP 1 & 2 (NORMALIZED DUPLICATE TEAM CHECK)
+        // STEP 1 & 2 
         // ==========================================
         document.getElementById('form-step1').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -288,9 +306,7 @@
                 if(rawVal) {
                     let normalizedVal = rawVal.trim().toLowerCase().replace(/\s+/g, ' ');
                     if(normalizedVal !== "") {
-                        if(teamNamesSet.has(normalizedVal)) {
-                            hasDuplicateTeam = true;
-                        }
+                        if(teamNamesSet.has(normalizedVal)) hasDuplicateTeam = true;
                         teamNamesSet.add(normalizedVal);
                         activeTeams.push(rawVal.trim());
                         teamPayload.push({ team_name: rawVal.trim() });
@@ -354,9 +370,7 @@
                 const name = pod.querySelector('.p-name').value.trim();
                 if(name !== "") {
                     let lowerName = name.toLowerCase().replace(/\s+/g, ' ');
-                    if(playerNamesSet.has(lowerName)) {
-                        hasDuplicatePlayer = true;
-                    }
+                    if(playerNamesSet.has(lowerName)) hasDuplicatePlayer = true;
                     playerNamesSet.add(lowerName);
 
                     const arm = pod.querySelector('.p-arm').value;
@@ -364,26 +378,19 @@
                     let bowlStyle = (arm !== "None" && type !== "None") ? `${arm}-arm ${type}` : "None";
                     
                     payload.push({ 
-                        full_name: name, 
-                        playing_role: pod.querySelector('.p-role').value,
+                        full_name: name, playing_role: pod.querySelector('.p-role').value,
                         batting_style: pod.querySelector('.p-bat').value === 'RHB' ? 'Right-hand bat' : 'Left-hand bat',
-                        bowling_style: bowlStyle, 
-                        current_team: team
+                        bowling_style: bowlStyle, current_team: team
                     });
                 }
             });
 
-            if (hasDuplicatePlayer) {
-                alert("❌ Error: Duplicate player names found within this squad. Every player must have a unique name.");
-                return;
-            }
-
+            if (hasDuplicatePlayer) { alert("❌ Error: Duplicate player names found within this squad."); return; }
             if(payload.length === 0) return;
             
             const { error } = await db.from('master_players').insert(payload);
-            if (error) {
-                alert("Error: " + error.message); 
-            } else { 
+            if (error) alert("Error: " + error.message); 
+            else { 
                 alert(`Saved ${payload.length} players to ${team}!`); 
                 document.getElementById('player-inputs-container').innerHTML = ''; 
                 for(let i=0; i<3; i++) { addPlayerPod(); } 
@@ -440,21 +447,12 @@
             });
         }
 
-        function updateMatch(index, field, value) {
-            manualMatches[index][field] = value;
-            if(field !== 'name') renderCanvas();
-        }
-
-        function deleteMatch(index) {
-            manualMatches.splice(index, 1);
-            manualMatches.forEach((m, i) => m.id = "M-" + (i+1));
-            renderCanvas();
-        }
+        function updateMatch(index, field, value) { manualMatches[index][field] = value; if(field !== 'name') renderCanvas(); }
+        function deleteMatch(index) { manualMatches.splice(index, 1); manualMatches.forEach((m, i) => m.id = "M-" + (i+1)); renderCanvas(); }
 
         function lockCanvasAndProceed() {
             if(manualMatches.length === 0) { alert("Please build at least one match on the canvas."); return; }
-            finalLockedMatches = manualMatches.map(m => ({ matchNum: m.id, matchName: m.name, team1: m.t1 || "TBD", team2: m.t2 || "TBD" }));
-            buildPostingsGrid();
+            updateFinalLockedMatches();
             document.querySelectorAll('.wizard-step')[3].click();
         }
 
@@ -462,9 +460,7 @@
         // STEP 3: SUB-TAB 2 (POOL BUILDER)
         // ==========================================
         function initPoolsWorkspace() {
-            if(Object.keys(poolsData).length === 0) {
-                poolsData = { "Pool A": [], "Pool B": [] };
-            }
+            if(Object.keys(poolsData).length === 0) poolsData = { "Pool A": [], "Pool B": [] };
             renderPoolsWorkspace();
         }
 
@@ -503,85 +499,137 @@
             `).join('');
         }
 
-        function assignTeamToPool(teamName, poolName) {
-            if(!poolName) return;
-            poolsData[poolName].push(teamName);
-            renderPoolsWorkspace();
-        }
-
-        function removeTeamFromPool(poolName, teamName) {
-            poolsData[poolName] = poolsData[poolName].filter(t => t !== teamName);
-            renderPoolsWorkspace();
-        }
-
-        function deletePool(poolName) {
-            delete poolsData[poolName];
-            renderPoolsWorkspace();
-        }
+        function assignTeamToPool(teamName, poolName) { if(!poolName) return; poolsData[poolName].push(teamName); renderPoolsWorkspace(); }
+        function removeTeamFromPool(poolName, teamName) { poolsData[poolName] = poolsData[poolName].filter(t => t !== teamName); renderPoolsWorkspace(); }
+        function deletePool(poolName) { delete poolsData[poolName]; renderPoolsWorkspace(); }
 
         function generatePoolMatches() {
             let matchCount = 1;
-            let generated = [];
+            poolGeneratedMatches = [];
             Object.keys(poolsData).forEach(poolName => {
                 let teams = poolsData[poolName];
                 for(let i=0; i<teams.length; i++) {
                     for(let j=i+1; j<teams.length; j++) {
-                        generated.push({ matchNum: `M-${matchCount}`, matchName: `${poolName}: ${teams[i]} vs ${teams[j]}`, team1: teams[i], team2: teams[j] });
+                        poolGeneratedMatches.push({ matchNum: `M-${matchCount}`, matchName: `${poolName}: ${teams[i]} vs ${teams[j]}`, team1: teams[i], team2: teams[j] });
                         matchCount++;
                     }
                 }
             });
 
-            if(generated.length === 0) { alert("Please assign at least 2 teams to a pool first."); return; }
+            if(poolGeneratedMatches.length === 0) { alert("Please assign at least 2 teams to a pool first."); return; }
 
             const resEl = document.getElementById('pool-generated-results');
             resEl.style.display = 'block';
-            resEl.innerHTML = `<h4 style="color:#10b981; margin-bottom:10px;">Generated ${generated.length} Group Matches:</h4>` + 
-                generated.map(m => `<div style="background:#1e293b; padding:8px; margin-bottom:5px; border-radius:4px; font-size:0.85rem;"><b>${m.matchNum}</b> (${m.matchName})</div>`).join('');
-            
-            finalLockedMatches = generated;
+            resEl.innerHTML = `<h4 style="color:#10b981; margin-bottom:10px;">Generated ${poolGeneratedMatches.length} Group Matches:</h4>` + 
+                poolGeneratedMatches.map(m => `<div style="background:#1e293b; padding:8px; margin-bottom:5px; border-radius:4px; font-size:0.85rem;"><b>${m.matchNum}</b> (${m.matchName})</div>`).join('');
         }
 
         function lockPoolsAndProceed() {
-            if(finalLockedMatches.length === 0) { generatePoolMatches(); }
-            if(finalLockedMatches.length === 0) return;
-            buildPostingsGrid();
+            if(poolGeneratedMatches.length === 0) generatePoolMatches();
+            if(poolGeneratedMatches.length === 0) return;
+            updateFinalLockedMatches();
             document.querySelectorAll('.wizard-step')[3].click();
         }
 
         // ==========================================
-        // STEP 3: SUB-TAB 3 (KNOCKOUT MAPPING)
+        // STEP 3: SUB-TAB 3 (DYNAMIC KNOCKOUTS)
         // ==========================================
-        function addKnockoutMatch() {
-            const container = document.getElementById('knockout-mapping-container');
-            let count = container.children.length + 1;
-            let row = document.createElement('div');
-            row.className = 'canvas-row';
-            row.innerHTML = `
-                <div class="canvas-header"><span class="canvas-match-id">KO-${count}</span><input type="text" class="canvas-name-input" value="Match ${count}"><button type="button" class="btn-delete" onclick="this.parentElement.parentElement.remove()">X</button></div>
-                <div class="canvas-teams">
-                    <select class="postings-select"><option>Pool A - 1st Place</option><option>Pool B - 1st Place</option></select>
-                    <span style="color: white; font-weight: bold;">VS</span>
-                    <select class="postings-select"><option>Pool B - 2nd Place</option><option>Pool A - 2nd Place</option></select>
-                </div>
-            `;
-            container.appendChild(row);
+        function generateKnockoutBracket() {
+            let size = parseInt(document.getElementById('ko-size-select').value);
+            koGeneratedMatches = [];
+            
+            if (size === 4) {
+                koGeneratedMatches.push({ id: "KO-1", name: "Semi-Final 1", t1: "", t2: "" });
+                koGeneratedMatches.push({ id: "KO-2", name: "Semi-Final 2", t1: "", t2: "" });
+                koGeneratedMatches.push({ id: "KO-3", name: "Grand Final", t1: "Winner KO-1", t2: "Winner KO-2" });
+            } else if (size === 8) {
+                for(let i=1; i<=4; i++) koGeneratedMatches.push({ id: `KO-${i}`, name: `Quarter-Final ${i}`, t1: "", t2: "" });
+                koGeneratedMatches.push({ id: "KO-5", name: "Semi-Final 1", t1: "Winner KO-1", t2: "Winner KO-2" });
+                koGeneratedMatches.push({ id: "KO-6", name: "Semi-Final 2", t1: "Winner KO-3", t2: "Winner KO-4" });
+                koGeneratedMatches.push({ id: "KO-7", name: "Grand Final", t1: "Winner KO-5", t2: "Winner KO-6" });
+            }
+            renderKnockouts();
         }
 
-        function lockKnockoutsAndProceed() {
-            let rows = document.querySelectorAll('#knockout-mapping-container .canvas-row');
-            finalLockedMatches = [];
-            rows.forEach((row, i) => {
-                let name = row.querySelector('.canvas-name-input').value;
-                let selects = row.querySelectorAll('select');
-                finalLockedMatches.push({
-                    matchNum: `KO-${i+1}`,
-                    matchName: name,
-                    team1: selects[0].value,
-                    team2: selects[1].value
-                });
+        function addCustomKnockoutMatch() {
+            let count = koGeneratedMatches.length + 1;
+            koGeneratedMatches.push({ id: `KO-${count}`, name: `Knockout ${count}`, t1: "", t2: "" });
+            renderKnockouts();
+        }
+
+        function getKnockoutDropdownOptions(currentKoIndex, selectedValue) {
+            let optionsHtml = `<option value="">Select Team or Placeholder...</option>`;
+            
+            // 1. Registered Teams (Active)
+            optionsHtml += `<optgroup label="Registered Teams">`;
+            activeTeams.forEach(team => { 
+                let sel = (selectedValue === team) ? "selected" : "";
+                optionsHtml += `<option value="${team}" ${sel}>${team}</option>`; 
             });
-            buildPostingsGrid();
+            optionsHtml += `</optgroup>`;
+
+            // 2. Pool Standing Placeholders
+            let poolKeys = Object.keys(poolsData);
+            if (poolKeys.length > 0) {
+                optionsHtml += `<optgroup label="Pool Standings">`;
+                poolKeys.forEach(pk => {
+                    ["1st Place", "2nd Place", "3rd Place", "4th Place"].forEach(pos => {
+                        let val = `${pk} - ${pos}`;
+                        let sel = (selectedValue === val) ? "selected" : "";
+                        optionsHtml += `<option value="${val}" ${sel}>${val}</option>`;
+                    });
+                });
+                optionsHtml += `</optgroup>`;
+            }
+
+            // 3. Winners of Previous Knockout Stages
+            if (currentKoIndex > 0) {
+                optionsHtml += `<optgroup label="Stage Progressions">`;
+                for(let i = 0; i < currentKoIndex; i++) {
+                    let prevM = koGeneratedMatches[i].id;
+                    let winVal = `Winner ${prevM}`;
+                    let loseVal = `Loser ${prevM}`;
+                    optionsHtml += `<option value="${winVal}" ${selectedValue === winVal ? "selected" : ""}>${winVal}</option>`;
+                    optionsHtml += `<option value="${loseVal}" ${selectedValue === loseVal ? "selected" : ""}>${loseVal}</option>`;
+                }
+                optionsHtml += `</optgroup>`;
+            }
+            return optionsHtml;
+        }
+
+        function renderKnockouts() {
+            const container = document.getElementById('knockout-mapping-container');
+            container.innerHTML = "";
+            
+            koGeneratedMatches.forEach((match, index) => {
+                let row = document.createElement('div');
+                row.className = 'canvas-row';
+                row.innerHTML = `
+                    <div class="canvas-header">
+                        <span class="canvas-match-id">${match.id}</span>
+                        <input type="text" class="canvas-name-input" value="${match.name}" oninput="updateKOMatch(${index}, 'name', this.value)">
+                        <button type="button" class="btn-delete" onclick="deleteKOMatch(${index})">X</button>
+                    </div>
+                    <div class="canvas-teams">
+                        <select class="postings-select" onchange="updateKOMatch(${index}, 't1', this.value)">
+                            ${getKnockoutDropdownOptions(index, match.t1)}
+                        </select>
+                        <span style="color: white; font-weight: bold;">VS</span>
+                        <select class="postings-select" onchange="updateKOMatch(${index}, 't2', this.value)">
+                            ${getKnockoutDropdownOptions(index, match.t2)}
+                        </select>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function updateKOMatch(index, field, value) { koGeneratedMatches[index][field] = value; }
+        function deleteKOMatch(index) { koGeneratedMatches.splice(index, 1); koGeneratedMatches.forEach((m, i) => m.id = "KO-" + (i+1)); renderKnockouts(); }
+
+        function lockKnockoutsAndProceed() {
+            if(koGeneratedMatches.length === 0) { alert("Please build at least one knockout match."); return; }
+            updateFinalLockedMatches();
             document.querySelectorAll('.wizard-step')[3].click();
         }
 
@@ -590,21 +638,23 @@
         // ==========================================
         function renderTournamentTree() {
             const canvas = document.getElementById('bracket-tree-canvas');
-            let matches = finalLockedMatches.length > 0 ? finalLockedMatches : manualMatches;
-
-            if(!matches || matches.length === 0) {
-                canvas.innerHTML = `<span style="color: #94a3b8; font-size: 0.9rem;">No matches found. Build your fixtures first.</span>`;
-                return;
+            
+            if(!finalLockedMatches || finalLockedMatches.length === 0) {
+                // Try updating the master list just in case they navigated to tree before locking
+                updateFinalLockedMatches();
+                if(finalLockedMatches.length === 0) {
+                    canvas.innerHTML = `<span style="color: #94a3b8; font-size: 0.9rem;">No matches found. Build your fixtures first.</span>`;
+                    return;
+                }
             }
 
-            // 1. Categorize matches dynamically by analyzing their names
             let pools = {};
             let semiFinals = [];
             let quarterFinals = [];
             let finalMatch = null;
             let others = [];
 
-            matches.forEach((m, idx) => {
+            finalLockedMatches.forEach((m, idx) => {
                 m._dispId = m.matchNum || 'M-' + (idx+1);
                 let name = (m.matchName || m.name || '').toUpperCase();
                 
@@ -615,16 +665,14 @@
                 } else if (name.includes('QUARTER')) {
                     quarterFinals.push(m);
                 } else if (name.includes('POOL ') || name.includes('GROUP ')) {
-                    // Extract the pool name (e.g., "Pool A: Team 1 vs Team 2" -> "Pool A")
                     let poolName = (m.matchName || m.name).split(':')[0].trim();
                     if (!pools[poolName]) pools[poolName] = [];
                     pools[poolName].push(m);
                 } else {
-                    others.push(m); // Captures single leagues or manual matches
+                    others.push(m); 
                 }
             });
 
-            // Reusable HTML node component
             let renderNode = (m) => `
                 <div class="bracket-match-node" style="margin-bottom: 12px; width: 100%;">
                     <div class="m-id">${m._dispId}</div>
@@ -639,14 +687,12 @@
 
             let html = `<div style="width: 100%; display: flex; flex-direction: column; gap: 30px;">`;
 
-            // 2. RENDER STAGE 1: GROUP / LEAGUE
             let poolKeys = Object.keys(pools);
             if (poolKeys.length > 0 || others.length > 0) {
                 html += `<div>
                             <div class="tree-stage-title">🏏 League & Group Stage</div>
                             <div class="tree-row" style="align-items: flex-start;">`;
                 
-                // Columns for each pool
                 poolKeys.forEach(pk => {
                     html += `<div class="tree-pool-col">
                         <div class="tree-pool-title">${pk}</div>
@@ -654,7 +700,6 @@
                     </div>`;
                 });
 
-                // Single-league/other matches in a column
                 if (others.length > 0) {
                     html += `<div class="tree-pool-col">
                         <div class="tree-pool-title">${poolKeys.length > 0 ? 'Other Matches' : 'League Matches'}</div>
@@ -664,7 +709,6 @@
                 html += `</div></div>`;
             }
 
-            // 3. RENDER STAGE 2: PLAYOFFS & FINALS (The Pyramid)
             if (quarterFinals.length > 0 || semiFinals.length > 0 || finalMatch) {
                 html += `<div>
                             <div class="tree-stage-title" style="color: #f59e0b;">🏆 Playoffs & Finals</div>`;
@@ -782,7 +826,7 @@
             });
 
             localStorage.setItem('cricket_matches', JSON.stringify(finalOutput));
-            alert("Success! Fixture pools and knockouts locked. Your Live Scoring Engine can now Fetch these exact matches and feed data seamlessly.");
+            alert("Success! Fixtures and assignments locked. Your Live Scoring Engine can now Fetch these matches seamlessly.");
         }
     </script>
 </body>
