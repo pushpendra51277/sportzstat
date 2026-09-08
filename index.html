@@ -62,13 +62,13 @@
     const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
     const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
     
-    // FIX: Renamed the variable to 'db' to prevent the Javascript crash
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const authForm = document.getElementById('auth-form');
     const authTitle = document.getElementById('auth-title');
     const authSubtitle = document.getElementById('auth-subtitle');
     const roleGroup = document.getElementById('role-group');
+    const userRoleSelect = document.getElementById('user-role');
     const btnSubmit = document.getElementById('btn-submit');
     const authToggle = document.getElementById('auth-toggle');
     const toggleText = document.getElementById('toggle-text');
@@ -82,7 +82,7 @@
 
         if (isSignUpMode) {
             authTitle.innerText = "CREATE ACCOUNT";
-            authSubtitle.innerText = "Register your profile and select your subscription tier";
+            authSubtitle.innerText = "Register your profile and select your role";
             roleGroup.classList.remove('hidden');
             btnSubmit.innerText = "Register via Email";
             toggleText.innerText = "Already have an account? ";
@@ -94,6 +94,89 @@
             btnSubmit.innerText = "Sign In with Email";
             toggleText.innerText = "Don't have an account? ";
             authToggle.innerText = "Create Account";
+        }
+    });
+
+    btnGoogle.addEventListener('click', async () => {
+        const { data, error } = await db.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: window.location.origin + '/fan.html' 
+            }
+        });
+        if (error) {
+            alert("Error logging in with Google: " + error.message);
+        }
+    });
+
+    authForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('user-email').value;
+        const password = document.getElementById('user-password').value;
+
+        if (isSignUpMode) {
+            const selectedRole = userRoleSelect.value; // fan, selector, scorer, admin
+
+            // 1. Create Supabase Auth User
+            const { data, error } = await db.auth.signUp({
+                email: email,
+                password: password,
+            });
+            if (error) {
+                alert("Registration Error: " + error.message);
+                return;
+            }
+
+            // 2. Save their role to the `user_profiles` table
+            if (data.user) {
+                const { error: profileError } = await db.from('user_profiles').insert([{
+                    id: data.user.id,
+                    email: email,
+                    role: selectedRole
+                }]);
+
+                if (profileError) {
+                    alert("Account created, but role assignment failed: " + profileError.message);
+                } else {
+                    alert("Account created successfully! Please sign in.");
+                    authToggle.click(); 
+                }
+            }
+        } else {
+            // LOGIN MODE
+            const { data, error } = await db.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+            if (error) {
+                alert("Login Error: " + error.message);
+                return;
+            }
+
+            // Fetch the user's role from Supabase to route them correctly
+            const { data: profileData, error: profileError } = await db
+                .from('user_profiles')
+                .select('role')
+                .eq('id', data.user.id)
+                .single();
+
+            if (profileError || !profileData) {
+                alert("No role profile found for this account. Defaulting to Fan view.");
+                window.location.href = "fan.html";
+                return;
+            }
+
+            const role = profileData.role;
+
+            // INTELLIGENT ROUTING BASED ON ROLE
+            if (role === "admin") {
+                window.location.href = "admin/index.html";
+            } else if (role === "scorer") {
+                window.location.href = "scorer/live.html";
+            } else {
+                // Fans and selectors go to the fan/viewer experience
+                window.location.href = "fan.html";
+            }
         }
     });
 
