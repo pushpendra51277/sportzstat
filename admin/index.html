@@ -29,26 +29,27 @@
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* BRACKET TREE */
-        .bracket-container { display: flex; flex-direction: row; gap: 30px; overflow-x: auto; padding: 20px; background: #1e293b; border-radius: 8px; margin-top: 15px; }
-        .bracket-col { display: flex; flex-direction: column; justify-content: space-around; gap: 20px; min-width: 180px; }
-        .bracket-title { text-align: center; color: #f59e0b; font-size: 0.85rem; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #334155; padding-bottom: 5px;}
-        .bracket-match { background: #0f172a; border: 1px solid #3b82f6; border-radius: 6px; padding: 12px; text-align: center; font-size: 0.8rem; font-weight: bold; color: #f8fafc; }
-        .match-label { font-size: 0.65rem; color: #94a3b8; display: block; margin-bottom: 4px; text-transform: uppercase;}
-
-        /* POSTINGS GRID */
-        .postings-grid { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.85rem; }
-        .postings-grid th { background: #1e293b; color: #94a3b8; padding: 10px; text-align: left; }
-        .postings-grid td { padding: 10px; border-bottom: 1px solid #1e293b; background: #0f172a; }
-        .postings-select { width: 100%; padding: 8px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 4px; }
-
-        /* PLAYER DATA PODS (NEW) */
+        /* PLAYER DATA PODS */
         .player-pod { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #334155; position: relative; }
         .pod-row-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px; }
         .pod-row-2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
         .pod-input { background: #0f172a; color: #f8fafc; border: 1px solid #475569; padding: 8px; border-radius: 4px; width: 100%; font-size: 0.85rem; }
-        .pod-input:focus { border-color: #3b82f6; outline: none; }
         .remove-pod-btn { position: absolute; top: -10px; right: -10px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-weight: bold; line-height: 1; }
+
+        /* EDITABLE MATCHES LIST (NEW) */
+        .editable-match-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; background: #1e293b; padding: 10px; border-radius: 6px; border: 1px solid #334155;}
+        .editable-match-input { flex: 1; padding: 8px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 4px; font-weight: bold; }
+        .btn-delete { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;}
+        .btn-delete:hover { background: #dc2626; }
+
+        /* POSTINGS GRID (NEW) */
+        .postings-grid { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.85rem; }
+        .postings-grid th { background: #1e293b; color: #94a3b8; padding: 10px; text-align: left; }
+        .postings-grid td { padding: 15px 10px; border-bottom: 1px solid #1e293b; background: #0f172a; vertical-align: top;}
+        .official-select-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+        .postings-select { width: 100%; padding: 8px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 4px; }
+        .btn-add-small { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px dashed #3b82f6; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; width: 100%; font-weight: bold;}
+        .btn-add-small:hover { background: rgba(59, 130, 246, 0.4); }
     </style>
 </head>
 <body style="text-align: center; padding: 20px;">
@@ -56,15 +57,16 @@
     <h2 style="color: #3b82f6; letter-spacing: 2px; margin-bottom: 5px;">TOURNAMENT CREATOR</h2>
     <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">Step-by-Step Logistics Flow</p>
 
-    <div class="wizard-nav" style="max-width: 900px; margin: 0 auto 25px auto;">
+    <div class="wizard-nav" style="max-width: 1100px; margin: 0 auto 25px auto;">
         <div class="wizard-step active" onclick="switchStep('step1')">1. Setup & Teams</div>
         <div class="wizard-step" onclick="switchStep('step2')">2. Add Players</div>
-        <div class="wizard-step" onclick="switchStep('step3')">3. Fixtures & Tree</div>
+        <div class="wizard-step" onclick="switchStep('step3')">3. Fixtures</div>
         <div class="wizard-step" onclick="switchStep('step4')">4. Match Postings</div>
     </div>
 
-    <div class="container" style="max-width: 900px; margin: 0 auto;">
+    <div class="container" style="max-width: 1100px; margin: 0 auto;">
         
+        <!-- STEP 1 -->
         <div id="step1" class="dashboard-section active">
             <div class="admin-form">
                 <h3 style="margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px;">1. Tournament Details</h3>
@@ -76,10 +78,7 @@
                     
                     <div class="full-width" style="margin-top: 15px;">
                         <h3 style="margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px;">Register Participating Teams</h3>
-                        <p style="color:#94a3b8; font-size:0.8rem; margin-bottom: 15px;">Names entered here will be saved directly to your Master Database.</p>
-                        
-                        <div id="team-inputs-container">
-                            </div>
+                        <div id="team-inputs-container"></div>
                         <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #475569; width: 100%; margin-top: 10px;" onclick="addTeamField()">+ Add Another Team</button>
                     </div>
 
@@ -88,6 +87,7 @@
             </div>
         </div>
 
+        <!-- STEP 2 -->
         <div id="step2" class="dashboard-section">
             <div class="admin-form">
                 <h3 style="margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px;">2. Build Detailed Squads</h3>
@@ -98,17 +98,17 @@
                     </select>
                 </div>
 
-                <div id="player-inputs-container">
-                    </div>
+                <div id="player-inputs-container"></div>
                 
                 <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #475569; width: 100%; margin-top: 10px; padding: 12px; color: #cbd5e1;" onclick="addPlayerPod()">+ Add New Player</button>
                 <button type="button" class="btn-launch full-width mt-20" style="background: #10b981;" onclick="savePlayersToDB()">Save Squad to Master DB</button>
             </div>
         </div>
 
+        <!-- STEP 3 (NEW EDITABLE FIXTURES ENGINE) -->
         <div id="step3" class="dashboard-section">
             <div class="admin-form">
-                <h3 style="margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px;">3. Generate Fixtures & Bracket</h3>
+                <h3 style="margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px;">3. Generate Fixtures (Fully Editable)</h3>
                 <form id="form-fixtures" class="form-grid">
                     <div class="input-group">
                         <label>Total Teams Detected</label>
@@ -117,50 +117,66 @@
                     
                     <div class="input-group">
                         <label>Tournament Structure *</label>
-                        <select id="f-format" required>
+                        <select id="f-format" required onchange="toggleKnockoutOptions()">
                             <option value="league_std">League Phase + Standard Knockout</option>
                             <option value="league_ipl">League Phase + IPL Style Playoffs</option>
                             <option value="pure_knockout">Pure Knockout (No League)</option>
                         </select>
                     </div>
 
-                    <div class="input-group full-width">
-                        <label>League Rounds (If applicable)</label>
+                    <div class="input-group full-width" id="league-round-container">
+                        <label>League Rounds</label>
                         <select id="f-rounds">
                             <option value="1">Single Round Robin (Play everyone once)</option>
                             <option value="2">Double Round Robin (Home & Away)</option>
                         </select>
                     </div>
 
-                    <button type="button" class="btn-launch full-width mt-10" style="background: #f59e0b;" onclick="generateFixtures()">Generate Matches & Visual Tree</button>
+                    <!-- NEW: Knockout Checkboxes -->
+                    <div class="input-group full-width" id="knockout-options" style="background: #1e293b; padding: 15px; border-radius: 6px; border: 1px dashed #334155; margin-top: 10px;">
+                        <label style="color: #f59e0b; margin-bottom: 10px; display: block;">Select Knockout Stages to Include:</label>
+                        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                            <label style="cursor: pointer; color: white;"><input type="checkbox" id="chk-pre-quarter"> Pre-Quarter Finals</label>
+                            <label style="cursor: pointer; color: white;"><input type="checkbox" id="chk-quarter"> Quarter Finals</label>
+                            <label style="cursor: pointer; color: white;"><input type="checkbox" id="chk-semi" checked> Semi Finals</label>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn-launch full-width mt-10" style="background: #f59e0b;" onclick="generateFixtures()">Generate Match List</button>
                 </form>
 
-                <div id="fixture-results" style="display: none; margin-top: 20px;">
-                    <div id="league-matches-list" style="color: #cbd5e1; font-size: 0.9rem; margin-bottom: 20px;"></div>
-                    <div class="bracket-container" id="knockout-tree"></div>
+                <div id="fixture-results" style="display: none; margin-top: 30px; border-top: 2px solid #334155; padding-top: 20px;">
+                    <!-- NEW: Tournament Name Heading -->
+                    <h2 id="fixture-tourney-title" style="color: #10b981; text-transform: uppercase; margin-bottom: 20px; text-align: center; font-size: 1.4rem;"></h2>
+                    <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 15px;">Rename, delete, or add matches below. The final list here will be passed to Match Postings.</p>
+                    
+                    <div id="editable-matches-container"></div>
+                    
+                    <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #475569; width: 100%; margin-top: 10px; padding: 12px; color: #cbd5e1;" onclick="addManualMatch()">+ Add Custom Match</button>
                 </div>
             </div>
         </div>
 
+        <!-- STEP 4 (NEW DYNAMIC POSTINGS) -->
         <div id="step4" class="dashboard-section">
             <div class="admin-form" style="overflow-x: auto;">
                 <h3 style="border-bottom: 1px solid #334155; padding-bottom: 10px;">4. Official Assignments (Postings)</h3>
-                <p style="color:#94a3b8; font-size:0.8rem; margin-bottom: 15px;">Assign your Umpires, Scorers, and Referees to the generated fixtures.</p>
+                <p style="color:#94a3b8; font-size:0.8rem; margin-bottom: 15px;">Assign your officials. Use the "+ Add" buttons to expand slots for extra officials (Max: 5 Umpires, 4 Scorers, 2 Referees).</p>
                 
                 <table class="postings-grid">
                     <thead>
                         <tr>
-                            <th style="width: 25%;">Match</th>
-                            <th style="width: 25%;">Umpire</th>
-                            <th style="width: 25%;">Scorer</th>
-                            <th style="width: 25%;">Match Referee</th>
+                            <th style="width: 25%;">Match Name</th>
+                            <th style="width: 25%;">Umpires (Default: 2)</th>
+                            <th style="width: 25%;">Scorers (Default: 2)</th>
+                            <th style="width: 25%;">Referees (Default: 1)</th>
                         </tr>
                     </thead>
                     <tbody id="postings-body">
                         <tr><td colspan="4" style="text-align: center; color: #94a3b8;">Generate fixtures in Step 3 to view postings.</td></tr>
                     </tbody>
                 </table>
-                <button type="button" class="btn-launch full-width mt-20" style="background: #3b82f6;" onclick="savePostings()">Lock All Postings & Schedule</button>
+                <button type="button" class="btn-launch full-width mt-20" style="background: #3b82f6; font-size: 1.1rem; padding: 15px;" onclick="savePostings()">Lock All Postings & Schedule</button>
             </div>
         </div>
 
@@ -172,21 +188,18 @@
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let activeTeams = []; 
-        let generatedMatches = []; 
+        let generatedMatches = []; // This array is now the master source of truth for the editable list
 
         // ==========================================
-        // INITIALIZATION & NAVIGATION
+        // INITIALIZATION
         // ==========================================
         window.onload = () => { 
             flatpickr("input[type='date']", { dateFormat: "Y-m-d", disableMobile: true });
             
-            // Step 1: 8 Blank Teams
             const container = document.getElementById('team-inputs-container');
             for(let i=1; i<=8; i++){
                 container.innerHTML += `<div class="team-input-row"><input type="text" class="tourney-team-input" placeholder="Team ${i} Name"></div>`;
             }
-
-            // Step 2: Initialize 3 blank player pods to start
             for(let i=0; i<3; i++) { addPlayerPod(); }
         };
 
@@ -203,28 +216,24 @@
         }
 
         // ==========================================
-        // STEP 1 LOGIC: Save Tournament & Teams
+        // STEP 1 & 2 (Unchanged Logic)
         // ==========================================
         document.getElementById('form-step1').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button');
             btn.innerText = "Saving to Database...";
 
-            // Save Tournament
             const { error: tError } = await db.from('tournaments').insert([{
                 tournament_name: document.getElementById('t-name').value,
                 format: document.getElementById('t-format').value,
                 start_date: document.getElementById('t-date').value,
                 host: document.getElementById('t-host').value 
             }]);
-
             if (tError) { alert("Error saving tournament: " + tError.message); return; }
 
-            // Save Teams
             activeTeams = [];
             const inputs = document.querySelectorAll('.tourney-team-input');
             const teamPayload = [];
-            
             inputs.forEach(input => {
                 if(input.value.trim() !== "") {
                     activeTeams.push(input.value.trim());
@@ -232,28 +241,17 @@
                 }
             });
 
-            if(teamPayload.length > 0) {
-                await db.from('master_teams').insert(teamPayload);
-            }
-
-            populateStep2Dropdown();
+            if(teamPayload.length > 0) await db.from('master_teams').insert(teamPayload);
+            
+            const select = document.getElementById('squad-team-select');
+            select.innerHTML = '<option value="">Select a team to add players...</option>';
+            activeTeams.forEach(team => { select.innerHTML += `<option value="${team}">${team}</option>`; });
+            
             document.getElementById('f-team-count').value = activeTeams.length;
-
-            alert(`Success! Tournament Created and ${activeTeams.length} Teams added to Master Registry.`);
+            alert(`Success! Tournament Created and ${activeTeams.length} Teams added to Registry.`);
             btn.innerText = "Save Tournament & Teams";
             document.querySelectorAll('.wizard-step')[1].click();
         });
-
-        // ==========================================
-        // STEP 2 LOGIC: SQUADS & DETAILED PLAYER PODS
-        // ==========================================
-        function populateStep2Dropdown() {
-            const select = document.getElementById('squad-team-select');
-            select.innerHTML = '<option value="">Select a team to add players...</option>';
-            activeTeams.forEach(team => {
-                select.innerHTML += `<option value="${team}">${team}</option>`;
-            });
-        }
 
         function addPlayerPod() {
             const div = document.createElement('div');
@@ -261,164 +259,168 @@
             div.innerHTML = `
                 <button type="button" class="remove-pod-btn" onclick="this.parentElement.remove()">×</button>
                 <div class="pod-row-1">
-                    <div>
-                        <label style="font-size: 0.7rem; color: #94a3b8;">Player Name *</label>
-                        <input type="text" class="pod-input p-name" placeholder="Full Name">
-                    </div>
-                    <div>
-                        <label style="font-size: 0.7rem; color: #94a3b8;">Role</label>
-                        <select class="pod-input p-role">
-                            <option value="Batter">Batter</option><option value="Bowler">Bowler</option><option value="All-Rounder">All-Rounder</option><option value="Wicketkeeper">WK</option>
-                        </select>
-                    </div>
+                    <div><label style="font-size: 0.7rem; color: #94a3b8;">Player Name *</label><input type="text" class="pod-input p-name" placeholder="Full Name"></div>
+                    <div><label style="font-size: 0.7rem; color: #94a3b8;">Role</label><select class="pod-input p-role"><option value="Batter">Batter</option><option value="Bowler">Bowler</option><option value="All-Rounder">All-Rounder</option><option value="Wicketkeeper">WK</option></select></div>
                 </div>
                 <div class="pod-row-2">
-                    <div>
-                        <label style="font-size: 0.7rem; color: #94a3b8;">Batting Style</label>
-                        <select class="pod-input p-bat">
-                            <option value="RHB">Right-Hand Bat</option>
-                            <option value="LHB">Left-Hand Bat</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size: 0.7rem; color: #94a3b8;">Bowling Arm</label>
-                        <select class="pod-input p-arm">
-                            <option value="None">None</option>
-                            <option value="Right">Right-Arm</option>
-                            <option value="Left">Left-Arm</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size: 0.7rem; color: #94a3b8;">Bowling Pace/Type</label>
-                        <select class="pod-input p-type">
-                            <option value="None">-</option>
-                            <option value="Pace">Pace / Medium</option>
-                            <option value="Spin">Spin</option>
-                        </select>
-                    </div>
-                </div>
-            `;
+                    <div><label style="font-size: 0.7rem; color: #94a3b8;">Batting Style</label><select class="pod-input p-bat"><option value="RHB">Right-Hand Bat</option><option value="LHB">Left-Hand Bat</option></select></div>
+                    <div><label style="font-size: 0.7rem; color: #94a3b8;">Bowling Arm</label><select class="pod-input p-arm"><option value="None">None</option><option value="Right">Right-Arm</option><option value="Left">Left-Arm</option></select></div>
+                    <div><label style="font-size: 0.7rem; color: #94a3b8;">Bowling Pace/Type</label><select class="pod-input p-type"><option value="None">-</option><option value="Pace">Pace / Medium</option><option value="Spin">Spin</option></select></div>
+                </div>`;
             document.getElementById('player-inputs-container').appendChild(div);
         }
 
         async function savePlayersToDB() {
             const team = document.getElementById('squad-team-select').value;
-            if(!team) { alert("Please select a team from the dropdown first."); return; }
-
+            if(!team) { alert("Please select a team."); return; }
             const pods = document.querySelectorAll('.player-pod');
             const payload = [];
-
             pods.forEach(pod => {
                 const name = pod.querySelector('.p-name').value.trim();
                 if(name !== "") {
-                    const role = pod.querySelector('.p-role').value;
-                    const bat = pod.querySelector('.p-bat').value === 'RHB' ? 'Right-hand bat' : 'Left-hand bat';
-                    
                     const arm = pod.querySelector('.p-arm').value;
                     const type = pod.querySelector('.p-type').value;
-                    
-                    // Logic to combine Bowling Arm and Type cleanly for the database
-                    let bowlStyle = "None";
-                    if(arm !== "None" && type !== "None") {
-                        bowlStyle = `${arm}-arm ${type}`; // e.g., "Right-arm Pace"
-                    }
-
+                    let bowlStyle = (arm !== "None" && type !== "None") ? `${arm}-arm ${type}` : "None";
                     payload.push({ 
-                        full_name: name, 
-                        playing_role: role,
-                        batting_style: bat,
-                        bowling_style: bowlStyle,
-                        current_team: team
+                        full_name: name, playing_role: pod.querySelector('.p-role').value,
+                        batting_style: pod.querySelector('.p-bat').value === 'RHB' ? 'Right-hand bat' : 'Left-hand bat',
+                        bowling_style: bowlStyle, current_team: team
                     });
                 }
             });
-
-            if(payload.length === 0) { alert("No player names entered. Please fill out at least one pod."); return; }
-
+            if(payload.length === 0) return;
             const { error } = await db.from('master_players').insert(payload);
-            if (error) { 
-                alert("Database Error: " + error.message); 
-            } else { 
-                alert(`Successfully saved ${payload.length} players directly to ${team}'s Master Roster!`); 
-                // Clear the pods so they can add players to the next team
+            if (error) alert("Error: " + error.message); 
+            else { 
+                alert(`Saved ${payload.length} players to ${team}!`); 
                 document.getElementById('player-inputs-container').innerHTML = ''; 
-                for(let i=0; i<3; i++) { addPlayerPod(); } // Reset with 3 empty pods
+                for(let i=0; i<3; i++) { addPlayerPod(); } 
             }
         }
 
         // ==========================================
-        // STEP 3 LOGIC: FIXTURES & TREE
+        // STEP 3: NEW EDITABLE FIXTURES LOGIC
         // ==========================================
+        function toggleKnockoutOptions() {
+            const format = document.getElementById('f-format').value;
+            const opts = document.getElementById('knockout-options');
+            if (format === 'league_ipl') opts.style.display = 'none'; // IPL has strict rules (Q1, Elim, Q2, Final)
+            else opts.style.display = 'block';
+        }
+
         function generateFixtures() {
             const format = document.getElementById('f-format').value;
             const rounds = parseInt(document.getElementById('f-rounds').value);
             const teamCount = activeTeams.length || parseInt(document.getElementById('f-team-count').value);
+            const tName = document.getElementById('t-name').value || "Official Tournament";
             
-            if(teamCount < 2) { alert("You need at least 2 teams to generate fixtures."); return; }
-
             document.getElementById('fixture-results').style.display = 'block';
+            document.getElementById('fixture-tourney-title').innerText = `${tName} - Match Schedule`;
+
             generatedMatches = [];
             let matchCounter = 1;
 
-            if(format.includes('league')) {
+            // 1. Generate League Matches
+            if(format.includes('league') && teamCount > 1) {
                 const leagueMatches = ((teamCount * (teamCount - 1)) / 2) * rounds;
-                document.getElementById('league-matches-list').innerHTML = `<strong style="color:#10b981;">League Phase:</strong> ${leagueMatches} matches generated based on ${teamCount} teams playing ${rounds} round(s).`;
                 for(let i=0; i<leagueMatches; i++) {
                     generatedMatches.push(`League Match ${matchCounter}`);
                     matchCounter++;
                 }
-            } else {
-                document.getElementById('league-matches-list').innerHTML = "";
             }
 
-            let treeHTML = "";
+            // 2. Generate Knockout Matches Based on Checkboxes
             if (format === 'league_ipl') {
-                treeHTML += drawBracketCol("Playoffs", ["Qualifier 1 (Rank 1 vs 2)", "Eliminator (Rank 3 vs 4)"]);
-                generatedMatches.push("Qualifier 1", "Eliminator");
-                treeHTML += drawBracketCol("Qualifier 2", ["Qualifier 2 (Loser Q1 vs Winner Elim)"]);
-                generatedMatches.push("Qualifier 2");
-                treeHTML += drawBracketCol("Finals", ["Grand Final 🏆"]);
-                generatedMatches.push("Grand Final");
+                generatedMatches.push("Qualifier 1", "Eliminator", "Qualifier 2", "Grand Final");
             } else {
-                treeHTML += drawBracketCol("Semifinals", ["Semi-Final 1", "Semi-Final 2"]);
-                generatedMatches.push("Semi-Final 1", "Semi-Final 2");
-                treeHTML += drawBracketCol("Finals", ["Championship Match 🏆"]);
-                generatedMatches.push("Championship Match");
+                if(document.getElementById('chk-pre-quarter').checked) {
+                    for(let i=1; i<=8; i++) generatedMatches.push(`Pre-Quarter Final ${i}`);
+                }
+                if(document.getElementById('chk-quarter').checked) {
+                    for(let i=1; i<=4; i++) generatedMatches.push(`Quarter Final ${i}`);
+                }
+                if(document.getElementById('chk-semi').checked) {
+                    generatedMatches.push("Semi-Final 1", "Semi-Final 2");
+                }
+                generatedMatches.push("Championship Final");
             }
 
-            document.getElementById('knockout-tree').innerHTML = treeHTML;
-            buildPostingsGrid(); 
+            renderEditableMatches();
         }
 
-        function drawBracketCol(title, matches) {
-            let col = `<div class="bracket-col"><div class="bracket-title">${title}</div>`;
-            matches.forEach(m => { col += `<div class="bracket-match"><span class="match-label">${m}</span>TBD vs TBD</div>`; });
-            col += `</div>`;
-            return col;
+        // Renders the inputs so users can edit the generated names
+        function renderEditableMatches() {
+            const container = document.getElementById('editable-matches-container');
+            container.innerHTML = generatedMatches.map((matchName, index) => `
+                <div class="editable-match-row">
+                    <span style="color: #94a3b8; font-size: 0.8rem; font-weight: bold; width: 30px;">M${index+1}</span>
+                    <input type="text" class="editable-match-input" value="${matchName}" onchange="updateMatchName(${index}, this.value)">
+                    <button type="button" class="btn-delete" onclick="deleteMatch(${index})">Delete</button>
+                </div>
+            `).join('');
+            
+            buildPostingsGrid(); // Auto-syncs Step 4 when changes are made
         }
+
+        function updateMatchName(index, val) { generatedMatches[index] = val; buildPostingsGrid(); }
+        function deleteMatch(index) { generatedMatches.splice(index, 1); renderEditableMatches(); }
+        function addManualMatch() { generatedMatches.push("New Custom Match"); renderEditableMatches(); }
 
         // ==========================================
-        // STEP 4 LOGIC: UPGRADED POSTINGS BRIDGE
+        // STEP 4: DYNAMIC POSTINGS GRID
         // ==========================================
         function buildPostingsGrid() {
             const tbody = document.getElementById('postings-body');
-            if(generatedMatches.length === 0) return;
+            if(generatedMatches.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#94a3b8;">No matches generated yet.</td></tr>`;
+                return;
+            }
 
             const mockUmpires = "<option>Select Umpire...</option><option>Simon Taufel</option><option>Aleem Dar</option><option>Billy Bowden</option>";
             const mockScorers = "<option>Select Scorer...</option><option>Official Scorer 1</option><option>Official Scorer 2</option>";
             const mockReferees = "<option>Select Referee...</option><option>Match Ref 1</option><option>Match Ref 2</option>";
 
-            tbody.innerHTML = generatedMatches.map(match => `
+            // Renders the default assignments (2 Umpires, 2 Scorers, 1 Ref) with + buttons
+            tbody.innerHTML = generatedMatches.map((match, i) => `
                 <tr>
-                    <td style="font-weight: bold; color: #f8fafc;">${match}</td>
-                    <td><select class="postings-select">${mockUmpires}</select></td>
-                    <td><select class="postings-select">${mockScorers}</select></td>
-                    <td><select class="postings-select">${mockReferees}</select></td>
+                    <td style="font-weight: bold; color: #10b981; font-size: 1rem;">${match}</td>
+                    <td>
+                        <div class="official-select-group" id="ump-group-${i}">
+                            <select class="postings-select">${mockUmpires}</select>
+                            <select class="postings-select">${mockUmpires}</select>
+                        </div>
+                        <button type="button" class="btn-add-small" onclick="addOfficialSlot('ump-group-${i}', 5, 'Umpire')">+ Add Umpire (Max 5)</button>
+                    </td>
+                    <td>
+                        <div class="official-select-group" id="sco-group-${i}">
+                            <select class="postings-select">${mockScorers}</select>
+                            <select class="postings-select">${mockScorers}</select>
+                        </div>
+                        <button type="button" class="btn-add-small" onclick="addOfficialSlot('sco-group-${i}', 4, 'Scorer')">+ Add Scorer (Max 4)</button>
+                    </td>
+                    <td>
+                        <div class="official-select-group" id="ref-group-${i}">
+                            <select class="postings-select">${mockReferees}</select>
+                        </div>
+                        <button type="button" class="btn-add-small" onclick="addOfficialSlot('ref-group-${i}', 2, 'Referee')">+ Add Referee (Max 2)</button>
+                    </td>
                 </tr>
             `).join('');
         }
 
-        // This function now captures the assignments and links them to Match IDs so the Scorer can fetch them
+        // Handles adding extra dropdowns dynamically up to the specific limit
+        function addOfficialSlot(groupId, maxAllowed, roleName) {
+            const group = document.getElementById(groupId);
+            if(group.children.length >= maxAllowed) {
+                alert(`You can only assign a maximum of ${maxAllowed} ${roleName}s per match.`);
+                return;
+            }
+            const clone = group.children[0].cloneNode(true);
+            clone.selectedIndex = 0; // Reset to "Select..."
+            group.appendChild(clone);
+        }
+
+        // Gathers everything and saves it to local storage for the Scorer app to pull
         function savePostings() {
             let tName = document.getElementById('t-name').value || "Official Tournament";
             let matchesData = [];
@@ -426,28 +428,32 @@
 
             rows.forEach((row, index) => {
                 if(row.cells.length === 4) {
-                    let umpire = row.cells[1].querySelector('select').value;
-                    let scorer = row.cells[2].querySelector('select').value;
-                    let referee = row.cells[3].querySelector('select').value;
+                    // Extract all selections dynamically, ignore unselected dropdowns
+                    let matchTitle = generatedMatches[index];
+                    let umpires = Array.from(row.cells[1].querySelectorAll('select')).map(s => s.value).filter(v => !v.includes('Select'));
+                    let scorers = Array.from(row.cells[2].querySelectorAll('select')).map(s => s.value).filter(v => !v.includes('Select'));
+                    let refs = Array.from(row.cells[3].querySelectorAll('select')).map(s => s.value).filter(v => !v.includes('Select'));
 
-                    // Automatically pair up the registered teams for testing purposes
+                    // Just grabbing active teams for the demo bridge
                     let t1 = activeTeams.length > 0 ? activeTeams[0] : "Team A";
                     let t2 = activeTeams.length > 1 ? activeTeams[1] : "Team B";
 
                     matchesData.push({
-                        matchNum: "M-" + (index + 1), // Generates M-1, M-2, M-3...
+                        matchNum: "M-" + (index + 1), // M-1, M-2...
+                        matchName: matchTitle,
                         tournament: tName,
                         team1: t1,
                         team2: t2,
-                        umpire1: umpire === "Select Umpire..." ? "" : umpire,
-                        scorer: scorer === "Select Scorer..." ? "" : scorer,
-                        observer: referee === "Select Referee..." ? "" : referee
+                        // Saving all assigned officials as comma-separated lists for the database
+                        umpires: umpires.join(", ") || "", 
+                        scorers: scorers.join(", ") || "",
+                        referees: refs.join(", ") || ""
                     });
                 }
             });
 
             localStorage.setItem('cricket_matches', JSON.stringify(matchesData));
-            alert("All fixtures locked! Match IDs (M-1, M-2, etc.) are now generated and ready for the Scorer app.");
+            alert("Success! All match structures and assigned officials have been locked. The Live Scoring Engine can now Fetch these matches using their IDs (M-1, M-2, etc.).");
         }
     </script>
 </body>
