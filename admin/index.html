@@ -132,7 +132,10 @@
                     <button type="button" class="sub-tab-btn active" onclick="switchSubTab('tab-canvas', this)">1. Manual Draw Canvas</button>
                     <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-pools', this)">2. Visual Pool / Group Builder</button>
                     <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-knockouts', this)">3. Knockout Mapping</button>
+                    <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-tree', this)" onclick="renderTournamentTree()">4. Visual Tree</button>
+
                 </div>
+                
 
                 <!-- SUB-TAB 1: MANUAL CANVAS -->
                 <div id="tab-canvas" class="sub-tab-pane active">
@@ -178,6 +181,16 @@
                             </div>
                         </div>
                     </div>
+            
+               
+
+                <!-- SUB-TAB 4: VISUAL TOURNAMENT TREE -->
+                <div id="tab-tree" class="sub-tab-pane">
+                    <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">Graphical hierarchy of your tournament structure and progression flow.</p>
+                    <div id="bracket-tree-canvas" style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 25px; min-height: 300px; display: flex; justify-content: space-around; align-items: center; overflow-x: auto;">
+                        <span style="color: #94a3b8; font-size: 0.9rem;">Configure your matches in previous tabs to render the tree.</span>
+                    </div>
+                </div>
                     <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #10b981; width: 100%; padding: 12px; color: #10b981; font-weight: bold;" onclick="addKnockoutMatch()">+ Add Knockout Match</button>
                     <button type="button" class="btn-launch full-width mt-20" style="background: #f59e0b;" onclick="lockKnockoutsAndProceed()">Lock Knockouts & Proceed to Postings</button>
                 </div>
