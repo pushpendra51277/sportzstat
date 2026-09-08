@@ -36,7 +36,7 @@
         .remove-pod-btn { position: absolute; top: -10px; right: -10px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-weight: bold; line-height: 1; }
 
         /* SUB-TABS FOR STEP 3 */
-        .sub-tab-nav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        .sub-tab-nav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px; flex-wrap: wrap; }
         .sub-tab-btn { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
         .sub-tab-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
         .sub-tab-pane { display: none; }
@@ -122,7 +122,7 @@
             </div>
         </div>
 
-        <!-- STEP 3: TABBED WORKSPACE (MANUAL CANVAS + POOLS + KNOCKOUTS) -->
+        <!-- STEP 3: TABBED WORKSPACE (MANUAL CANVAS + POOLS + KNOCKOUTS + TREE) -->
         <div id="step3" class="dashboard-section">
             <div class="admin-form">
                 <h3 style="margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">3. Multi-Mode Fixture Builder</h3>
@@ -132,10 +132,8 @@
                     <button type="button" class="sub-tab-btn active" onclick="switchSubTab('tab-canvas', this)">1. Manual Draw Canvas</button>
                     <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-pools', this)">2. Visual Pool / Group Builder</button>
                     <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-knockouts', this)">3. Knockout Mapping</button>
-                    <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-tree', this)" onclick="renderTournamentTree()">4. Visual Tree</button>
-
+                    <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-tree', this); renderTournamentTree();">4. Visual Tree</button>
                 </div>
-                
 
                 <!-- SUB-TAB 1: MANUAL CANVAS -->
                 <div id="tab-canvas" class="sub-tab-pane active">
@@ -181,8 +179,9 @@
                             </div>
                         </div>
                     </div>
-            
-               
+                    <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #10b981; width: 100%; padding: 12px; color: #10b981; font-weight: bold;" onclick="addKnockoutMatch()">+ Add Knockout Match</button>
+                    <button type="button" class="btn-launch full-width mt-20" style="background: #f59e0b;" onclick="lockKnockoutsAndProceed()">Lock Knockouts & Proceed to Postings</button>
+                </div>
 
                 <!-- SUB-TAB 4: VISUAL TOURNAMENT TREE -->
                 <div id="tab-tree" class="sub-tab-pane">
@@ -190,9 +189,6 @@
                     <div id="bracket-tree-canvas" style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 25px; min-height: 300px; display: flex; justify-content: space-around; align-items: center; overflow-x: auto;">
                         <span style="color: #94a3b8; font-size: 0.9rem;">Configure your matches in previous tabs to render the tree.</span>
                     </div>
-                </div>
-                    <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #10b981; width: 100%; padding: 12px; color: #10b981; font-weight: bold;" onclick="addKnockoutMatch()">+ Add Knockout Match</button>
-                    <button type="button" class="btn-launch full-width mt-20" style="background: #f59e0b;" onclick="lockKnockoutsAndProceed()">Lock Knockouts & Proceed to Postings</button>
                 </div>
 
             </div>
@@ -431,7 +427,6 @@
         }
 
         function renderPoolsWorkspace() {
-            // 1. Render Unassigned Teams (Staging)
             let assignedTeams = [].concat(...Object.values(poolsData));
             let unassigned = activeTeams.filter(t => !assignedTeams.includes(t));
             
@@ -444,7 +439,6 @@
                     </select>
                 </div>`).join('');
 
-            // 2. Render Pool Containers
             const gridEl = document.getElementById('pools-container-grid');
             gridEl.innerHTML = Object.keys(poolsData).map(poolName => `
                 <div class="pool-card">
@@ -541,7 +535,8 @@
             buildPostingsGrid();
             document.querySelectorAll('.wizard-step')[3].click();
         }
-// ==========================================
+
+        // ==========================================
         // STEP 3: SUB-TAB 4 (VISUAL TOURNAMENT TREE)
         // ==========================================
         function renderTournamentTree() {
@@ -554,7 +549,7 @@
             }
 
             canvas.innerHTML = matches.map((m, index) => `
-                <div style="background: #1e293b; border: 1px solid #3b82f6; border-radius: 8px; padding: 15px; width: 220px; text-align: center; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+                <div style="background: #1e293b; border: 1px solid #3b82f6; border-radius: 8px; padding: 15px; width: 220px; text-align: center; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin-right: 10px; margin-bottom: 10px;">
                     <div style="color: #f59e0b; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 5px;">${m.matchNum || 'M-' + (index+1)}</div>
                     <div style="color: white; font-weight: bold; font-size: 0.9rem; margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 5px;">${m.matchName || m.name}</div>
                     <div style="font-size: 0.8rem; color: #10b981; font-weight: bold; background: #0f172a; padding: 6px; border-radius: 4px;">
@@ -563,8 +558,9 @@
                         <div>${m.team2 || 'TBD'}</div>
                     </div>
                 </div>
-            `).join(`<div style="color: #3b82f6; font-weight: bold; font-size: 1.2rem;">➔</div>`);
+            `).join(`<div style="color: #3b82f6; font-weight: bold; font-size: 1.2rem; margin: 0 5px;">➔</div>`);
         }
+
         // ==========================================
         // STEP 4: POSTINGS GRID
         // ==========================================
