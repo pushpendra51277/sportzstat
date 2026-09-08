@@ -87,6 +87,18 @@
         </a>
 
         <!-- Public View -->
+        <!-- Super Admin Only: Global Directory -->
+        <a href="#" class="portal-card" id="card-superadmin" style="display: none; border-color: #f43f5e;" onclick="showGlobalDirectory(event)">
+            <h3 style="color: #f43f5e;">🌍 Global Match Directory</h3>
+            <p>View all tournaments, active matches, and Scorer PINs.</p>
+        </a>
+
+        <!-- Global Directory Modal -->
+        <div id="global-directory" style="display: none; background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #f43f5e; margin-top: 20px; text-align: left;">
+            <h3 style="color: #f43f5e; margin-top: 0; margin-bottom: 15px;">Super Admin Directory</h3>
+            <div id="directory-content" style="max-height: 300px; overflow-y: auto; background: #0f172a; padding: 10px; border-radius: 8px;"></div>
+            <button onclick="document.getElementById('global-directory').style.display='none'" style="margin-top: 15px; padding: 8px 15px; background: #334155; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">Close Directory</button>
+        </div>
         <a href="fan.html" class="portal-card" style="border-color: #f59e0b;">
             <h3 style="color: #f59e0b;">📺 Fan Viewing Portal</h3>
             <p>View live scorecards and tournament standings.</p>
