@@ -15,6 +15,19 @@
 <div class="container">
     <div id="setupView" class="setup-screen">
         <h1 class="text-center text-primary mb-30">Pre Match Registry</h1>
+        <!-- NEW: OFFICIAL MATCH FETCH BRIDGE -->
+        <div style="background: rgba(234, 179, 8, 0.1); border: 2px dashed #eab308; padding: 20px; border-radius: 8px; margin-bottom: 25px; text-align: left;">
+            <h3 style="color: #eab308; margin-top: 0; font-size: 1.2rem;">🔗 Link Official Match (Admin Sync)</h3>
+            <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 15px;">Enter your Match ID and Scorer Auth PIN to automatically load approved match data.</p>
+            
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <input type="text" id="syncMatchId" placeholder="Match ID (e.g., M-1)" style="padding: 12px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; flex: 1;">
+                <input type="password" id="syncScorerPin" placeholder="Scorer Auth PIN" style="padding: 12px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; flex: 1;">
+                <button type="button" style="background: #eab308; border: none; color: black; font-weight: bold; padding: 12px 25px; border-radius: 6px; cursor: pointer;" onclick="fetchOfficialMatch()">FETCH DATA</button>
+            </div>
+            <div id="fetchStatus" style="font-size: 0.9rem; margin-top: 15px; font-weight: bold;"></div>
+        </div>
+        <!-- END FETCH BRIDGE -->
         <div class="admin-grid">
             <div class="input-group btn-col-2"><label>Tournament Name</label><input type="text" id="setupTournament" placeholder="Tournament Name"></div>
             <div class="input-group btn-col-2" style="background:rgba(59,130,246,0.1); padding:8px; border-radius:8px; border:1px solid var(--primary);"><label style="color:var(--primary);">Venue / Ground (Used for Live Link)</label><input type="text" id="setupVenue" placeholder="e.g. Ground A" style="font-weight:bold; border-color:var(--primary);"></div>
