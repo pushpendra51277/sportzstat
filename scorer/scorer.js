@@ -1085,3 +1085,67 @@ function closeModal() {
 
 function manualRotateUI() { saveState(); manualRotate(); }
 function manualRotate() { [state.current.sIdx, state.current.nsIdx] = [state.current.nsIdx, state.current.sIdx]; updateUI(); }
+// ==========================================
+// ADMIN TO SCORER BRIDGE (FETCH MATCH LOGIC)
+// ==========================================
+function fetchOfficialMatch() {
+    const matchId = document.getElementById('syncMatchId').value.trim().toUpperCase();
+    const pin = document.getElementById('syncScorerPin').value.trim();
+    const statusEl = document.getElementById('fetchStatus');
+    
+    if (!matchId) {
+        statusEl.innerText = "❌ Please enter a Match ID.";
+        statusEl.style.color = "#ef4444";
+        return;
+    }
+    
+    // BASIC AUTHENTICATION LAYER
+    // In production, this can verify against Supabase. For now, we use a standard Scorer PIN.
+    if (pin !== "1234" && pin !== "SCORER") { 
+        statusEl.innerText = "❌ Unauthorized: Invalid Scorer PIN.";
+        statusEl.style.color = "#ef4444";
+        return;
+    }
+
+    // Retrieve the locked postings from local storage
+    const storedMatches = JSON.parse(localStorage.getItem('cricket_matches') || "[]");
+    const matchData = storedMatches.find(m => m.matchNum.toUpperCase() === matchId);
+
+    if (!matchData) {
+        statusEl.innerText = "❌ Match ID not found in Official Postings.";
+        statusEl.style.color = "#ef4444";
+        return;
+    }
+
+    // 1. Auto-Fill Match Details
+    document.getElementById('setupTournament').value = matchData.tournament || "";
+    document.getElementById('setupMatchId').value = matchData.matchNum || "";
+    
+    // 2. Auto-Fill Umpires (Handling comma-separated lists from Admin)
+    let umps = (matchData.umpires || "").split(",").map(u => u.trim());
+    document.getElementById('u1').value = umps[0] || "";
+    document.getElementById('u2').value = umps[1] || "";
+    if(umps[2]) document.getElementById('tvUmpire').value = umps[2];
+    if(umps[3]) document.getElementById('u4').value = umps[3];
+
+    // 3. Auto-Fill Scorers
+    let scors = (matchData.scorers || "").split(",").map(s => s.trim());
+    document.getElementById('s1').value = scors[0] || "";
+    document.getElementById('s2').value = scors[1] || "";
+
+    // 4. Auto-Fill Referees
+    document.getElementById('setupObsRef').value = matchData.referees || "";
+
+    // 5. Auto-Fill Teams & Trigger Roster Loading
+    document.getElementById('nameTeamA').value = matchData.team1 === "TBD" ? "" : matchData.team1;
+    document.getElementById('nameTeamB').value = matchData.team2 === "TBD" ? "" : matchData.team2;
+
+    // Trigger existing functions to physically render the team names and load squad arrays
+    updateTeamNames();
+    if(document.getElementById('nameTeamA').value) loadTeamRoster('A', document.getElementById('nameTeamA').value);
+    if(document.getElementById('nameTeamB').value) loadTeamRoster('B', document.getElementById('nameTeamB').value);
+
+    // Success Message
+    statusEl.innerText = `✅ Match Found! Auto-filled data for ${matchData.matchName}. You may edit any field before calling 'Play'.`;
+    statusEl.style.color = "#10b981";
+}
