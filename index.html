@@ -35,7 +35,8 @@
     <div id="auth-section" class="auth-container">
         <h2 id="auth-title" style="margin-top: 0;">System Login</h2>
         
-        <form id="auth-form">
+        <!-- Added onsubmit safeguard to prevent URL ? refreshing -->
+        <form id="auth-form" onsubmit="event.preventDefault();">
             <div class="input-group">
                 <label>Email Address</label>
                 <input type="email" id="auth-email" required>
@@ -74,6 +75,19 @@
         <h2 style="margin-bottom: 5px;">Welcome, <span id="user-role-display" style="color: #f59e0b; text-transform: capitalize;"></span></h2>
         <p style="color: #94a3b8; margin-bottom: 30px;">Select your workspace below:</p>
 
+        <!-- Super Admin Only: Global Directory -->
+        <a href="#" class="portal-card" id="card-superadmin" style="display: none; border-color: #f43f5e;" onclick="showGlobalDirectory(event)">
+            <h3 style="color: #f43f5e;">🌍 Global Match Directory</h3>
+            <p>View all tournaments, active matches, and Scorer PINs.</p>
+        </a>
+
+        <!-- Global Directory Modal -->
+        <div id="global-directory" style="display: none; background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #f43f5e; margin-top: 20px; text-align: left;">
+            <h3 style="color: #f43f5e; margin-top: 0; margin-bottom: 15px;">Super Admin Directory</h3>
+            <div id="directory-content" style="max-height: 300px; overflow-y: auto; background: #0f172a; padding: 10px; border-radius: 8px;"></div>
+            <button onclick="document.getElementById('global-directory').style.display='none'" style="margin-top: 15px; padding: 8px 15px; background: #334155; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">Close Directory</button>
+        </div>
+
         <!-- Admin Only Card -->
         <a href="admin/index.html" class="portal-card" id="card-admin" style="display: none; border-color: #3b82f6;">
             <h3 style="color: #3b82f6;">🛠️ Tournament Creator Wizard</h3>
@@ -87,18 +101,6 @@
         </a>
 
         <!-- Public View -->
-        <!-- Super Admin Only: Global Directory -->
-        <a href="#" class="portal-card" id="card-superadmin" style="display: none; border-color: #f43f5e;" onclick="showGlobalDirectory(event)">
-            <h3 style="color: #f43f5e;">🌍 Global Match Directory</h3>
-            <p>View all tournaments, active matches, and Scorer PINs.</p>
-        </a>
-
-        <!-- Global Directory Modal -->
-        <div id="global-directory" style="display: none; background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #f43f5e; margin-top: 20px; text-align: left;">
-            <h3 style="color: #f43f5e; margin-top: 0; margin-bottom: 15px;">Super Admin Directory</h3>
-            <div id="directory-content" style="max-height: 300px; overflow-y: auto; background: #0f172a; padding: 10px; border-radius: 8px;"></div>
-            <button onclick="document.getElementById('global-directory').style.display='none'" style="margin-top: 15px; padding: 8px 15px; background: #334155; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">Close Directory</button>
-        </div>
         <a href="fan.html" class="portal-card" style="border-color: #f59e0b;">
             <h3 style="color: #f59e0b;">📺 Fan Viewing Portal</h3>
             <p>View live scorecards and tournament standings.</p>
@@ -136,7 +138,6 @@
 
         // Email / Password Authentication
         document.getElementById('auth-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
             const btn = document.getElementById('auth-submit-btn');
@@ -160,10 +161,14 @@
             }
         });
 
-        // Google Authentication
+        // Google Authentication (Now forces redirect to GitHub Pages URL)
         async function signInWithGoogle() {
             const { data, error } = await db.auth.signInWithOAuth({
                 provider: 'google',
+                options: {
+                    // This forces Supabase to send you back to this exact page instead of localhost
+                    redirectTo: window.location.href.split('?')[0] 
+                }
             });
             if (error) {
                 alert("Error connecting to Google: " + error.message);
@@ -173,10 +178,11 @@
         // Dashboard Router with Bulletproof Role Normalization
         async function loadPortalDashboard(userId) {
             document.getElementById('auth-section').style.display = 'none';
+            
             const { data, error } = await db.from('user_profiles').select('role').eq('id', userId).single();
             
             let rawRole = data && data.role ? data.role : 'Fan';
-            let normalizedRole = rawRole.toLowerCase().replace(/[^a-z]/g, ''); // Aggressive strip
+            let normalizedRole = rawRole.toLowerCase().replace(/[^a-z]/g, ''); // Aggressively strips spaces
             
             document.getElementById('user-role-display').innerText = rawRole;
             document.getElementById('portal-dashboard').style.display = 'block';
@@ -226,25 +232,10 @@
             }
             document.getElementById('global-directory').style.display = 'block';
         }
-            
-            // This safely converts "Super Admin" to "super_admin"
-            let normalizedRole = rawRole.toLowerCase().trim().replace(/\s+/g, '_');
-            
-            document.getElementById('user-role-display').innerText = rawRole;
-            document.getElementById('portal-dashboard').style.display = 'block';
-
-            // Check normalized strings safely
-            if (normalizedRole === 'admin' || normalizedRole === 'super_admin' || normalizedRole === 'tournament_admin') {
-                document.getElementById('card-admin').style.display = 'block'; 
-                document.getElementById('card-scorer').style.display = 'block'; 
-            } else if (normalizedRole === 'scorer' || normalizedRole === 'official_scorer') {
-                document.getElementById('card-scorer').style.display = 'block'; 
-            }
-        }
 
         async function signOut() {
             await db.auth.signOut();
-            location.reload();
+            window.location.href = window.location.href.split('?')[0]; // Clean URL on sign out
         }
     </script>
 </body>
