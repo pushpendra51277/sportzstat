@@ -1,228 +1,174 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"> 
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sportzstat - Portal Authentication</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Sportzstat - Login Portal</title>
+    
+    <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: sans-serif; text-align: center; padding: 50px 20px; }
+        .auth-container { max-width: 400px; margin: 0 auto; background: #1e293b; padding: 30px; border-radius: 12px; border: 1px solid #334155; }
+        .input-group { margin-bottom: 15px; text-align: left; }
+        .input-group label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; }
+        .input-group input, .input-group select { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; box-sizing: border-box; }
+        .btn-launch { width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-alt { background: transparent; border: 1px dashed #3b82f6; color: #3b82f6; margin-top: 15px; }
+        
+        /* Dashboard Portal Styles */
+        #portal-dashboard { display: none; max-width: 600px; margin: 0 auto; }
+        .portal-card { background: #1e293b; border: 1px solid #3b82f6; border-radius: 12px; padding: 25px; text-align: center; margin-bottom: 20px; text-decoration: none; display: block; color: white; transition: 0.3s; }
+        .portal-card:hover { transform: translateY(-3px); background: #3b82f6; }
+        .portal-card h3 { margin: 0 0 10px 0; font-size: 1.2rem; }
+        .portal-card p { margin: 0; color: #cbd5e1; font-size: 0.85rem; }
+        .hidden { display: none; }
+    </style>
 </head>
 <body>
 
-<div class="container" style="max-width: 450px; margin-top: 10vh;">
-    <div class="setup-screen">
-        <h2 id="auth-title" class="text-primary text-center mb-10">PORTAL LOGIN</h2>
-        <p id="auth-subtitle" class="text-muted text-center mb-15">Enter your credentials to access your dashboard</p>
+    <h1 style="color: #3b82f6; letter-spacing: 2px; margin-bottom: 5px;">SPORTZSTAT</h1>
+    <p style="color: #94a3b8; margin-bottom: 30px;">Tournament Management & Live Scoring</p>
 
-        <!-- Google OAuth Button -->
-        <button type="button" id="btn-google" class="btn-action mb-15" style="background: white; color: #333; padding: 12px; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 10px;">
-            <svg width="20" height="20" viewBox="0 0 48 48">
-                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.73 17.74 9.5 24 9.5z"></path>
-                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
-                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
-                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
-            </svg>
-            Continue with Google
-        </button>
-
-        <div class="text-center text-muted mb-15" style="font-size: 0.75rem; letter-spacing: 2px;">— OR EMAIL —</div>
-
+    <!-- AUTHENTICATION FORMS -->
+    <div id="auth-section" class="auth-container">
+        <h2 id="auth-title" style="margin-top: 0;">System Login</h2>
+        
         <form id="auth-form">
-            <div id="role-group" class="input-group mb-10 hidden">
-                <label for="user-role">Account Type / Role</label>
-                <select id="user-role">
-                    <option value="fan">Fan / Viewer (Free 30-min Live Feed)</option>
-                    <option value="selector">Talent Selector / Scout (10 Player Career Limit)</option>
-                    <option value="scorer">Official Match Scorer</option>
-                    <option value="admin">Tournament Administrator</option>
+            <div class="input-group">
+                <label>Email Address</label>
+                <input type="email" id="auth-email" required>
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="auth-password" required>
+            </div>
+            
+            <!-- Only shown during Sign Up -->
+            <div class="input-group hidden" id="role-group">
+                <label>Select Role</label>
+                <select id="auth-role">
+                    <option value="admin">Tournament Admin</option>
+                    <option value="scorer">Official Scorer</option>
                 </select>
             </div>
 
-            <div class="input-group mb-10">
-                <label for="user-email">Email Address</label>
-                <input type="email" id="user-email" placeholder="name@domain.com" required>
-            </div>
-
-            <div class="input-group mb-15">
-                <label for="user-password">Password</label>
-                <input type="password" id="user-password" placeholder="••••••••" required>
-            </div>
-
-            <button type="submit" id="btn-submit" class="btn-launch mb-10">Sign In with Email</button>
+            <button type="submit" class="btn-launch" id="auth-submit-btn">Sign In</button>
         </form>
-
-        <div class="text-center mt-10">
-            <span id="toggle-text" class="text-muted" style="font-size: 0.85rem;">Don't have an account? </span>
-            <a href="#" id="auth-toggle" class="text-accent font-bold" style="text-decoration: none; font-size: 0.85rem;">Create Account</a>
-        </div>
+        
+        <button type="button" class="btn-launch btn-alt" id="toggle-auth-btn" onclick="toggleAuthMode()">Create New Account</button>
     </div>
-</div>
 
-<script>
-    const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
-    const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
-    
-    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    <!-- ROLE-BASED PORTAL DASHBOARD -->
+    <div id="portal-dashboard">
+        <h2 style="margin-bottom: 5px;">Welcome, <span id="user-role-display" style="color: #f59e0b; text-transform: capitalize;"></span></h2>
+        <p style="color: #94a3b8; margin-bottom: 30px;">Select your workspace below:</p>
 
-    const authForm = document.getElementById('auth-form');
-    const authTitle = document.getElementById('auth-title');
-    const authSubtitle = document.getElementById('auth-subtitle');
-    const roleGroup = document.getElementById('role-group');
-    const userRoleSelect = document.getElementById('user-role');
-    const btnSubmit = document.getElementById('btn-submit');
-    const authToggle = document.getElementById('auth-toggle');
-    const toggleText = document.getElementById('toggle-text');
-    const btnGoogle = document.getElementById('btn-google');
+        <!-- Admin Only Card -->
+        <a href="admin/index.html" class="portal-card" id="card-admin" style="display: none;">
+            <h3>🛠️ Tournament Creator Wizard</h3>
+            <p>Build fixtures, map pools, and assign officials.</p>
+        </a>
 
-    let isSignUpMode = false;
+        <!-- Accessible by Admin & Scorer -->
+        <a href="scorer/live.html" class="portal-card" id="card-scorer" style="display: none; border-color: #10b981;">
+            <h3>📊 Live Scoring Engine</h3>
+            <p>Access match postings and score live games ball-by-ball.</p>
+        </a>
 
-    authToggle.addEventListener('click', (e) => {
-        e.preventDefault();
-        isSignUpMode = !isSignUpMode;
+        <!-- Public View -->
+        <a href="fan.html" class="portal-card" style="border-color: #f59e0b;">
+            <h3>📺 Fan Viewing Portal</h3>
+            <p>View live scorecards and tournament standings.</p>
+        </a>
 
-        if (isSignUpMode) {
-            authTitle.innerText = "CREATE ACCOUNT";
-            authSubtitle.innerText = "Register your profile and select your role";
-            roleGroup.classList.remove('hidden');
-            btnSubmit.innerText = "Register via Email";
-            toggleText.innerText = "Already have an account? ";
-            authToggle.innerText = "Log In";
-        } else {
-            authTitle.innerText = "PORTAL LOGIN";
-            authSubtitle.innerText = "Enter your credentials to access your dashboard";
-            roleGroup.classList.add('hidden');
-            btnSubmit.innerText = "Sign In with Email";
-            toggleText.innerText = "Don't have an account? ";
-            authToggle.innerText = "Create Account";
-        }
-    });
+        <button onclick="signOut()" style="background: transparent; border: none; color: #ef4444; text-decoration: underline; cursor: pointer; margin-top: 20px;">Sign Out</button>
+    </div>
 
-    btnGoogle.addEventListener('click', async () => {
-        const { data, error } = await db.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: window.location.origin + '/fan.html' 
+    <script>
+        // Initialize Supabase
+        const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
+        const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let isSignUp = false;
+
+        // 1. Check for active session on load
+        window.onload = async () => {
+            const { data: { session } } = await db.auth.getSession();
+            if (session) {
+                loadPortalDashboard(session.user.id);
             }
-        });
-        if (error) {
-            alert("Error logging in with Google: " + error.message);
-        }
-    });
+        };
 
-    authForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('user-email').value;
-        const password = document.getElementById('user-password').value;
-
-        if (isSignUpMode) {
-            const selectedRole = userRoleSelect.value; // fan, selector, scorer, admin
-
-            // 1. Create Supabase Auth User
-            const { data, error } = await db.auth.signUp({
-                email: email,
-                password: password,
-            });
-            if (error) {
-                alert("Registration Error: " + error.message);
-                return;
+        function toggleAuthMode() {
+            isSignUp = !isSignUp;
+            document.getElementById('auth-title').innerText = isSignUp ? "Create Account" : "System Login";
+            document.getElementById('auth-submit-btn').innerText = isSignUp ? "Register" : "Sign In";
+            document.getElementById('toggle-auth-btn').innerText = isSignUp ? "Back to Login" : "Create New Account";
+            
+            if(isSignUp) {
+                document.getElementById('role-group').classList.remove('hidden');
+            } else {
+                document.getElementById('role-group').classList.add('hidden');
             }
+        }
 
-            // 2. Save their role to the `user_profiles` table
-            if (data.user) {
-                const { error: profileError } = await db.from('user_profiles').insert([{
-                    id: data.user.id,
-                    email: email,
-                    role: selectedRole
-                }]);
+        // 2. Handle Login / Registration
+        document.getElementById('auth-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const btn = document.getElementById('auth-submit-btn');
+            btn.innerText = "Processing...";
 
-                if (profileError) {
-                    alert("Account created, but role assignment failed: " + profileError.message);
-                } else {
-                    alert("Account created successfully! Please sign in.");
-                    authToggle.click(); 
+            if (isSignUp) {
+                const role = document.getElementById('auth-role').value;
+                // Create Auth User
+                const { data, error } = await db.auth.signUp({ email, password });
+                if (error) { alert("Error: " + error.message); btn.innerText = "Register"; return; }
+                
+                // Save Role to user_profiles table
+                if (data.user) {
+                    await db.from('user_profiles').insert([{ id: data.user.id, email: email, role: role }]);
+                    alert("Account created! You can now log in.");
+                    toggleAuthMode();
+                    btn.innerText = "Sign In";
                 }
-            }
-        } else {
-            // LOGIN MODE
-            const { data, error } = await db.auth.signInWithPassword({
-                email: email,
-                password: password,
-            });
-            if (error) {
-                alert("Login Error: " + error.message);
-                return;
-            }
-
-            // Fetch the user's role from Supabase to route them correctly
-            const { data: profileData, error: profileError } = await db
-                .from('user_profiles')
-                .select('role')
-                .eq('id', data.user.id)
-                .single();
-
-            if (profileError || !profileData) {
-                alert("No role profile found for this account. Defaulting to Fan view.");
-                window.location.href = "fan.html";
-                return;
-            }
-
-            const role = profileData.role;
-
-            // INTELLIGENT ROUTING BASED ON ROLE
-            if (role === "admin") {
-                window.location.href = "admin/index.html";
-            } else if (role === "scorer") {
-                window.location.href = "scorer/live.html";
             } else {
-                // Fans and selectors go to the fan/viewer experience
-                window.location.href = "fan.html";
-            }
-        }
-    });
-
-    btnGoogle.addEventListener('click', async () => {
-        // FIX: Replaced 'supabase' with 'db'
-        const { data, error } = await db.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: window.location.origin + '/fan.html' 
+                // Login
+                const { data, error } = await db.auth.signInWithPassword({ email, password });
+                if (error) { alert("Error: " + error.message); btn.innerText = "Sign In"; return; }
+                
+                loadPortalDashboard(data.user.id);
             }
         });
-        if (error) {
-            alert("Error logging in with Google: " + error.message);
-        }
-    });
 
-    authForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('user-email').value;
-        const password = document.getElementById('user-password').value;
+        // 3. Load Dynamic Role Hierarchy Dashboard
+        async function loadPortalDashboard(userId) {
+            document.getElementById('auth-section').style.display = 'none';
+            
+            // Fetch user role from user_profiles table
+            const { data, error } = await db.from('user_profiles').select('role').eq('id', userId).single();
+            
+            let userRole = data ? data.role : 'fan';
+            document.getElementById('user-role-display').innerText = userRole;
+            document.getElementById('portal-dashboard').style.display = 'block';
 
-        if (isSignUpMode) {
-            // FIX: Replaced 'supabase' with 'db'
-            const { data, error } = await db.auth.signUp({
-                email: email,
-                password: password,
-            });
-            if (error) {
-                alert("Registration Error: " + error.message);
-            } else {
-                alert("Account created successfully! Please sign in.");
-                authToggle.click(); 
-            }
-        } else {
-            // FIX: Replaced 'supabase' with 'db'
-            const { data, error } = await db.auth.signInWithPassword({
-                email: email,
-                password: password,
-            });
-            if (error) {
-                alert("Login Error: " + error.message);
-            } else {
-                window.location.href = "admin/index.html"; 
+            // Apply Role Hierarchy Logic
+            if (userRole === 'admin' || userRole === 'super_admin') {
+                document.getElementById('card-admin').style.display = 'block'; 
+                document.getElementById('card-scorer').style.display = 'block'; // Admin inherits Scorer privileges
+            } else if (userRole === 'scorer') {
+                document.getElementById('card-scorer').style.display = 'block'; // Restricted to Scoring only
             }
         }
-    });
-</script>
+
+        async function signOut() {
+            await db.auth.signOut();
+            location.reload();
+        }
+    </script>
 </body>
 </html>
