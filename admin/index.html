@@ -781,11 +781,22 @@
             const clone = group.children[0].cloneNode(true);
             clone.selectedIndex = 0; 
             group.appendChild(clone);
+        function generateUniquePin(existingPins) {
+            let pin;
+            do {
+                pin = Math.floor(1000 + Math.random() * 9000).toString(); // Generates 1000 to 9999
+            } while (existingPins.includes(pin));
+            return pin;
         }
 
         function savePostings() {
             let tName = document.getElementById('t-name').value || "Official Tournament";
-            let finalOutput = [];
+            
+            // Pull existing matches so we don't overwrite other admins' tournaments
+            let existingMatches = JSON.parse(localStorage.getItem('cricket_matches') || '[]');
+            let existingPins = existingMatches.map(m => m.pin);
+            
+            let newMatches = [];
             let rows = document.querySelectorAll('#postings-body tr');
 
             rows.forEach((row, index) => {
@@ -795,7 +806,12 @@
                     let scorers = Array.from(row.cells[2].querySelectorAll('select')).map(s => s.value).filter(v => !v.includes('Select'));
                     let refs = Array.from(row.cells[3].querySelectorAll('select')).map(s => s.value).filter(v => !v.includes('Select'));
 
-                    finalOutput.push({
+                    // Generate PIN for this specific match
+                    let matchPin = generateUniquePin(existingPins);
+                    existingPins.push(matchPin);
+
+                    newMatches.push({
+                        pin: matchPin,
                         matchNum: mObj.matchNum, 
                         matchName: mObj.matchName,
                         tournament: tName,
@@ -808,8 +824,42 @@
                 }
             });
 
-            localStorage.setItem('cricket_matches', JSON.stringify(finalOutput));
-            alert("Success! Fixtures and assignments locked. Your Live Scoring Engine can now Fetch these matches seamlessly.");
+            // Save combined global list
+            let allMatches = [...existingMatches, ...newMatches];
+            localStorage.setItem('cricket_matches', JSON.stringify(allMatches));
+            
+            // Display PINs to the Admin
+            displayPinsToAdmin(newMatches);
+        }
+
+        function displayPinsToAdmin(matches) {
+            const container = document.getElementById('step4');
+            let html = `<div style="background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #10b981; margin-top: 25px; animation: fadeIn 0.5s;">
+                <h3 style="color: #10b981; margin-top: 0;">✅ Postings Locked Successfully!</h3>
+                <p style="color: #94a3b8; font-size: 0.9rem;">Share these 4-digit PINs with your Scorers so they can access their matches.</p>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem;">
+                    <tr style="background: #1e293b; color: #cbd5e1;">
+                        <th style="padding: 10px; text-align: left;">Match</th>
+                        <th style="padding: 10px; text-align: left;">Teams</th>
+                        <th style="padding: 10px; text-align: center; color: #f59e0b;">Scorer PIN</th>
+                    </tr>`;
+            
+            matches.forEach(m => {
+                html += `<tr style="border-bottom: 1px solid #1e293b;">
+                    <td style="padding: 10px; color: white;"><b>${m.matchNum}</b>: ${m.matchName}</td>
+                    <td style="padding: 10px; color: #94a3b8;">${m.team1} vs ${m.team2}</td>
+                    <td style="padding: 10px; text-align: center; font-size: 1.5rem; font-weight: bold; color: #f59e0b; letter-spacing: 3px;">${m.pin}</td>
+                </tr>`;
+            });
+            html += `</table></div>`;
+            
+            let existingDisplay = document.getElementById('pin-display-area');
+            if(!existingDisplay) {
+                existingDisplay = document.createElement('div');
+                existingDisplay.id = 'pin-display-area';
+                container.querySelector('.admin-form').appendChild(existingDisplay);
+            }
+            existingDisplay.innerHTML = html;
         }
     </script>
 </body>
