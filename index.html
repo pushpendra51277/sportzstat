@@ -173,10 +173,59 @@
         // Dashboard Router with Bulletproof Role Normalization
         async function loadPortalDashboard(userId) {
             document.getElementById('auth-section').style.display = 'none';
-            
             const { data, error } = await db.from('user_profiles').select('role').eq('id', userId).single();
             
             let rawRole = data && data.role ? data.role : 'Fan';
+            let normalizedRole = rawRole.toLowerCase().replace(/[^a-z]/g, ''); // Aggressive strip
+            
+            document.getElementById('user-role-display').innerText = rawRole;
+            document.getElementById('portal-dashboard').style.display = 'block';
+
+            // SUPER ADMIN GETS EVERYTHING
+            if (normalizedRole === 'superadmin') {
+                document.getElementById('card-admin').style.display = 'block'; 
+                document.getElementById('card-scorer').style.display = 'block'; 
+                document.getElementById('card-superadmin').style.display = 'block'; 
+            } 
+            // TOURNAMENT ADMIN GETS WIZARD & SCORING
+            else if (normalizedRole === 'admin' || normalizedRole === 'tournamentadmin') {
+                document.getElementById('card-admin').style.display = 'block'; 
+                document.getElementById('card-scorer').style.display = 'block'; 
+            } 
+            // SCORER GETS ONLY SCORING
+            else if (normalizedRole === 'scorer' || normalizedRole === 'officialscorer') {
+                document.getElementById('card-scorer').style.display = 'block'; 
+            }
+        }
+
+        function showGlobalDirectory(e) {
+            e.preventDefault();
+            const matches = JSON.parse(localStorage.getItem('cricket_matches') || '[]');
+            const container = document.getElementById('directory-content');
+            
+            if(matches.length === 0) {
+                container.innerHTML = "<p style='color: #94a3b8; text-align: center;'>No matches have been locked by any Admin yet.</p>";
+            } else {
+                let html = `<table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; color: white;">
+                    <tr style="border-bottom: 1px solid #334155; color: #94a3b8; text-align: left;">
+                        <th style="padding: 8px;">Tournament</th>
+                        <th style="padding: 8px;">Match</th>
+                        <th style="padding: 8px;">Teams</th>
+                        <th style="padding: 8px; text-align: center;">PIN</th>
+                    </tr>`;
+                matches.forEach(m => {
+                    html += `<tr style="border-bottom: 1px solid #1e293b;">
+                        <td style="padding: 8px;">${m.tournament}</td>
+                        <td style="padding: 8px; color: #cbd5e1;">${m.matchNum}</td>
+                        <td style="padding: 8px; color: #cbd5e1;">${m.team1} v ${m.team2}</td>
+                        <td style="padding: 8px; text-align: center; color: #f59e0b; font-weight: bold; font-size: 1.1rem; letter-spacing: 1px;">${m.pin}</td>
+                    </tr>`;
+                });
+                html += `</table>`;
+                container.innerHTML = html;
+            }
+            document.getElementById('global-directory').style.display = 'block';
+        }
             
             // This safely converts "Super Admin" to "super_admin"
             let normalizedRole = rawRole.toLowerCase().trim().replace(/\s+/g, '_');
