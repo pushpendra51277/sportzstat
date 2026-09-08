@@ -1148,4 +1148,36 @@ function fetchOfficialMatch() {
     // Success Message
     statusEl.innerText = `✅ Match Found! Auto-filled data for ${matchData.matchName}. You may edit any field before calling 'Play'.`;
     statusEl.style.color = "#10b981";
+    // ==========================================
+        // ADMIN MATCH SYNC (FETCH VIA 4-DIGIT PIN)
+        // ==========================================
+        function fetchOfficialMatch() {
+            const pin = document.getElementById('match-pin-input').value.trim();
+            const statusEl = document.getElementById('sync-status');
+            
+            if(!pin || pin.length !== 4) {
+                statusEl.innerHTML = '<span style="color: #ef4444;">Please enter a valid 4-digit PIN.</span>';
+                return;
+            }
+
+            // Fetch the master list of all matches
+            const storedMatches = JSON.parse(localStorage.getItem('cricket_matches') || '[]');
+            const matchData = storedMatches.find(m => m.pin === pin);
+
+            if(matchData) {
+                // Change 'team1-name' and 'team2-name' to match whatever IDs your scorer file uses!
+                document.getElementById('team1-name').value = matchData.team1;
+                document.getElementById('team2-name').value = matchData.team2;
+                
+                statusEl.innerHTML = `<span style="color: #10b981;">✅ Synced: ${matchData.matchName} (${matchData.team1} vs ${matchData.team2})</span>`;
+                
+                // Lock inputs
+                document.getElementById('team1-name').readOnly = true;
+                document.getElementById('team2-name').readOnly = true;
+                document.getElementById('team1-name').style.border = "1px solid #10b981";
+                document.getElementById('team2-name').style.border = "1px solid #10b981";
+            } else {
+                statusEl.innerHTML = `<span style="color: #ef4444;">❌ Invalid PIN. No match found.</span>`;
+            }
+        }
 }
