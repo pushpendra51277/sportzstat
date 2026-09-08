@@ -29,27 +29,28 @@
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* PLAYER DATA PODS */
         .player-pod { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #334155; position: relative; }
         .pod-row-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px; }
         .pod-row-2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
         .pod-input { background: #0f172a; color: #f8fafc; border: 1px solid #475569; padding: 8px; border-radius: 4px; width: 100%; font-size: 0.85rem; }
         .remove-pod-btn { position: absolute; top: -10px; right: -10px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-weight: bold; line-height: 1; }
 
-        /* EDITABLE MATCHES LIST (NEW) */
-        .editable-match-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; background: #1e293b; padding: 10px; border-radius: 6px; border: 1px solid #334155;}
-        .editable-match-input { flex: 1; padding: 8px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 4px; font-weight: bold; }
-        .btn-delete { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;}
-        .btn-delete:hover { background: #dc2626; }
-
-        /* POSTINGS GRID (NEW) */
+        /* POSTINGS GRID */
         .postings-grid { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.85rem; }
         .postings-grid th { background: #1e293b; color: #94a3b8; padding: 10px; text-align: left; }
         .postings-grid td { padding: 15px 10px; border-bottom: 1px solid #1e293b; background: #0f172a; vertical-align: top;}
         .official-select-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
         .postings-select { width: 100%; padding: 8px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 4px; }
         .btn-add-small { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px dashed #3b82f6; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; width: 100%; font-weight: bold;}
-        .btn-add-small:hover { background: rgba(59, 130, 246, 0.4); }
+        
+        /* MANUAL CANVAS STYLES */
+        .canvas-row { background: #1e293b; border: 1px solid #3b82f6; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+        .canvas-header { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
+        .canvas-match-id { color: #f59e0b; font-weight: bold; font-size: 1.1rem; }
+        .canvas-name-input { background: #0f172a; border: 1px solid #475569; color: white; padding: 8px; border-radius: 4px; width: 60%; }
+        .canvas-teams { display: flex; gap: 15px; align-items: center; }
+        .canvas-teams select { flex: 1; }
+        .btn-delete { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold;}
     </style>
 </head>
 <body style="text-align: center; padding: 20px;">
@@ -60,7 +61,7 @@
     <div class="wizard-nav" style="max-width: 1100px; margin: 0 auto 25px auto;">
         <div class="wizard-step active" onclick="switchStep('step1')">1. Setup & Teams</div>
         <div class="wizard-step" onclick="switchStep('step2')">2. Add Players</div>
-        <div class="wizard-step" onclick="switchStep('step3')">3. Fixtures</div>
+        <div class="wizard-step" onclick="switchStep('step3')">3. Draw Canvas</div>
         <div class="wizard-step" onclick="switchStep('step4')">4. Match Postings</div>
     </div>
 
@@ -105,78 +106,48 @@
             </div>
         </div>
 
-        <!-- STEP 3 (NEW EDITABLE FIXTURES ENGINE) -->
+        <!-- STEP 3 (NEW MANUAL CANVAS) -->
         <div id="step3" class="dashboard-section">
             <div class="admin-form">
-                <h3 style="margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px;">3. Generate Fixtures (Fully Editable)</h3>
-                <form id="form-fixtures" class="form-grid">
-                    <div class="input-group">
-                        <label>Total Teams Detected</label>
-                        <input type="text" id="f-team-count" readonly value="0" style="background: #1e293b; color: #10b981; font-weight: bold;">
-                    </div>
-                    
-                    <div class="input-group">
-                        <label>Tournament Structure *</label>
-                        <select id="f-format" required onchange="toggleKnockoutOptions()">
-                            <option value="league_std">League Phase + Standard Knockout</option>
-                            <option value="league_ipl">League Phase + IPL Style Playoffs</option>
-                            <option value="pure_knockout">Pure Knockout (No League)</option>
-                        </select>
-                    </div>
-
-                    <div class="input-group full-width" id="league-round-container">
-                        <label>League Rounds</label>
-                        <select id="f-rounds">
-                            <option value="1">Single Round Robin (Play everyone once)</option>
-                            <option value="2">Double Round Robin (Home & Away)</option>
-                        </select>
-                    </div>
-
-                    <!-- NEW: Knockout Checkboxes -->
-                    <div class="input-group full-width" id="knockout-options" style="background: #1e293b; padding: 15px; border-radius: 6px; border: 1px dashed #334155; margin-top: 10px;">
-                        <label style="color: #f59e0b; margin-bottom: 10px; display: block;">Select Knockout Stages to Include:</label>
-                        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                            <label style="cursor: pointer; color: white;"><input type="checkbox" id="chk-pre-quarter"> Pre-Quarter Finals</label>
-                            <label style="cursor: pointer; color: white;"><input type="checkbox" id="chk-quarter"> Quarter Finals</label>
-                            <label style="cursor: pointer; color: white;"><input type="checkbox" id="chk-semi" checked> Semi Finals</label>
-                        </div>
-                    </div>
-
-                    <button type="button" class="btn-launch full-width mt-10" style="background: #f59e0b;" onclick="generateFixtures()">Generate Match List</button>
-                </form>
-
-                <div id="fixture-results" style="display: none; margin-top: 30px; border-top: 2px solid #334155; padding-top: 20px;">
-                    <!-- NEW: Tournament Name Heading -->
-                    <h2 id="fixture-tourney-title" style="color: #10b981; text-transform: uppercase; margin-bottom: 20px; text-align: center; font-size: 1.4rem;"></h2>
-                    <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 15px;">Rename, delete, or add matches below. The final list here will be passed to Match Postings.</p>
-                    
-                    <div id="editable-matches-container"></div>
-                    
-                    <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #475569; width: 100%; margin-top: 10px; padding: 12px; color: #cbd5e1;" onclick="addManualMatch()">+ Add Custom Match</button>
+                <h3 style="margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px;">3. The Draw Canvas</h3>
+                
+                <!-- Reminder UI for Roadmap -->
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <span style="background: #3b82f6; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">Mode: Manual Canvas Active</span>
+                    <span style="background: #334155; color: #94a3b8; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">Pools/Groups Module: Pending</span>
+                    <span style="background: #334155; color: #94a3b8; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">Knockout Mapping: Pending</span>
                 </div>
+
+                <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">Build your matches sequentially. Select actual teams, or use dynamic placeholders (e.g. "Winner of M-1") for future rounds.</p>
+                
+                <div id="canvas-container"></div>
+                
+                <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #10b981; width: 100%; padding: 15px; color: #10b981; font-weight: bold; font-size: 1rem;" onclick="addManualMatch()">+ ADD MATCH TO CANVAS</button>
+                
+                <button type="button" class="btn-launch full-width mt-20" style="background: #f59e0b;" onclick="lockCanvasAndProceed()">Lock Canvas & Proceed to Postings</button>
             </div>
         </div>
 
-        <!-- STEP 4 (NEW DYNAMIC POSTINGS) -->
+        <!-- STEP 4 -->
         <div id="step4" class="dashboard-section">
             <div class="admin-form" style="overflow-x: auto;">
                 <h3 style="border-bottom: 1px solid #334155; padding-bottom: 10px;">4. Official Assignments (Postings)</h3>
-                <p style="color:#94a3b8; font-size:0.8rem; margin-bottom: 15px;">Assign your officials. Use the "+ Add" buttons to expand slots for extra officials (Max: 5 Umpires, 4 Scorers, 2 Referees).</p>
+                <p style="color:#94a3b8; font-size:0.8rem; margin-bottom: 15px;">Assign your officials to the Canvas draw.</p>
                 
                 <table class="postings-grid">
                     <thead>
                         <tr>
-                            <th style="width: 25%;">Match Name</th>
-                            <th style="width: 25%;">Umpires (Default: 2)</th>
-                            <th style="width: 25%;">Scorers (Default: 2)</th>
-                            <th style="width: 25%;">Referees (Default: 1)</th>
+                            <th style="width: 25%;">Match Details</th>
+                            <th style="width: 25%;">Umpires</th>
+                            <th style="width: 25%;">Scorers</th>
+                            <th style="width: 25%;">Referees</th>
                         </tr>
                     </thead>
                     <tbody id="postings-body">
-                        <tr><td colspan="4" style="text-align: center; color: #94a3b8;">Generate fixtures in Step 3 to view postings.</td></tr>
+                        <tr><td colspan="4" style="text-align: center; color: #94a3b8;">Build your canvas in Step 3 to view postings.</td></tr>
                     </tbody>
                 </table>
-                <button type="button" class="btn-launch full-width mt-20" style="background: #3b82f6; font-size: 1.1rem; padding: 15px;" onclick="savePostings()">Lock All Postings & Schedule</button>
+                <button type="button" class="btn-launch full-width mt-20" style="background: #3b82f6; font-size: 1.1rem; padding: 15px;" onclick="savePostings()">Lock All Postings & Deploy to Scorer</button>
             </div>
         </div>
 
@@ -188,19 +159,12 @@
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let activeTeams = []; 
-        let generatedMatches = []; // This array is now the master source of truth for the editable list
+        let manualMatches = []; // Array of objects: { id: "M-1", name: "", t1: "", t2: "" }
 
-        // ==========================================
-        // INITIALIZATION
-        // ==========================================
         window.onload = () => { 
             flatpickr("input[type='date']", { dateFormat: "Y-m-d", disableMobile: true });
-            
-            const container = document.getElementById('team-inputs-container');
-            for(let i=1; i<=8; i++){
-                container.innerHTML += `<div class="team-input-row"><input type="text" class="tourney-team-input" placeholder="Team ${i} Name"></div>`;
-            }
-            for(let i=0; i<3; i++) { addPlayerPod(); }
+            for(let i=1; i<=8; i++) addTeamField(i);
+            for(let i=0; i<3; i++) addPlayerPod();
         };
 
         function switchStep(stepId) {
@@ -208,22 +172,20 @@
             document.querySelectorAll('.dashboard-section').forEach(sec => sec.classList.remove('active'));
             event.target.classList.add('active');
             document.getElementById(stepId).classList.add('active');
+            if(stepId === 'step3') renderCanvas(); // Refresh placeholders if teams were added
         }
 
-        function addTeamField() {
-            const count = document.querySelectorAll('.tourney-team-input').length + 1;
+        function addTeamField(forceCount = null) {
+            const count = forceCount || document.querySelectorAll('.tourney-team-input').length + 1;
             const container = document.getElementById('team-inputs-container');
-            
-            // Create a new element safely so it doesn't wipe existing typed text
             const newDiv = document.createElement('div');
             newDiv.className = 'team-input-row';
             newDiv.innerHTML = `<input type="text" class="tourney-team-input" placeholder="Team ${count} Name">`;
-            
             container.appendChild(newDiv);
         }
 
         // ==========================================
-        // STEP 1 & 2 (Unchanged Logic)
+        // STEP 1 & 2
         // ==========================================
         document.getElementById('form-step1').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -254,8 +216,7 @@
             select.innerHTML = '<option value="">Select a team to add players...</option>';
             activeTeams.forEach(team => { select.innerHTML += `<option value="${team}">${team}</option>`; });
             
-            document.getElementById('f-team-count').value = activeTeams.length;
-            alert(`Success! Tournament Created and ${activeTeams.length} Teams added to Registry.`);
+            alert(`Success! Tournament Created and ${activeTeams.length} Teams registered.`);
             btn.innerText = "Save Tournament & Teams";
             document.querySelectorAll('.wizard-step')[1].click();
         });
@@ -306,152 +267,146 @@
         }
 
         // ==========================================
-        // STEP 3: NEW EDITABLE FIXTURES LOGIC
+        // STEP 3: MANUAL CANVAS LOGIC
         // ==========================================
-        function toggleKnockoutOptions() {
-            const format = document.getElementById('f-format').value;
-            const opts = document.getElementById('knockout-options');
-            if (format === 'league_ipl') opts.style.display = 'none'; // IPL has strict rules (Q1, Elim, Q2, Final)
-            else opts.style.display = 'block';
+        function addManualMatch() {
+            let nextId = "M-" + (manualMatches.length + 1);
+            manualMatches.push({ id: nextId, name: `Match ${manualMatches.length + 1}`, t1: "", t2: "" });
+            renderCanvas();
         }
 
-        function generateFixtures() {
-            const format = document.getElementById('f-format').value;
-            const rounds = parseInt(document.getElementById('f-rounds').value);
-            const teamCount = activeTeams.length || parseInt(document.getElementById('f-team-count').value);
-            const tName = document.getElementById('t-name').value || "Official Tournament";
-            
-            document.getElementById('fixture-results').style.display = 'block';
-            document.getElementById('fixture-tourney-title').innerText = `${tName} - Match Schedule`;
+        function renderCanvas() {
+            const container = document.getElementById('canvas-container');
+            container.innerHTML = "";
 
-            generatedMatches = [];
-            let matchCounter = 1;
+            manualMatches.forEach((match, index) => {
+                // Build dynamic dropdown options based on previous matches and active teams
+                let optionsHtml = `<option value="">Select Team or Placeholder...</option>`;
+                
+                // Real Teams
+                optionsHtml += `<optgroup label="Registered Teams">`;
+                activeTeams.forEach(team => { optionsHtml += `<option value="${team}">${team}</option>`; });
+                optionsHtml += `</optgroup>`;
 
-            // 1. Generate League Matches
-            if(format.includes('league') && teamCount > 1) {
-                const leagueMatches = ((teamCount * (teamCount - 1)) / 2) * rounds;
-                for(let i=0; i<leagueMatches; i++) {
-                    generatedMatches.push(`League Match ${matchCounter}`);
-                    matchCounter++;
+                // Dynamic Placeholders (Only generated from matches created BEFORE this one)
+                if (index > 0) {
+                    optionsHtml += `<optgroup label="Match Progressions">`;
+                    for(let i = 0; i < index; i++) {
+                        let prevM = manualMatches[i].id;
+                        optionsHtml += `<option value="Winner of ${prevM}">Winner of ${prevM}</option>`;
+                        optionsHtml += `<option value="Loser of ${prevM}">Loser of ${prevM}</option>`;
+                    }
+                    optionsHtml += `</optgroup>`;
                 }
-            }
 
-            // 2. Generate Knockout Matches Based on Checkboxes
-            if (format === 'league_ipl') {
-                generatedMatches.push("Qualifier 1", "Eliminator", "Qualifier 2", "Grand Final");
-            } else {
-                if(document.getElementById('chk-pre-quarter').checked) {
-                    for(let i=1; i<=8; i++) generatedMatches.push(`Pre-Quarter Final ${i}`);
-                }
-                if(document.getElementById('chk-quarter').checked) {
-                    for(let i=1; i<=4; i++) generatedMatches.push(`Quarter Final ${i}`);
-                }
-                if(document.getElementById('chk-semi').checked) {
-                    generatedMatches.push("Semi-Final 1", "Semi-Final 2");
-                }
-                generatedMatches.push("Championship Final");
-            }
-
-            renderEditableMatches();
+                // Render the row
+                let row = document.createElement('div');
+                row.className = 'canvas-row';
+                row.innerHTML = `
+                    <div class="canvas-header">
+                        <span class="canvas-match-id">${match.id}</span>
+                        <input type="text" class="canvas-name-input" value="${match.name}" oninput="updateMatch(${index}, 'name', this.value)" placeholder="e.g. Quarter Final 1">
+                        <button type="button" class="btn-delete" onclick="deleteMatch(${index})">X</button>
+                    </div>
+                    <div class="canvas-teams">
+                        <select class="postings-select" onchange="updateMatch(${index}, 't1', this.value)">
+                            ${optionsHtml.replace(`value="${match.t1}"`, `value="${match.t1}" selected`)}
+                        </select>
+                        <span style="color: white; font-weight: bold;">VS</span>
+                        <select class="postings-select" onchange="updateMatch(${index}, 't2', this.value)">
+                            ${optionsHtml.replace(`value="${match.t2}"`, `value="${match.t2}" selected`)}
+                        </select>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
         }
 
-        // Renders the inputs so users can edit the generated names
-        function renderEditableMatches() {
-            const container = document.getElementById('editable-matches-container');
-            container.innerHTML = generatedMatches.map((matchName, index) => `
-                <div class="editable-match-row">
-                    <span style="color: #94a3b8; font-size: 0.8rem; font-weight: bold; width: 30px;">M${index+1}</span>
-                    <input type="text" class="editable-match-input" value="${matchName}" onchange="updateMatchName(${index}, this.value)">
-                    <button type="button" class="btn-delete" onclick="deleteMatch(${index})">Delete</button>
-                </div>
-            `).join('');
-            
-            buildPostingsGrid(); // Auto-syncs Step 4 when changes are made
+        function updateMatch(index, field, value) {
+            manualMatches[index][field] = value;
+            if(field !== 'name') renderCanvas(); // Re-render to update downstream placeholders if a team changes
         }
 
-        function updateMatchName(index, val) { generatedMatches[index] = val; buildPostingsGrid(); }
-        function deleteMatch(index) { generatedMatches.splice(index, 1); renderEditableMatches(); }
-        function addManualMatch() { generatedMatches.push("New Custom Match"); renderEditableMatches(); }
+        function deleteMatch(index) {
+            manualMatches.splice(index, 1);
+            // Re-sequence IDs
+            manualMatches.forEach((m, i) => m.id = "M-" + (i+1));
+            renderCanvas();
+        }
+
+        function lockCanvasAndProceed() {
+            if(manualMatches.length === 0) { alert("Please build at least one match on the canvas."); return; }
+            buildPostingsGrid();
+            document.querySelectorAll('.wizard-step')[3].click();
+        }
 
         // ==========================================
-        // STEP 4: DYNAMIC POSTINGS GRID
+        // STEP 4: POSTINGS GRID
         // ==========================================
         function buildPostingsGrid() {
             const tbody = document.getElementById('postings-body');
-            if(generatedMatches.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#94a3b8;">No matches generated yet.</td></tr>`;
-                return;
-            }
-
             const mockUmpires = "<option>Select Umpire...</option><option>Simon Taufel</option><option>Aleem Dar</option><option>Billy Bowden</option>";
             const mockScorers = "<option>Select Scorer...</option><option>Official Scorer 1</option><option>Official Scorer 2</option>";
             const mockReferees = "<option>Select Referee...</option><option>Match Ref 1</option><option>Match Ref 2</option>";
 
-            // Renders the default assignments (2 Umpires, 2 Scorers, 1 Ref) with + buttons
-            tbody.innerHTML = generatedMatches.map((match, i) => `
+            tbody.innerHTML = manualMatches.map((mObj, i) => `
                 <tr>
-                    <td style="font-weight: bold; color: #10b981; font-size: 1rem;">${match}</td>
+                    <td style="font-weight: bold; color: #10b981; font-size: 1rem;">
+                        ${mObj.id}: ${mObj.name}
+                        <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 5px;">
+                            ${mObj.t1 || 'TBD'} <br>vs<br> ${mObj.t2 || 'TBD'}
+                        </div>
+                    </td>
                     <td>
                         <div class="official-select-group" id="ump-group-${i}">
                             <select class="postings-select">${mockUmpires}</select>
                             <select class="postings-select">${mockUmpires}</select>
                         </div>
-                        <button type="button" class="btn-add-small" onclick="addOfficialSlot('ump-group-${i}', 5, 'Umpire')">+ Add Umpire (Max 5)</button>
+                        <button type="button" class="btn-add-small" onclick="addOfficialSlot('ump-group-${i}', 5, 'Umpire')">+ Add Umpire</button>
                     </td>
                     <td>
                         <div class="official-select-group" id="sco-group-${i}">
                             <select class="postings-select">${mockScorers}</select>
                             <select class="postings-select">${mockScorers}</select>
                         </div>
-                        <button type="button" class="btn-add-small" onclick="addOfficialSlot('sco-group-${i}', 4, 'Scorer')">+ Add Scorer (Max 4)</button>
+                        <button type="button" class="btn-add-small" onclick="addOfficialSlot('sco-group-${i}', 4, 'Scorer')">+ Add Scorer</button>
                     </td>
                     <td>
                         <div class="official-select-group" id="ref-group-${i}">
                             <select class="postings-select">${mockReferees}</select>
                         </div>
-                        <button type="button" class="btn-add-small" onclick="addOfficialSlot('ref-group-${i}', 2, 'Referee')">+ Add Referee (Max 2)</button>
+                        <button type="button" class="btn-add-small" onclick="addOfficialSlot('ref-group-${i}', 2, 'Referee')">+ Add Referee</button>
                     </td>
                 </tr>
             `).join('');
         }
 
-        // Handles adding extra dropdowns dynamically up to the specific limit
         function addOfficialSlot(groupId, maxAllowed, roleName) {
             const group = document.getElementById(groupId);
-            if(group.children.length >= maxAllowed) {
-                alert(`You can only assign a maximum of ${maxAllowed} ${roleName}s per match.`);
-                return;
-            }
+            if(group.children.length >= maxAllowed) { alert(`Max ${maxAllowed} ${roleName}s allowed.`); return; }
             const clone = group.children[0].cloneNode(true);
-            clone.selectedIndex = 0; // Reset to "Select..."
+            clone.selectedIndex = 0; 
             group.appendChild(clone);
         }
 
-        // Gathers everything and saves it to local storage for the Scorer app to pull
         function savePostings() {
             let tName = document.getElementById('t-name').value || "Official Tournament";
-            let matchesData = [];
+            let finalOutput = [];
             let rows = document.querySelectorAll('#postings-body tr');
 
             rows.forEach((row, index) => {
                 if(row.cells.length === 4) {
-                    // Extract all selections dynamically, ignore unselected dropdowns
-                    let matchTitle = generatedMatches[index];
+                    let mObj = manualMatches[index];
                     let umpires = Array.from(row.cells[1].querySelectorAll('select')).map(s => s.value).filter(v => !v.includes('Select'));
                     let scorers = Array.from(row.cells[2].querySelectorAll('select')).map(s => s.value).filter(v => !v.includes('Select'));
                     let refs = Array.from(row.cells[3].querySelectorAll('select')).map(s => s.value).filter(v => !v.includes('Select'));
 
-                    // Just grabbing active teams for the demo bridge
-                    let t1 = activeTeams.length > 0 ? activeTeams[0] : "Team A";
-                    let t2 = activeTeams.length > 1 ? activeTeams[1] : "Team B";
-
-                    matchesData.push({
-                        matchNum: "M-" + (index + 1), // M-1, M-2...
-                        matchName: matchTitle,
+                    finalOutput.push({
+                        matchNum: mObj.id, 
+                        matchName: mObj.name,
                         tournament: tName,
-                        team1: t1,
-                        team2: t2,
-                        // Saving all assigned officials as comma-separated lists for the database
+                        team1: mObj.t1 || "TBD",
+                        team2: mObj.t2 || "TBD",
                         umpires: umpires.join(", ") || "", 
                         scorers: scorers.join(", ") || "",
                         referees: refs.join(", ") || ""
@@ -459,8 +414,8 @@
                 }
             });
 
-            localStorage.setItem('cricket_matches', JSON.stringify(matchesData));
-            alert("Success! All match structures and assigned officials have been locked. The Live Scoring Engine can now Fetch these matches using their IDs (M-1, M-2, etc.).");
+            localStorage.setItem('cricket_matches', JSON.stringify(finalOutput));
+            alert("Success! Canvas locked. Your Live Scoring Engine can now Fetch these exact matches and placeholders.");
         }
     </script>
 </body>
