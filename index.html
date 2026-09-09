@@ -35,6 +35,10 @@
         <h2 id="auth-title" style="margin-top: 0;">System Login</h2>
         
         <form id="auth-form" onsubmit="event.preventDefault();">
+            <div class="input-group hidden" id="name-group">
+                <label>Full Name</label>
+                <input type="text" id="auth-name" placeholder="John Doe">
+            </div>
             <div class="input-group">
                 <label>Email Address</label>
                 <input type="email" id="auth-email" required>
@@ -45,61 +49,53 @@
             </div>
             
             <div class="input-group hidden" id="role-group">
-                <label>Select Role</label>
+                <label>Request Role</label>
                 <select id="auth-role">
-                    <option value="admin">Tournament Admin</option>
+                    <option value="fan">Fan (Default)</option>
                     <option value="scorer">Official Scorer</option>
+                    <option value="admin">Tournament Admin</option>
                 </select>
             </div>
 
             <button type="submit" class="btn-launch" id="auth-submit-btn">Sign In</button>
         </form>
-
-        <div style="margin: 20px 0; border-bottom: 1px solid #334155; height: 1px; text-align: center;">
-            <span style="background: #1e293b; padding: 0 10px; color: #94a3b8; font-size: 0.8rem; position: relative; top: -10px;">OR</span>
-        </div>
-
-        <button type="button" class="btn-launch" style="background: white; color: #0f172a; border: 1px solid #cbd5e1;" onclick="signInWithGoogle()">
-            <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
-            Sign in with Google
-        </button>
         
         <button type="button" class="btn-launch btn-alt" id="toggle-auth-btn" onclick="toggleAuthMode()">Create New Account</button>
     </div>
 
     <!-- ROLE-BASED PORTAL DASHBOARD -->
     <div id="portal-dashboard">
-        <h2 style="margin-bottom: 5px;">Welcome, <span id="user-role-display" style="color: #f59e0b; text-transform: capitalize;"></span></h2>
-        <p style="color: #94a3b8; margin-bottom: 30px;">Select your workspace below:</p>
+        <h2 style="margin-bottom: 5px;">Welcome, <span id="user-name-display" style="color: white;"></span></h2>
+        <p style="color: #94a3b8; margin-bottom: 30px;">Role: <span id="user-role-display" style="color: #f59e0b; text-transform: uppercase; font-weight: bold;"></span></p>
 
         <!-- Super Admin Only: Global Directory -->
         <a href="#" class="portal-card" id="card-superadmin" style="display: none; border-color: #f43f5e;" onclick="showGlobalDirectory(event)">
             <h3 style="color: #f43f5e;">🌍 Global Match Directory</h3>
-            <p>View all tournaments, active matches, and Scorer PINs.</p>
+            <p>View all tournaments, active matches, and Scorer PINs across the database.</p>
         </a>
 
-        <div id="global-directory" style="display: none; background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #f43f5e; margin-top: 20px; text-align: left;">
-            <h3 style="color: #f43f5e; margin-top: 0; margin-bottom: 15px;">Super Admin Directory</h3>
-            <div id="directory-content" style="max-height: 300px; overflow-y: auto; background: #0f172a; padding: 10px; border-radius: 8px;"></div>
-            <button onclick="document.getElementById('global-directory').style.display='none'" style="margin-top: 15px; padding: 8px 15px; background: #334155; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">Close Directory</button>
-        </div>
-
-        <!-- Admin Only Card -->
+        <!-- Admin / Super Admin Card -->
         <a href="admin/index.html" class="portal-card" id="card-admin" style="display: none; border-color: #3b82f6;">
             <h3 style="color: #3b82f6;">🛠️ Tournament Creator Wizard</h3>
             <p>Build fixtures, map pools, and assign officials.</p>
         </a>
 
-        <!-- Accessible by Admin & Scorer -->
+        <!-- Scorer / Admin / Super Admin Card -->
         <a href="scorer/live.html" class="portal-card" id="card-scorer" style="display: none; border-color: #10b981;">
             <h3 style="color: #10b981;">📊 Live Scoring Engine</h3>
             <p>Access match postings and score live games ball-by-ball.</p>
         </a>
 
-        <!-- Public View -->
+        <!-- Selector Card (We will build this later) -->
+        <a href="#" class="portal-card" id="card-selector" style="display: none; border-color: #8b5cf6;">
+            <h3 style="color: #8b5cf6;">📋 Selector Analytics Dashboard</h3>
+            <p>Deep-dive player stats, pitch maps, and milestone tracking.</p>
+        </a>
+
+        <!-- Public / Fan View (Everyone gets this) -->
         <a href="fan.html" class="portal-card" style="border-color: #f59e0b;">
             <h3 style="color: #f59e0b;">📺 Fan Viewing Portal</h3>
-            <p>View live scorecards and tournament standings.</p>
+            <p>View live scorecards, career boards, and tournament standings.</p>
         </a>
 
         <button onclick="signOut()" style="background: transparent; border: none; color: #ef4444; text-decoration: underline; cursor: pointer; margin-top: 20px;">Sign Out</button>
@@ -127,8 +123,10 @@
             
             if(isSignUp) {
                 document.getElementById('role-group').classList.remove('hidden');
+                document.getElementById('name-group').classList.remove('hidden');
             } else {
                 document.getElementById('role-group').classList.add('hidden');
+                document.getElementById('name-group').classList.add('hidden');
             }
         }
 
@@ -140,14 +138,20 @@
 
             if (isSignUp) {
                 const role = document.getElementById('auth-role').value;
+                const fullName = document.getElementById('auth-name').value || "User";
+                
                 const { data, error } = await db.auth.signUp({ email, password });
                 if (error) { alert("Error: " + error.message); btn.innerText = "Register"; return; }
                 
                 if (data.user) {
-                    await db.from('user_profiles').insert([{ id: data.user.id, email: email, role: role }]);
-                    alert("Account created! You can now log in.");
-                    toggleAuthMode();
-                    btn.innerText = "Sign In";
+                    // Create Profile record linked to Auth ID
+                    await db.from('profiles').insert([{ 
+                        id: data.user.id, 
+                        full_name: fullName, 
+                        role: role 
+                    }]);
+                    alert("Account created successfully! You are now logged in.");
+                    loadPortalDashboard(data.user.id);
                 }
             } else {
                 const { data, error } = await db.auth.signInWithPassword({ email, password });
@@ -156,70 +160,42 @@
             }
         });
 
-        async function signInWithGoogle() {
-            const { data, error } = await db.auth.signInWithOAuth({
-                provider: 'google',
-                options: {
-                    redirectTo: window.location.href.split('?')[0] 
-                }
-            });
-            if (error) {
-                alert("Error connecting to Google: " + error.message);
-            }
-        }
-
         async function loadPortalDashboard(userId) {
             document.getElementById('auth-section').style.display = 'none';
             
-            const { data, error } = await db.from('user_profiles').select('role').eq('id', userId).single();
+            // Fetch the user's role from the new profiles table
+            const { data, error } = await db.from('profiles').select('role, full_name').eq('id', userId).single();
             
-            let rawRole = data && data.role ? data.role : 'Fan';
-            let normalizedRole = rawRole.toLowerCase().replace(/[^a-z]/g, ''); 
+            let userRole = data && data.role ? data.role : 'fan';
+            let userName = data && data.full_name ? data.full_name : 'Sports Fan';
             
-            document.getElementById('user-role-display').innerText = rawRole;
+            document.getElementById('user-role-display').innerText = userRole;
+            document.getElementById('user-name-display').innerText = userName;
             document.getElementById('portal-dashboard').style.display = 'block';
 
-            if (normalizedRole === 'superadmin') {
+            // Reset visibilities
+            document.getElementById('card-admin').style.display = 'none';
+            document.getElementById('card-scorer').style.display = 'none';
+            document.getElementById('card-superadmin').style.display = 'none';
+            document.getElementById('card-selector').style.display = 'none';
+
+            // Apply Role-Based Routing
+            if (userRole === 'superadmin') {
                 document.getElementById('card-admin').style.display = 'block'; 
                 document.getElementById('card-scorer').style.display = 'block'; 
                 document.getElementById('card-superadmin').style.display = 'block'; 
+                document.getElementById('card-selector').style.display = 'block'; 
             } 
-            else if (normalizedRole === 'admin' || normalizedRole === 'tournamentadmin') {
+            else if (userRole === 'admin') {
                 document.getElementById('card-admin').style.display = 'block'; 
                 document.getElementById('card-scorer').style.display = 'block'; 
             } 
-            else if (normalizedRole === 'scorer' || normalizedRole === 'officialscorer') {
+            else if (userRole === 'scorer') {
                 document.getElementById('card-scorer').style.display = 'block'; 
             }
-        }
-
-        function showGlobalDirectory(e) {
-            e.preventDefault();
-            const matches = JSON.parse(localStorage.getItem('cricket_matches') || '[]');
-            const container = document.getElementById('directory-content');
-            
-            if(matches.length === 0) {
-                container.innerHTML = "<p style='color: #94a3b8; text-align: center;'>No matches have been locked by any Admin yet.</p>";
-            } else {
-                let html = `<table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; color: white;">
-                    <tr style="border-bottom: 1px solid #334155; color: #94a3b8; text-align: left;">
-                        <th style="padding: 8px;">Tournament</th>
-                        <th style="padding: 8px;">Match ID</th>
-                        <th style="padding: 8px;">Teams</th>
-                        <th style="padding: 8px; text-align: center;">PIN</th>
-                    </tr>`;
-                matches.forEach(m => {
-                    html += `<tr style="border-bottom: 1px solid #1e293b;">
-                        <td style="padding: 8px;">${m.tournament}</td>
-                        <td style="padding: 8px; color: #cbd5e1; font-weight:bold;">${m.matchNum}</td>
-                        <td style="padding: 8px; color: #cbd5e1;">${m.team1} v ${m.team2}</td>
-                        <td style="padding: 8px; text-align: center; color: #f59e0b; font-weight: bold; font-size: 1.1rem; letter-spacing: 1px;">${m.pin}</td>
-                    </tr>`;
-                });
-                html += `</table>`;
-                container.innerHTML = html;
+            else if (userRole === 'selector') {
+                document.getElementById('card-selector').style.display = 'block'; 
             }
-            document.getElementById('global-directory').style.display = 'block';
         }
 
         async function signOut() {
