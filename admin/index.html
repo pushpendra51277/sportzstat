@@ -223,12 +223,28 @@
         let activeTeams = []; let poolsData = {}; 
         let manualMatches = []; let poolGeneratedMatches = []; let koGeneratedMatches = [];
         let finalLockedMatches = []; 
+        let currentTournamentId = null;
 
-        document.addEventListener('DOMContentLoaded', () => { 
+        document.addEventListener('DOMContentLoaded', async () => { 
             for(let i=1; i<=8; i++) addTeamField(i);
             for(let i=0; i<3; i++) addPlayerPod();
             try { flatpickr("input[type='date']", { dateFormat: "Y-m-d", disableMobile: true }); } catch(e) {}
+            
+            // Check auth
+            const { data: { session } } = await db.auth.getSession();
+            if (!session) {
+                alert("You must be logged in as an Admin to use this wizard.");
+                window.location.href = '../index.html';
+            }
         });
+
+        // ==============================
+        // GLOBALLY UNIQUE ID GENERATOR
+        // ==============================
+        function generateUniqueMatchID(prefix) {
+            const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
+            return `${prefix}-${rand}`; // e.g., M-9A3K7 or KO-X8B2P
+        }
 
         function switchStep(stepId) {
             document.querySelectorAll('.wizard-step').forEach(btn => btn.classList.remove('active'));
@@ -275,7 +291,7 @@
                         if(teamNamesSet.has(normalizedVal)) hasDuplicateTeam = true;
                         teamNamesSet.add(normalizedVal);
                         activeTeams.push(rawVal.trim());
-                        teamPayload.push({ team_name: rawVal.trim() });
+                        teamPayload.push({ name: rawVal.trim() });
                     }
                 }
             });
@@ -283,15 +299,29 @@
             if (hasDuplicateTeam) { alert("❌ Error: Duplicate team names are not allowed."); return; }
             btn.innerText = "Saving to Database...";
 
-            const { error: tError } = await db.from('tournaments').insert([{
-                tournament_name: document.getElementById('t-name').value,
+            // Retrieve Logged-in Admin User
+            const { data: { session } } = await db.auth.getSession();
+            const adminId = session ? session.user.id : null;
+
+            // 1. Create Tournament
+            const { data: tData, error: tError } = await db.from('tournaments').insert([{
+                name: document.getElementById('t-name').value,
                 format: document.getElementById('t-format').value,
                 start_date: document.getElementById('t-date').value,
-                host: document.getElementById('t-host').value 
-            }]);
+                host: document.getElementById('t-host').value,
+                admin_id: adminId,
+                status: 'draft'
+            }]).select();
+            
             if (tError) { alert("Error saving tournament: " + tError.message); btn.innerText = "Save Tournament & Teams"; return; }
+            currentTournamentId = tData[0].tournament_id;
 
-            if(teamPayload.length > 0) await db.from('master_teams').insert(teamPayload);
+            // 2. Insert Teams (Use upsert if team exists globally, otherwise insert)
+            if(teamPayload.length > 0) {
+                // Upsert to ensure team exists globally
+                await db.from('teams').upsert(teamPayload, { onConflict: 'name' });
+            }
+
             const select = document.getElementById('squad-team-select');
             select.innerHTML = '<option value="">Select a team to add players...</option>';
             activeTeams.forEach(team => { select.innerHTML += `<option value="${team}">${team}</option>`; });
@@ -304,14 +334,15 @@
         function addPlayerPod() {
             const div = document.createElement('div');
             div.className = 'player-pod';
-            div.innerHTML = `<button type="button" class="remove-pod-btn" onclick="this.parentElement.remove()">×</button><div class="pod-row-1"><div><label style="font-size: 0.7rem; color: #94a3b8;">Player Name *</label><input type="text" class="pod-input p-name" placeholder="Full Name"></div><div><label style="font-size: 0.7rem; color: #94a3b8;">Role</label><select class="pod-input p-role"><option value="Batter">Batter</option><option value="Bowler">Bowler</option><option value="All-Rounder">All-Rounder</option><option value="Wicketkeeper">WK</option></select></div></div><div class="pod-row-2"><div><label style="font-size: 0.7rem; color: #94a3b8;">Batting Style</label><select class="pod-input p-bat"><option value="RHB">Right-Hand Bat</option><option value="LHB">Left-Hand Bat</option></select></div><div><label style="font-size: 0.7rem; color: #94a3b8;">Bowling Arm</label><select class="pod-input p-arm"><option value="None">None</option><option value="Right">Right-Arm</option><option value="Left">Left-Arm</option></select></div><div><label style="font-size: 0.7rem; color: #94a3b8;">Bowling Pace/Type</label><select class="pod-input p-type"><option value="None">-</option><option value="Pace">Pace / Medium</option><option value="Spin">Spin</option></select></div></div>`;
+            div.innerHTML = `<button type="button" class="remove-pod-btn" onclick="this.parentElement.remove()">×</button><div class="pod-row-1"><div><label style="font-size: 0.7rem; color: #94a3b8;">Player Name *</label><input type="text" class="pod-input p-name" placeholder="Full Name"></div><div><label style="font-size: 0.7rem; color: #94a3b8;">Role</label><select class="pod-input p-role"><option value="Batter">Batter</option><option value="Bowler">Bowler</option><option value="All-Rounder">All-Rounder</option><option value="Wicketkeeper">WK</option></select></div></div><div class="pod-row-2"><div><label style="font-size: 0.7rem; color: #94a3b8;">Batting Style</label><select class="pod-input p-bat"><option value="Right-hand bat">Right-Hand Bat</option><option value="Left-hand bat">Left-Hand Bat</option></select></div><div><label style="font-size: 0.7rem; color: #94a3b8;">Bowling Arm</label><select class="pod-input p-arm"><option value="None">None</option><option value="Right-arm">Right-Arm</option><option value="Left-arm">Left-Arm</option></select></div><div><label style="font-size: 0.7rem; color: #94a3b8;">Bowling Pace/Type</label><select class="pod-input p-type"><option value="None">-</option><option value="Fast">Fast / Medium</option><option value="Off-spin">Off-spin</option><option value="Leg-spin">Leg-spin</option><option value="Orthodox">Orthodox</option></select></div></div>`;
             document.getElementById('player-inputs-container').appendChild(div);
         }
 
         async function savePlayersToDB() {
-            const team = document.getElementById('squad-team-select').value;
-            if(!team) { alert("Please select a team."); return; }
-            const pods = document.querySelectorAll('.player-pod'); const payload = [];
+            const teamName = document.getElementById('squad-team-select').value;
+            if(!teamName || !currentTournamentId) { alert("Please select a team and ensure Tournament is saved."); return; }
+            const pods = document.querySelectorAll('.player-pod'); 
+            const payload = [];
             const playerNamesSet = new Set(); let hasDuplicatePlayer = false;
 
             pods.forEach(pod => {
@@ -320,19 +351,47 @@
                     let lowerName = name.toLowerCase().replace(/\s+/g, ' ');
                     if(playerNamesSet.has(lowerName)) hasDuplicatePlayer = true;
                     playerNamesSet.add(lowerName);
-                    const arm = pod.querySelector('.p-arm').value; const type = pod.querySelector('.p-type').value;
-                    let bowlStyle = (arm !== "None" && type !== "None") ? `${arm}-arm ${type}` : "None";
-                    payload.push({ full_name: name, playing_role: pod.querySelector('.p-role').value, batting_style: pod.querySelector('.p-bat').value === 'RHB' ? 'Right-hand bat' : 'Left-hand bat', bowling_style: bowlStyle, current_team: team });
+                    
+                    const arm = pod.querySelector('.p-arm').value; 
+                    const type = pod.querySelector('.p-type').value;
+                    const role = pod.querySelector('.p-role').value;
+                    const bat = pod.querySelector('.p-bat').value;
+                    
+                    payload.push({ 
+                        full_name: name, 
+                        playing_role: role, 
+                        batting_style: bat, 
+                        bowling_arm: arm,
+                        bowling_type: type 
+                    });
                 }
             });
 
             if (hasDuplicatePlayer) { alert("❌ Error: Duplicate player names found within this squad."); return; }
             if(payload.length === 0) return;
-            const { error } = await db.from('master_players').insert(payload);
-            if (error) alert("Error: " + error.message); else { alert(`Saved ${payload.length} players to ${team}!`); document.getElementById('player-inputs-container').innerHTML = ''; for(let i=0; i<3; i++) { addPlayerPod(); } }
+
+            // Insert into global players
+            const { error: pErr } = await db.from('players').insert(payload);
+            
+            if (pErr) {
+                alert("Error saving players: " + pErr.message);
+            } else {
+                alert(`Saved ${payload.length} players to ${teamName}!`); 
+                document.getElementById('player-inputs-container').innerHTML = ''; 
+                for(let i=0; i<3; i++) { addPlayerPod(); } 
+            }
         }
 
-        function addManualMatch() { let nextId = "M-" + (manualMatches.length + 1); manualMatches.push({ id: nextId, name: `Match ${manualMatches.length + 1}`, t1: "", t2: "" }); renderCanvas(); }
+        // ==============================
+        // FIXTURE BUILDERS WITH UNIQUE IDs
+        // ==============================
+        
+        function addManualMatch() { 
+            let uniqueId = generateUniqueMatchID("M");
+            let matchLabel = `Match ${manualMatches.length + 1}`;
+            manualMatches.push({ id: uniqueId, name: matchLabel, t1: "", t2: "" }); 
+            renderCanvas(); 
+        }
 
         function renderCanvas() {
             const container = document.getElementById('canvas-container'); container.innerHTML = "";
@@ -340,7 +399,14 @@
                 let optionsHtml = `<option value="">Select Team or Placeholder...</option><optgroup label="Registered Teams">`;
                 activeTeams.forEach(team => { optionsHtml += `<option value="${team}">${team}</option>`; });
                 optionsHtml += `</optgroup>`;
-                if (index > 0) { optionsHtml += `<optgroup label="Match Progressions">`; for(let i = 0; i < index; i++) { let prevM = manualMatches[i].id; optionsHtml += `<option value="Winner of ${prevM}">Winner of ${prevM}</option><option value="Loser of ${prevM}">Loser of ${prevM}</option>`; } optionsHtml += `</optgroup>`; }
+                if (index > 0) { 
+                    optionsHtml += `<optgroup label="Match Progressions">`; 
+                    for(let i = 0; i < index; i++) { 
+                        let prevM = manualMatches[i].id; 
+                        optionsHtml += `<option value="Winner of ${prevM}">Winner of ${prevM}</option><option value="Loser of ${prevM}">Loser of ${prevM}</option>`; 
+                    } 
+                    optionsHtml += `</optgroup>`; 
+                }
                 let row = document.createElement('div'); row.className = 'canvas-row';
                 row.innerHTML = `<div class="canvas-header"><span class="canvas-match-id">${match.id}</span><input type="text" class="canvas-name-input" value="${match.name}" oninput="updateMatch(${index}, 'name', this.value)" placeholder="e.g. Quarter Final 1"><button type="button" class="btn-delete" onclick="deleteMatch(${index})">X</button></div><div class="canvas-teams"><select class="postings-select" onchange="updateMatch(${index}, 't1', this.value)">${optionsHtml.replace(`value="${match.t1}"`, `value="${match.t1}" selected`)}</select><span style="color: white; font-weight: bold;">VS</span><select class="postings-select" onchange="updateMatch(${index}, 't2', this.value)">${optionsHtml.replace(`value="${match.t2}"`, `value="${match.t2}" selected`)}</select></div>`;
                 container.appendChild(row);
@@ -348,7 +414,8 @@
         }
 
         function updateMatch(index, field, value) { manualMatches[index][field] = value; if(field !== 'name') renderCanvas(); }
-        function deleteMatch(index) { manualMatches.splice(index, 1); manualMatches.forEach((m, i) => m.id = "M-" + (i+1)); renderCanvas(); }
+        function deleteMatch(index) { manualMatches.splice(index, 1); renderCanvas(); }
+        
         function lockCanvasAndProceed() { if(manualMatches.length === 0) { alert("Please build at least one match on the canvas."); return; } updateFinalLockedMatches(); document.querySelectorAll('.wizard-step')[3].click(); }
 
         function initPoolsWorkspace() { if(Object.keys(poolsData).length === 0) poolsData = { "Pool A": [], "Pool B": [] }; renderPoolsWorkspace(); }
@@ -368,19 +435,57 @@
 
         function generatePoolMatches() {
             let matchCount = 1; poolGeneratedMatches = [];
-            Object.keys(poolsData).forEach(poolName => { let teams = poolsData[poolName]; for(let i=0; i<teams.length; i++) { for(let j=i+1; j<teams.length; j++) { poolGeneratedMatches.push({ matchNum: `M-${matchCount}`, matchName: `${poolName}: ${teams[i]} vs ${teams[j]}`, team1: teams[i], team2: teams[j] }); matchCount++; } } });
+            Object.keys(poolsData).forEach(poolName => { 
+                let teams = poolsData[poolName]; 
+                for(let i=0; i<teams.length; i++) { 
+                    for(let j=i+1; j<teams.length; j++) { 
+                        let uniqueId = generateUniqueMatchID("P");
+                        poolGeneratedMatches.push({ 
+                            matchNum: uniqueId, 
+                            matchName: `${poolName}: ${teams[i]} vs ${teams[j]}`, 
+                            team1: teams[i], 
+                            team2: teams[j] 
+                        }); 
+                        matchCount++; 
+                    } 
+                } 
+            });
             if(poolGeneratedMatches.length === 0) { alert("Please assign at least 2 teams to a pool first."); return; }
-            const resEl = document.getElementById('pool-generated-results'); resEl.style.display = 'block'; resEl.innerHTML = `<h4 style="color:#10b981; margin-bottom:10px;">Generated ${poolGeneratedMatches.length} Group Matches:</h4>` + poolGeneratedMatches.map(m => `<div style="background:#1e293b; padding:8px; margin-bottom:5px; border-radius:4px; font-size:0.85rem;"><b>${m.matchNum}</b> (${m.matchName})</div>`).join('');
+            const resEl = document.getElementById('pool-generated-results'); resEl.style.display = 'block'; 
+            resEl.innerHTML = `<h4 style="color:#10b981; margin-bottom:10px;">Generated ${poolGeneratedMatches.length} Group Matches:</h4>` + 
+                poolGeneratedMatches.map(m => `<div style="background:#1e293b; padding:8px; margin-bottom:5px; border-radius:4px; font-size:0.85rem;"><b style="color:#38bdf8;">${m.matchNum}</b> - ${m.matchName}</div>`).join('');
         }
         function lockPoolsAndProceed() { if(poolGeneratedMatches.length === 0) generatePoolMatches(); if(poolGeneratedMatches.length === 0) return; updateFinalLockedMatches(); document.querySelectorAll('.wizard-step')[3].click(); }
 
         function generateKnockoutBracket() {
-            let size = parseInt(document.getElementById('ko-size-select').value); koGeneratedMatches = [];
-            if (size === 4) { koGeneratedMatches.push({ id: "KO-1", name: "Semi-Final 1", t1: "", t2: "" }); koGeneratedMatches.push({ id: "KO-2", name: "Semi-Final 2", t1: "", t2: "" }); koGeneratedMatches.push({ id: "KO-3", name: "Grand Final", t1: "Winner KO-1", t2: "Winner KO-2" }); } else if (size === 8) { for(let i=1; i<=4; i++) koGeneratedMatches.push({ id: `KO-${i}`, name: `Quarter-Final ${i}`, t1: "", t2: "" }); koGeneratedMatches.push({ id: "KO-5", name: "Semi-Final 1", t1: "Winner KO-1", t2: "Winner KO-2" }); koGeneratedMatches.push({ id: "KO-6", name: "Semi-Final 2", t1: "Winner KO-3", t2: "Winner KO-4" }); koGeneratedMatches.push({ id: "KO-7", name: "Grand Final", t1: "Winner KO-5", t2: "Winner KO-6" }); }
+            let size = parseInt(document.getElementById('ko-size-select').value); 
+            koGeneratedMatches = [];
+            
+            if (size === 4) { 
+                let sf1 = generateUniqueMatchID("KO"); let sf2 = generateUniqueMatchID("KO");
+                koGeneratedMatches.push({ id: sf1, name: "Semi-Final 1", t1: "", t2: "" }); 
+                koGeneratedMatches.push({ id: sf2, name: "Semi-Final 2", t1: "", t2: "" }); 
+                koGeneratedMatches.push({ id: generateUniqueMatchID("KO"), name: "Grand Final", t1: `Winner ${sf1}`, t2: `Winner ${sf2}` }); 
+            } else if (size === 8) { 
+                let qf1 = generateUniqueMatchID("KO"), qf2 = generateUniqueMatchID("KO"), qf3 = generateUniqueMatchID("KO"), qf4 = generateUniqueMatchID("KO");
+                koGeneratedMatches.push({ id: qf1, name: `Quarter-Final 1`, t1: "", t2: "" }); 
+                koGeneratedMatches.push({ id: qf2, name: `Quarter-Final 2`, t1: "", t2: "" }); 
+                koGeneratedMatches.push({ id: qf3, name: `Quarter-Final 3`, t1: "", t2: "" }); 
+                koGeneratedMatches.push({ id: qf4, name: `Quarter-Final 4`, t1: "", t2: "" }); 
+                
+                let sf1 = generateUniqueMatchID("KO"), sf2 = generateUniqueMatchID("KO");
+                koGeneratedMatches.push({ id: sf1, name: "Semi-Final 1", t1: `Winner ${qf1}`, t2: `Winner ${qf2}` }); 
+                koGeneratedMatches.push({ id: sf2, name: "Semi-Final 2", t1: `Winner ${qf3}`, t2: `Winner ${qf4}` }); 
+                koGeneratedMatches.push({ id: generateUniqueMatchID("KO"), name: "Grand Final", t1: `Winner ${sf1}`, t2: `Winner ${sf2}` }); 
+            }
             renderKnockouts();
         }
 
-        function addCustomKnockoutMatch() { let count = koGeneratedMatches.length + 1; koGeneratedMatches.push({ id: `KO-${count}`, name: `Knockout ${count}`, t1: "", t2: "" }); renderKnockouts(); }
+        function addCustomKnockoutMatch() { 
+            let count = koGeneratedMatches.length + 1; 
+            koGeneratedMatches.push({ id: generateUniqueMatchID("KO"), name: `Knockout ${count}`, t1: "", t2: "" }); 
+            renderKnockouts(); 
+        }
 
         function getKnockoutDropdownOptions(currentKoIndex, selectedValue) {
             let optionsHtml = `<option value="">Select Team or Placeholder...</option><optgroup label="Registered Teams">`;
@@ -397,14 +502,14 @@
         }
 
         function updateKOMatch(index, field, value) { koGeneratedMatches[index][field] = value; }
-        function deleteKOMatch(index) { koGeneratedMatches.splice(index, 1); koGeneratedMatches.forEach((m, i) => m.id = "KO-" + (i+1)); renderKnockouts(); }
+        function deleteKOMatch(index) { koGeneratedMatches.splice(index, 1); renderKnockouts(); }
         function lockKnockoutsAndProceed() { if(koGeneratedMatches.length === 0) { alert("Please build at least one knockout match."); return; } updateFinalLockedMatches(); document.querySelectorAll('.wizard-step')[3].click(); }
 
         function renderTournamentTree() {
             const canvas = document.getElementById('bracket-tree-canvas');
             if(!finalLockedMatches || finalLockedMatches.length === 0) { updateFinalLockedMatches(); if(finalLockedMatches.length === 0) { canvas.innerHTML = `<span style="color: #94a3b8; font-size: 0.9rem;">No matches found. Build your fixtures first.</span>`; return; } }
             let pools = {}; let semiFinals = []; let quarterFinals = []; let finalMatch = null; let others = [];
-            finalLockedMatches.forEach((m, idx) => { m._dispId = m.matchNum || 'M-' + (idx+1); let name = (m.matchName || m.name || '').toUpperCase(); if (name.includes('FINAL') && !name.includes('SEMI') && !name.includes('QUARTER')) { finalMatch = m; } else if (name.includes('SEMI')) { semiFinals.push(m); } else if (name.includes('QUARTER')) { quarterFinals.push(m); } else if (name.includes('POOL ') || name.includes('GROUP ')) { let poolName = (m.matchName || m.name).split(':')[0].trim(); if (!pools[poolName]) pools[poolName] = []; pools[poolName].push(m); } else { others.push(m); } });
+            finalLockedMatches.forEach((m, idx) => { m._dispId = m.matchNum; let name = (m.matchName || m.name || '').toUpperCase(); if (name.includes('FINAL') && !name.includes('SEMI') && !name.includes('QUARTER')) { finalMatch = m; } else if (name.includes('SEMI')) { semiFinals.push(m); } else if (name.includes('QUARTER')) { quarterFinals.push(m); } else if (name.includes('POOL ') || name.includes('GROUP ')) { let poolName = (m.matchName || m.name).split(':')[0].trim(); if (!pools[poolName]) pools[poolName] = []; pools[poolName].push(m); } else { others.push(m); } });
             let renderNode = (m) => `<div class="bracket-match-node" style="margin-bottom: 12px; width: 100%;"><div class="m-id">${m._dispId}</div><div class="m-title">${m.matchName || m.name}</div><div class="m-teams"><div>${m.team1 || 'TBD'}</div><div style="color: #94a3b8; font-size: 0.6rem; margin: 2px 0;">vs</div><div>${m.team2 || 'TBD'}</div></div></div>`;
             let html = `<div style="width: 100%; display: flex; flex-direction: column; gap: 30px;">`;
             let poolKeys = Object.keys(pools); if (poolKeys.length > 0 || others.length > 0) { html += `<div><div class="tree-stage-title">🏏 League & Group Stage</div><div class="tree-row" style="align-items: flex-start;">`; poolKeys.forEach(pk => { html += `<div class="tree-pool-col"><div class="tree-pool-title">${pk}</div>${pools[pk].map(m => renderNode(m)).join('')}</div>`; }); if (others.length > 0) { html += `<div class="tree-pool-col"><div class="tree-pool-title">${poolKeys.length > 0 ? 'Other Matches' : 'League Matches'}</div>${others.map(m => renderNode(m)).join('')}</div>`; } html += `</div></div>`; }
@@ -422,32 +527,67 @@
 
         function generateUniquePin(existingPins) { let pin; do { pin = Math.floor(1000 + Math.random() * 9000).toString(); } while (existingPins.includes(pin)); return pin; }
 
-        function savePostings() {
+        async function savePostings() {
+            if(!currentTournamentId) { alert("Please save the Tournament in Step 1 first."); return; }
+            
             let tName = document.getElementById('t-name').value || "Official Tournament";
-            let existingMatches = JSON.parse(localStorage.getItem('cricket_matches') || '[]');
-            let existingPins = existingMatches.map(m => m.pin);
-            let newMatches = []; let rows = document.querySelectorAll('#postings-body tr');
+            const btn = document.querySelector('button[onclick="savePostings()"]');
+            btn.innerText = "⏳ Pushing to Cloud...";
+            
+            // Generate standard random PINs
+            let existingPins = [];
+            let newMatches = [];
+            let rows = document.querySelectorAll('#postings-body tr');
 
-            rows.forEach((row, index) => {
+            for (let index = 0; index < rows.length; index++) {
+                let row = rows[index];
                 if(row.cells.length === 4) {
                     let mObj = finalLockedMatches[index];
                     let umpires = Array.from(row.cells[1].querySelectorAll('select')).map(s => s.value).filter(v => !v.includes('Select'));
                     let scorers = Array.from(row.cells[2].querySelectorAll('select')).map(s => s.value).filter(v => !v.includes('Select'));
                     let refs = Array.from(row.cells[3].querySelectorAll('select')).map(s => s.value).filter(v => !v.includes('Select'));
-                    let matchPin = generateUniquePin(existingPins); existingPins.push(matchPin);
-                    newMatches.push({ pin: matchPin, matchNum: mObj.matchNum, matchName: mObj.matchName, tournament: tName, team1: mObj.team1, team2: mObj.team2, umpires: umpires.join(", ") || "", scorers: scorers.join(", ") || "", referees: refs.join(", ") || "" });
-                }
-            });
 
+                    let matchPin = generateUniquePin(existingPins);
+                    existingPins.push(matchPin);
+
+                    // Payload for Cloud DB
+                    let fixturePayload = {
+                        matchNum: mObj.matchNum, 
+                        matchName: mObj.matchName,
+                        tournament: tName,
+                        team1: mObj.team1,
+                        team2: mObj.team2,
+                        umpires: umpires.join(", ") || "", 
+                        scorers: scorers.join(", ") || "",
+                        referees: refs.join(", ") || ""
+                    };
+                    
+                    newMatches.push({ pin: matchPin, ...fixturePayload });
+
+                    // Push fixture to Supabase Cloud
+                    await db.from('matches').upsert({
+                        match_id: mObj.matchNum,
+                        tournament_id: currentTournamentId,
+                        scorer_pin: matchPin,
+                        match_state: 'scheduled',
+                        full_state: fixturePayload 
+                    });
+                }
+            }
+
+            // Also save locally for quick retrieval in the global directory viewer without intense querying
+            let existingMatches = JSON.parse(localStorage.getItem('cricket_matches') || '[]');
             let allMatches = [...existingMatches, ...newMatches];
             localStorage.setItem('cricket_matches', JSON.stringify(allMatches));
+            
+            btn.innerText = "Lock All Postings & Deploy to Scorer";
             displayPinsToAdmin(newMatches);
         }
 
         function displayPinsToAdmin(matches) {
             const container = document.getElementById('step4');
-            let html = `<div style="background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #10b981; margin-top: 25px; animation: fadeIn 0.5s;"><h3 style="color: #10b981; margin-top: 0;">✅ Postings Locked Successfully!</h3><p style="color: #94a3b8; font-size: 0.9rem;">Share these 4-digit PINs with your Scorers.</p><table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem;"><tr style="background: #1e293b; color: #cbd5e1;"><th style="padding: 10px; text-align: left;">Match</th><th style="padding: 10px; text-align: left;">Teams</th><th style="padding: 10px; text-align: center; color: #f59e0b;">Scorer PIN</th></tr>`;
-            matches.forEach(m => { html += `<tr style="border-bottom: 1px solid #1e293b;"><td style="padding: 10px; color: white;"><b>${m.matchNum}</b>: ${m.matchName}</td><td style="padding: 10px; color: #94a3b8;">${m.team1} vs ${m.team2}</td><td style="padding: 10px; text-align: center; font-size: 1.5rem; font-weight: bold; color: #f59e0b; letter-spacing: 3px;">${m.pin}</td></tr>`; });
+            let html = `<div style="background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #10b981; margin-top: 25px; animation: fadeIn 0.5s;"><h3 style="color: #10b981; margin-top: 0;">✅ Postings Locked & Pushed to Cloud!</h3><p style="color: #94a3b8; font-size: 0.9rem;">Share these Match IDs and 4-digit PINs with your Scorers.</p><table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem;"><tr style="background: #1e293b; color: #cbd5e1;"><th style="padding: 10px; text-align: left;">Match ID</th><th style="padding: 10px; text-align: left;">Teams</th><th style="padding: 10px; text-align: center; color: #f59e0b;">Scorer PIN</th></tr>`;
+            matches.forEach(m => { html += `<tr style="border-bottom: 1px solid #1e293b;"><td style="padding: 10px; color: #38bdf8; font-weight:bold;">${m.matchNum}</td><td style="padding: 10px; color: #94a3b8;">${m.team1} vs ${m.team2} <div style="font-size:0.75rem; color:white;">${m.matchName}</div></td><td style="padding: 10px; text-align: center; font-size: 1.5rem; font-weight: bold; color: #f59e0b; letter-spacing: 3px;">${m.pin}</td></tr>`; });
             html += `</table></div>`;
             let existingDisplay = document.getElementById('pin-display-area'); if(!existingDisplay) { existingDisplay = document.createElement('div'); existingDisplay.id = 'pin-display-area'; container.querySelector('.admin-form').appendChild(existingDisplay); }
             existingDisplay.innerHTML = html;
