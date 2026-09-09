@@ -318,9 +318,34 @@
             tbody.innerHTML = rowsHtml;
         }
 
-        async function signOut() {
-            await db.auth.signOut();
-            window.location.href = window.location.href.split('?')[0]; 
+        async function signOut(event) {
+            // Optional: Provide visual feedback that the button was clicked
+            if (event && event.target) {
+                event.target.innerText = "Signing out...";
+                event.target.style.opacity = "0.5";
+                event.target.style.pointerEvents = "none";
+            }
+
+            try {
+                // Attempt to officially kill the session on the Supabase server
+                await db.auth.signOut();
+            } catch (error) {
+                console.warn("Server sign-out issue, forcing local logout:", error);
+            } finally {
+                // FORCE CLEANUP: Wipe Supabase tokens from local storage manually
+                // Supabase keys usually start with 'sb-' (e.g., sb-cavkoylkbcyhsifrsjyd-auth-token)
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('sb-')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+
+                // Clear any locally saved active match data as well
+                localStorage.removeItem('cricStat_activeMatch');
+
+                // Force the browser to refresh, returning the user to the login screen
+                window.location.reload(); 
+            }
         }
     </script>
 </body>
