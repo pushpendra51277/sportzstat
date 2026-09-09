@@ -3,41 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sportzstat - Login Portal</title>
+    <title>Sportzstat - Login & Command Portal</title>
     
     <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        body { background: #0f172a; color: #f8fafc; font-family: sans-serif; text-align: center; padding: 50px 20px; }
-        .auth-container { max-width: 400px; margin: 0 auto; background: #1e293b; padding: 30px; border-radius: 12px; border: 1px solid #334155; }
+        body { background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; padding: 40px 20px; }
+        .auth-container { max-width: 420px; margin: 0 auto; background: #1e293b; padding: 30px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         .input-group { margin-bottom: 15px; text-align: left; }
         .input-group label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; }
-        .input-group input, .input-group select { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; box-sizing: border-box; }
-        .btn-launch { width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .input-group input, .input-group select { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; }
+        .btn-launch { width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 0.95rem; }
         .btn-alt { background: transparent; border: 1px dashed #3b82f6; color: #3b82f6; margin-top: 15px; }
         
-        #portal-dashboard { display: none; max-width: 600px; margin: 0 auto; }
-        .portal-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 25px; text-align: center; margin-bottom: 20px; text-decoration: none; display: block; color: white; transition: 0.3s; }
-        .portal-card:hover { transform: translateY(-3px); border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
-        .portal-card h3 { margin: 0 0 10px 0; font-size: 1.2rem; }
-        .portal-card p { margin: 0; color: #cbd5e1; font-size: 0.85rem; }
+        #portal-dashboard { display: none; max-width: 900px; margin: 0 auto; }
+        .portal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .portal-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px; text-align: left; text-decoration: none; display: block; color: white; transition: 0.2s ease; cursor: pointer; }
+        .portal-card:hover { transform: translateY(-3px); border-color: #3b82f6; background: rgba(59, 130, 246, 0.08); }
+        .portal-card h3 { margin: 0 0 8px 0; font-size: 1.1rem; }
+        .portal-card p { margin: 0; color: #94a3b8; font-size: 0.85rem; line-height: 1.4; }
         .hidden { display: none; }
+
+        /* Directory Modal / Table */
+        .directory-box { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; text-align: left; margin-top: 20px; }
+        .directory-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 15px; }
+        .directory-table th { background: #0f172a; color: #94a3b8; padding: 10px 12px; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; border-bottom: 1px solid #334155; }
+        .directory-table td { padding: 12px; border-bottom: 1px solid #334155; vertical-align: middle; }
+        .pin-badge { background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #f59e0b; padding: 4px 8px; border-radius: 4px; font-weight: 900; letter-spacing: 2px; font-size: 1rem; }
+        .state-badge { padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }
+        .state-draft { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
+        .state-live { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .state-completed { background: rgba(16, 185, 129, 0.2); color: #10b981; }
     </style>
 </head>
 <body>
 
     <h1 style="color: #3b82f6; letter-spacing: 2px; margin-bottom: 5px;">SPORTZSTAT</h1>
-    <p style="color: #94a3b8; margin-bottom: 30px;">Tournament Management & Live Scoring</p>
+    <p style="color: #94a3b8; margin-bottom: 30px;">Tournament Management & Live Scoring Architecture</p>
 
-    <!-- AUTHENTICATION FORMS -->
+    <!-- AUTHENTICATION FORM -->
     <div id="auth-section" class="auth-container">
         <h2 id="auth-title" style="margin-top: 0;">System Login</h2>
         
         <form id="auth-form" onsubmit="event.preventDefault();">
             <div class="input-group hidden" id="name-group">
                 <label>Full Name</label>
-                <input type="text" id="auth-name" placeholder="John Doe">
+                <input type="text" id="auth-name" placeholder="Pushpendra Singh">
             </div>
             <div class="input-group">
                 <label>Email Address</label>
@@ -65,40 +77,74 @@
 
     <!-- ROLE-BASED PORTAL DASHBOARD -->
     <div id="portal-dashboard">
-        <h2 style="margin-bottom: 5px;">Welcome, <span id="user-name-display" style="color: white;"></span></h2>
-        <p style="color: #94a3b8; margin-bottom: 30px;">Role: <span id="user-role-display" style="color: #f59e0b; text-transform: uppercase; font-weight: bold;"></span></p>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 25px; border-bottom: 1px solid #334155; padding-bottom: 15px;">
+            <div style="text-align: left;">
+                <h2 style="margin: 0; font-size: 1.5rem;">Welcome, <span id="user-name-display" style="color: #38bdf8;"></span></h2>
+                <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">Role Permission: <span id="user-role-display" style="color: #f59e0b; text-transform: uppercase; font-weight: bold;"></span></div>
+            </div>
+            <button onclick="signOut()" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">Sign Out</button>
+        </div>
 
-        <!-- Super Admin Only: Global Directory -->
-        <a href="#" class="portal-card" id="card-superadmin" style="display: none; border-color: #f43f5e;" onclick="showGlobalDirectory(event)">
-            <h3 style="color: #f43f5e;">🌍 Global Match Directory</h3>
-            <p>View all tournaments, active matches, and Scorer PINs across the database.</p>
-        </a>
+        <div class="portal-grid">
+            <!-- Super Admin & Tournament Admin: Directory Card -->
+            <div class="portal-card" id="card-directory" style="border-color: #f59e0b;" onclick="toggleDirectoryView()">
+                <h3 style="color: #f59e0b;" id="directory-card-title">📁 Tournament & Match Directory</h3>
+                <p id="directory-card-desc">Review your created tournaments, active fixtures, Match IDs, and Scorer PINs.</p>
+            </div>
 
-        <!-- Admin / Super Admin Card -->
-        <a href="admin/index.html" class="portal-card" id="card-admin" style="display: none; border-color: #3b82f6;">
-            <h3 style="color: #3b82f6;">🛠️ Tournament Creator Wizard</h3>
-            <p>Build fixtures, map pools, and assign officials.</p>
-        </a>
+            <!-- Admin / Super Admin Card -->
+            <a href="admin/index.html" class="portal-card" id="card-admin" style="border-color: #3b82f6;">
+                <h3 style="color: #3b82f6;">🛠️ Tournament Creator Wizard</h3>
+                <p>Build fixtures, map pools, and assign officials.</p>
+            </a>
 
-        <!-- Scorer / Admin / Super Admin Card -->
-        <a href="scorer/live.html" class="portal-card" id="card-scorer" style="display: none; border-color: #10b981;">
-            <h3 style="color: #10b981;">📊 Live Scoring Engine</h3>
-            <p>Access match postings and score live games ball-by-ball.</p>
-        </a>
+            <!-- Scorer / Admin / Super Admin Card -->
+            <a href="scorer/live.html" class="portal-card" id="card-scorer" style="border-color: #10b981;">
+                <h3 style="color: #10b981;">📊 Live Scoring Engine</h3>
+                <p>Access match postings and score live games ball-by-ball.</p>
+            </a>
 
-        <!-- Selector Card (We will build this later) -->
-        <a href="#" class="portal-card" id="card-selector" style="display: none; border-color: #8b5cf6;">
-            <h3 style="color: #8b5cf6;">📋 Selector Analytics Dashboard</h3>
-            <p>Deep-dive player stats, pitch maps, and milestone tracking.</p>
-        </a>
+            <!-- Selector Card -->
+            <a href="#" class="portal-card" id="card-selector" style="border-color: #8b5cf6;">
+                <h3 style="color: #8b5cf6;">📋 Selector Analytics Dashboard</h3>
+                <p>Deep-dive player analytics, pitch tracking, and team statistics.</p>
+            </a>
 
-        <!-- Public / Fan View (Everyone gets this) -->
-        <a href="fan.html" class="portal-card" style="border-color: #f59e0b;">
-            <h3 style="color: #f59e0b;">📺 Fan Viewing Portal</h3>
-            <p>View live scorecards, career boards, and tournament standings.</p>
-        </a>
+            <!-- Public / Fan View -->
+            <a href="fan.html" class="portal-card" style="border-color: #06b6d4;">
+                <h3 style="color: #06b6d4;">📺 Fan Viewing Portal</h3>
+                <p>View live scorecards, career boards, and tournament standings.</p>
+            </a>
+        </div>
 
-        <button onclick="signOut()" style="background: transparent; border: none; color: #ef4444; text-decoration: underline; cursor: pointer; margin-top: 20px;">Sign Out</button>
+        <!-- DYNAMIC DIRECTORY VIEW FOR ADMIN & SUPER ADMIN -->
+        <div id="directory-section" class="directory-box hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div>
+                    <h3 style="margin: 0; color: #f59e0b;" id="dir-heading">Tournament & Match Master List</h3>
+                    <p style="margin: 3px 0 0 0; font-size: 0.8rem; color: #94a3b8;" id="dir-subheading">Live cloud data queried from Supabase.</p>
+                </div>
+                <button onclick="document.getElementById('directory-section').classList.add('hidden')" style="background: transparent; border: 1px solid #475569; color: #cbd5e1; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Close</button>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="directory-table">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left;">Tournament</th>
+                            <th id="th-creator" style="text-align: left;">Creator</th>
+                            <th style="text-align: left;">Match ID</th>
+                            <th style="text-align: left;">Teams</th>
+                            <th style="text-align: center;">Status</th>
+                            <th style="text-align: center;">Scorer PIN</th>
+                        </tr>
+                    </thead>
+                    <tbody id="directory-tbody">
+                        <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Loading fixtures from cloud...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -106,12 +152,15 @@
         const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        let currentUser = null;
+        let currentUserProfile = null;
         let isSignUp = false;
 
         window.onload = async () => {
             const { data: { session } } = await db.auth.getSession();
             if (session) {
-                loadPortalDashboard(session.user.id);
+                currentUser = session.user;
+                await loadPortalDashboard(session.user.id);
             }
         };
 
@@ -120,73 +169,68 @@
             document.getElementById('auth-title').innerText = isSignUp ? "Create Account" : "System Login";
             document.getElementById('auth-submit-btn').innerText = isSignUp ? "Register" : "Sign In";
             document.getElementById('toggle-auth-btn').innerText = isSignUp ? "Back to Login" : "Create New Account";
-            
-            if(isSignUp) {
-                document.getElementById('role-group').classList.remove('hidden');
-                document.getElementById('name-group').classList.remove('hidden');
-            } else {
-                document.getElementById('role-group').classList.add('hidden');
-                document.getElementById('name-group').classList.add('hidden');
-            }
+            document.getElementById('role-group').classList.toggle('hidden', !isSignUp);
+            document.getElementById('name-group').classList.toggle('hidden', !isSignUp);
         }
 
-        document.getElementById('auth-form').addEventListener('submit', async (e) => {
-            const email = document.getElementById('auth-email').value;
+        document.getElementById('auth-form').addEventListener('submit', async () => {
+            const email = document.getElementById('auth-email').value.trim();
             const password = document.getElementById('auth-password').value;
             const btn = document.getElementById('auth-submit-btn');
             btn.innerText = "Processing...";
 
             if (isSignUp) {
                 const role = document.getElementById('auth-role').value;
-                const fullName = document.getElementById('auth-name').value || "User";
+                const fullName = document.getElementById('auth-name').value.trim() || "User";
                 
                 const { data, error } = await db.auth.signUp({ email, password });
                 if (error) { alert("Error: " + error.message); btn.innerText = "Register"; return; }
                 
                 if (data.user) {
-                    // Create Profile record linked to Auth ID
-                    await db.from('profiles').insert([{ 
-                        id: data.user.id, 
-                        full_name: fullName, 
-                        role: role 
-                    }]);
-                    alert("Account created successfully! You are now logged in.");
-                    loadPortalDashboard(data.user.id);
+                    await db.from('profiles').insert([{ id: data.user.id, full_name: fullName, role: role }]);
+                    alert("Account created successfully!");
+                    currentUser = data.user;
+                    await loadPortalDashboard(data.user.id);
                 }
             } else {
                 const { data, error } = await db.auth.signInWithPassword({ email, password });
                 if (error) { alert("Error: " + error.message); btn.innerText = "Sign In"; return; }
-                loadPortalDashboard(data.user.id);
+                currentUser = data.user;
+                await loadPortalDashboard(data.user.id);
             }
         });
 
         async function loadPortalDashboard(userId) {
             document.getElementById('auth-section').style.display = 'none';
             
-            // Fetch the user's role from the new profiles table
-            const { data, error } = await db.from('profiles').select('role, full_name').eq('id', userId).single();
+            const { data: profile } = await db.from('profiles').select('*').eq('id', userId).single();
+            currentUserProfile = profile || { role: 'fan', full_name: 'Sports Fan' };
             
-            let userRole = data && data.role ? data.role : 'fan';
-            let userName = data && data.full_name ? data.full_name : 'Sports Fan';
+            const userRole = (currentUserProfile.role || 'fan').toLowerCase();
+            const userName = currentUserProfile.full_name || 'Sports Fan';
             
             document.getElementById('user-role-display').innerText = userRole;
             document.getElementById('user-name-display').innerText = userName;
             document.getElementById('portal-dashboard').style.display = 'block';
 
             // Reset visibilities
+            document.getElementById('card-directory').style.display = 'none';
             document.getElementById('card-admin').style.display = 'none';
             document.getElementById('card-scorer').style.display = 'none';
-            document.getElementById('card-superadmin').style.display = 'none';
             document.getElementById('card-selector').style.display = 'none';
 
-            // Apply Role-Based Routing
             if (userRole === 'superadmin') {
+                document.getElementById('card-directory').style.display = 'block';
+                document.getElementById('directory-card-title').innerText = "🌍 Master Tournament Directory";
+                document.getElementById('directory-card-desc').innerText = "Global view of all tournaments, matches, and PINs across the entire database.";
                 document.getElementById('card-admin').style.display = 'block'; 
                 document.getElementById('card-scorer').style.display = 'block'; 
-                document.getElementById('card-superadmin').style.display = 'block'; 
                 document.getElementById('card-selector').style.display = 'block'; 
             } 
             else if (userRole === 'admin') {
+                document.getElementById('card-directory').style.display = 'block';
+                document.getElementById('directory-card-title').innerText = "📁 My Tournaments & Matches";
+                document.getElementById('directory-card-desc').innerText = "View fixtures, Match IDs, and Scorer PINs for tournaments you created.";
                 document.getElementById('card-admin').style.display = 'block'; 
                 document.getElementById('card-scorer').style.display = 'block'; 
             } 
@@ -196,6 +240,70 @@
             else if (userRole === 'selector') {
                 document.getElementById('card-selector').style.display = 'block'; 
             }
+        }
+
+        async function toggleDirectoryView() {
+            const section = document.getElementById('directory-section');
+            section.classList.remove('hidden');
+            section.scrollIntoView({ behavior: 'smooth' });
+
+            const isSuperAdmin = currentUserProfile.role.toLowerCase() === 'superadmin';
+            document.getElementById('th-creator').style.display = isSuperAdmin ? 'table-cell' : 'none';
+            document.getElementById('dir-heading').innerText = isSuperAdmin ? "Global Master Match Directory (All Organizers)" : "My Tournaments & Active Postings";
+            
+            const tbody = document.getElementById('directory-tbody');
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">Fetching records from Supabase...</td></tr>`;
+
+            // Step 1: Fetch Tournaments (Admins get only their own, Super Admins get all)
+            let tourneyQuery = db.from('tournaments').select('tournament_id, name, format, status, admin_id, profiles(full_name)');
+            if (!isSuperAdmin) {
+                tourneyQuery = tourneyQuery.eq('admin_id', currentUser.id);
+            }
+            const { data: tournaments, error: tourneyErr } = await tourneyQuery;
+
+            if (tourneyErr || !tournaments || tournaments.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">No tournaments found. Create one using the Tournament Creator Wizard.</td></tr>`;
+                return;
+            }
+
+            const tourneyIds = tournaments.map(t => t.tournament_id);
+
+            // Step 2: Fetch Matches and Team information for these tournaments
+            const { data: matches, error: matchErr } = await db
+                .from('matches')
+                .select('match_id, tournament_id, scorer_pin, match_state, team_a:teams!matches_team_a_id_fkey(name), team_b:teams!matches_team_b_id_fkey(name)')
+                .in('tournament_id', tourneyIds);
+
+            if (matchErr || !matches || matches.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">Tournaments exist, but no matches have been generated yet.</td></tr>`;
+                return;
+            }
+
+            // Build Map for fast tournament lookup
+            const tourneyMap = {};
+            tournaments.forEach(t => tourneyMap[t.tournament_id] = t);
+
+            let rowsHtml = '';
+            matches.forEach(m => {
+                const tourney = tourneyMap[m.tournament_id] || { name: 'Unknown', profiles: { full_name: '-' } };
+                const teamAName = m.team_a ? m.team_a.name : 'TBD';
+                const teamBName = m.team_b ? m.team_b.name : 'TBD';
+                const creatorName = tourney.profiles ? tourney.profiles.full_name : 'Admin';
+                const stateClass = m.match_state === 'live' ? 'state-live' : (m.match_state === 'completed' ? 'state-completed' : 'state-draft');
+
+                rowsHtml += `
+                    <tr>
+                        <td style="font-weight: bold; color: white;">${tourney.name}</td>
+                        ${isSuperAdmin ? `<td style="color: #94a3b8;">${creatorName}</td>` : ''}
+                        <td style="font-weight: bold; color: #38bdf8; letter-spacing: 1px;">${m.match_id}</td>
+                        <td style="color: #cbd5e1;">${teamAName} <span style="color:#94a3b8; font-size:0.75rem;">vs</span> ${teamBName}</td>
+                        <td style="text-align: center;"><span class="state-badge ${stateClass}">${m.match_state}</span></td>
+                        <td style="text-align: center;"><span class="pin-badge">${m.scorer_pin || '----'}</span></td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = rowsHtml;
         }
 
         async function signOut() {
