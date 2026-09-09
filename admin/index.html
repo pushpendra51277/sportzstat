@@ -24,7 +24,6 @@
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .full-width { grid-column: span 2; }
         
-        /* Clean Team Inputs CSS */
         .team-input-row { display: flex; gap: 10px; margin-bottom: 10px; }
         .team-input-row input { flex: 1; padding: 10px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 4px; font-weight: bold;}
         
@@ -36,14 +35,12 @@
         .pod-input { background: #0f172a; color: #f8fafc; border: 1px solid #475569; padding: 8px; border-radius: 4px; width: 100%; font-size: 0.85rem; }
         .remove-pod-btn { position: absolute; top: -10px; right: -10px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-weight: bold; line-height: 1; }
 
-        /* SUB-TABS FOR STEP 3 */
         .sub-tab-nav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px; flex-wrap: wrap; }
         .sub-tab-btn { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
         .sub-tab-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
         .sub-tab-pane { display: none; }
         .sub-tab-pane.active { display: block; }
 
-        /* POOLS BUILDER STYLES */
         .pools-workspace { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
         .staging-sidebar { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 15px; min-height: 250px; }
         .pools-container-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
@@ -52,7 +49,6 @@
         .team-pill { background: #3b82f6; color: white; padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; display: flex; align-items: center; gap: 6px; cursor: pointer; }
         .team-pill button { background: transparent; border: none; color: white; cursor: pointer; font-weight: bold; }
 
-        /* POSTINGS GRID */
         .postings-grid { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.85rem; }
         .postings-grid th { background: #1e293b; color: #94a3b8; padding: 10px; text-align: left; }
         .postings-grid td { padding: 15px 10px; border-bottom: 1px solid #1e293b; background: #0f172a; vertical-align: top;}
@@ -60,7 +56,6 @@
         .postings-select { width: 100%; padding: 8px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 4px; }
         .btn-add-small { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px dashed #3b82f6; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; width: 100%; font-weight: bold;}
         
-        /* MANUAL CANVAS STYLES */
         .canvas-row { background: #1e293b; border: 1px solid #3b82f6; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
         .canvas-header { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
         .canvas-match-id { color: #f59e0b; font-weight: bold; font-size: 1.1rem; }
@@ -69,7 +64,6 @@
         .canvas-teams select { flex: 1; }
         .btn-delete { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold;}
 
-        /* MULTI-GROUP BRACKET TREE STYLES */
         .tree-stage-title { color: #38bdf8; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin: 10px 0 20px 0; border-bottom: 2px solid #1e293b; padding-bottom: 5px; text-align: left; font-size: 1.1rem;}
         .tree-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; }
         .tree-pool-col { background: rgba(30, 41, 59, 0.5); border: 1px dashed #475569; border-radius: 8px; padding: 15px; min-width: 220px; flex: 1; max-width: 320px; }
@@ -86,7 +80,6 @@
     <h2 style="color: #3b82f6; letter-spacing: 2px; margin-bottom: 5px;">TOURNAMENT CREATOR</h2>
     <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">Step-by-Step Logistics Flow</p>
 
-    <!-- Navigation Back to Dashboard -->
     <div style="max-width: 1100px; margin: 0 auto 15px auto; text-align: left;">
         <a href="../index.html" style="color: #cbd5e1; text-decoration: none; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px;">
             <span>←</span> Back to Dashboard
@@ -107,38 +100,14 @@
             <div class="admin-form">
                 <h3 style="margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px;">1. Tournament Details</h3>
                 <form id="form-step1" class="form-grid">
-                    
-                    <!-- Top Row: Tournament Name -->
-                    <div class="input-group full-width">
-                        <label>Tournament Name *</label>
-                        <input type="text" id="t-name" required placeholder="e.g., Summer Cup 2026">
-                    </div>
-                    
-                    <!-- Middle Row: Format & Date cleanly side-by-side -->
-                    <div class="input-group">
-                        <label>Format *</label>
-                        <select id="t-format" required>
-                            <option value="T20">T20</option><option value="One Day">One Day</option><option value="Test">Test Match</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label>Starting Date *</label>
-                        <input type="date" id="t-date" required placeholder="Select Date...">
-                    </div>
-                    
-                    <!-- Bottom Row: Host -->
-                    <div class="input-group full-width">
-                        <label>Host / Organizer *</label>
-                        <input type="text" id="t-host" required>
-                    </div>
+                    <div class="input-group full-width"><label>Tournament Name *</label><input type="text" id="t-name" required placeholder="e.g., Summer Cup 2026"></div>
+                    <div class="input-group"><label>Format *</label><select id="t-format" required><option value="T20">T20</option><option value="One Day">One Day</option><option value="Test">Test Match</option></select></div>
+                    <div class="input-group"><label>Starting Date *</label><input type="date" id="t-date" required placeholder="Select Date..."></div>
+                    <div class="input-group full-width"><label>Host / Organizer *</label><input type="text" id="t-host" required></div>
                     
                     <div class="full-width" style="margin-top: 15px;">
                         <h3 style="margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px;">Register Participating Teams</h3>
-                        
-                        <!-- Safe container for team inputs -->
                         <div id="team-inputs-container"></div>
-                        
-                        <!-- Safely appends new fields without wiping data -->
                         <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #475569; width: 100%; margin-top: 10px; padding: 12px; color: #cbd5e1;" onclick="addTeamField()">+ Add Another Team</button>
                     </div>
 
@@ -165,12 +134,10 @@
             </div>
         </div>
 
-        <!-- STEP 3: TABBED WORKSPACE (MANUAL CANVAS + POOLS + KNOCKOUTS + TREE) -->
+        <!-- STEP 3 -->
         <div id="step3" class="dashboard-section">
             <div class="admin-form">
                 <h3 style="margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">3. Multi-Mode Fixture Builder</h3>
-                
-                <!-- Sub-Tab Navigation -->
                 <div class="sub-tab-nav">
                     <button type="button" class="sub-tab-btn active" onclick="switchSubTab('tab-canvas', this)">1. Manual Draw Canvas</button>
                     <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-pools', this)">2. Visual Pool / Group Builder</button>
@@ -178,7 +145,6 @@
                     <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-tree', this); renderTournamentTree();">4. Visual Tree</button>
                 </div>
 
-                <!-- SUB-TAB 1: MANUAL CANVAS -->
                 <div id="tab-canvas" class="sub-tab-pane active">
                     <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">Build matches sequentially with full control. Use dynamic placeholders (e.g. "Winner of M-1") for progression.</p>
                     <div id="canvas-container"></div>
@@ -186,10 +152,8 @@
                     <button type="button" class="btn-launch full-width mt-20" style="background: #f59e0b;" onclick="lockCanvasAndProceed()">Lock Canvas & Proceed to Postings</button>
                 </div>
 
-                <!-- SUB-TAB 2: POOL / GROUP BUILDER -->
                 <div id="tab-pools" class="sub-tab-pane">
                     <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">Organize your registered teams into custom groups to reduce match bloat for large tournaments.</p>
-                    
                     <div class="pools-workspace">
                         <div class="staging-sidebar">
                             <h4 style="color: #3b82f6; margin-top: 0; font-size: 0.95rem;">Unassigned Teams</h4>
@@ -203,16 +167,13 @@
                             <div id="pools-container-grid" class="pools-container-grid"></div>
                         </div>
                     </div>
-
                     <button type="button" class="btn-action w-100 mt-20" style="background: transparent; border: 1px dashed #3b82f6; padding: 12px; color: #3b82f6;" onclick="generatePoolMatches()">Generate Intra-Pool Round Robin Matches</button>
                     <div id="pool-generated-results" class="mt-15" style="display:none;"></div>
                     <button type="button" class="btn-launch full-width mt-20" style="background: #f59e0b;" onclick="lockPoolsAndProceed()">Lock Pools & Proceed to Postings</button>
                 </div>
 
-                <!-- SUB-TAB 3: KNOCKOUT MAPPING -->
                 <div id="tab-knockouts" class="sub-tab-pane">
                     <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 15px;">Generate tournament playoffs. League matches remain safely stored and active.</p>
-                    
                     <div style="background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
                         <label style="color: #f8fafc; font-weight: bold; font-size: 0.9rem;">Auto-Generate Bracket:</label>
                         <select id="ko-size-select" class="postings-select" style="width: auto;">
@@ -221,23 +182,17 @@
                         </select>
                         <button type="button" class="btn-action" style="background: #3b82f6; padding: 8px 15px; font-size: 0.85rem;" onclick="generateKnockoutBracket()">Build Structure</button>
                     </div>
-
-                    <div id="knockout-mapping-container">
-                        <!-- Dynamic KO rows injected here -->
-                    </div>
-                    
+                    <div id="knockout-mapping-container"></div>
                     <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #10b981; width: 100%; padding: 12px; color: #10b981; font-weight: bold; margin-top: 10px;" onclick="addCustomKnockoutMatch()">+ Add Custom Knockout Stage</button>
                     <button type="button" class="btn-launch full-width mt-20" style="background: #f59e0b;" onclick="lockKnockoutsAndProceed()">Lock Knockouts & Proceed to Postings</button>
                 </div>
 
-                <!-- SUB-TAB 4: VISUAL TOURNAMENT TREE -->
                 <div id="tab-tree" class="sub-tab-pane">
                     <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">Graphical hierarchy of your complete tournament progression.</p>
                     <div id="bracket-tree-canvas" style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; min-height: 300px; display: flex; justify-content: space-around; align-items: center; overflow-x: auto;">
                         <span style="color: #94a3b8; font-size: 0.9rem;">Configure your matches in previous tabs to render the tree.</span>
                     </div>
                 </div>
-
             </div>
         </div>
 
@@ -246,15 +201,9 @@
             <div class="admin-form" style="overflow-x: auto;">
                 <h3 style="border-bottom: 1px solid #334155; padding-bottom: 10px;">4. Official Assignments (Postings)</h3>
                 <p style="color:#94a3b8; font-size:0.8rem; margin-bottom: 15px;">Assign your officials to the complete generated draw.</p>
-                
                 <table class="postings-grid">
                     <thead>
-                        <tr>
-                            <th style="width: 25%;">Match Details</th>
-                            <th style="width: 25%;">Umpires</th>
-                            <th style="width: 25%;">Scorers</th>
-                            <th style="width: 25%;">Referees</th>
-                        </tr>
+                        <tr><th style="width: 25%;">Match Details</th><th style="width: 25%;">Umpires</th><th style="width: 25%;">Scorers</th><th style="width: 25%;">Referees</th></tr>
                     </thead>
                     <tbody id="postings-body">
                         <tr><td colspan="4" style="text-align: center; color: #94a3b8;">Build your fixtures in Step 3 to view postings.</td></tr>
@@ -271,25 +220,14 @@
         const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let activeTeams = []; 
-        let poolsData = {}; 
-        
-        let manualMatches = []; 
-        let poolGeneratedMatches = [];
-        let koGeneratedMatches = [];
-        
+        let activeTeams = []; let poolsData = {}; 
+        let manualMatches = []; let poolGeneratedMatches = []; let koGeneratedMatches = [];
         let finalLockedMatches = []; 
 
-        // 1. SAFE LOAD: Appends fields immediately, immune to flatpickr network failures
         document.addEventListener('DOMContentLoaded', () => { 
             for(let i=1; i<=8; i++) addTeamField(i);
             for(let i=0; i<3; i++) addPlayerPod();
-
-            try {
-                flatpickr("input[type='date']", { dateFormat: "Y-m-d", disableMobile: true });
-            } catch(e) {
-                console.warn("Flatpickr calendar failed to load, reverting to native browser calendar.");
-            }
+            try { flatpickr("input[type='date']", { dateFormat: "Y-m-d", disableMobile: true }); } catch(e) {}
         });
 
         function switchStep(stepId) {
@@ -310,12 +248,10 @@
         function updateFinalLockedMatches() {
             let mMatches = manualMatches.map(m => ({ matchNum: m.id, matchName: m.name, team1: m.t1 || "TBD", team2: m.t2 || "TBD" }));
             let koMatches = koGeneratedMatches.map(m => ({ matchNum: m.id, matchName: m.name, team1: m.t1 || "TBD", team2: m.t2 || "TBD" }));
-            
             finalLockedMatches = [...mMatches, ...poolGeneratedMatches, ...koMatches];
             buildPostingsGrid();
         }
 
-        // 2. SAFE APPEND: Uses appendChild to prevent overwriting existing entered text
         function addTeamField(forceCount = null) {
             const count = forceCount || document.querySelectorAll('.tourney-team-input').length + 1;
             const container = document.getElementById('team-inputs-container');
@@ -328,12 +264,8 @@
         document.getElementById('form-step1').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button');
-            
-            activeTeams = [];
-            const inputs = document.querySelectorAll('.tourney-team-input');
-            const teamPayload = [];
-            const teamNamesSet = new Set();
-            let hasDuplicateTeam = false;
+            activeTeams = []; const inputs = document.querySelectorAll('.tourney-team-input');
+            const teamPayload = []; const teamNamesSet = new Set(); let hasDuplicateTeam = false;
 
             inputs.forEach(input => {
                 let rawVal = input.value;
@@ -348,11 +280,7 @@
                 }
             });
 
-            if (hasDuplicateTeam) {
-                alert("❌ Error: Duplicate team names are not allowed.");
-                return;
-            }
-
+            if (hasDuplicateTeam) { alert("❌ Error: Duplicate team names are not allowed."); return; }
             btn.innerText = "Saving to Database...";
 
             const { error: tError } = await db.from('tournaments').insert([{
@@ -364,7 +292,6 @@
             if (tError) { alert("Error saving tournament: " + tError.message); btn.innerText = "Save Tournament & Teams"; return; }
 
             if(teamPayload.length > 0) await db.from('master_teams').insert(teamPayload);
-            
             const select = document.getElementById('squad-team-select');
             select.innerHTML = '<option value="">Select a team to add players...</option>';
             activeTeams.forEach(team => { select.innerHTML += `<option value="${team}">${team}</option>`; });
@@ -377,28 +304,15 @@
         function addPlayerPod() {
             const div = document.createElement('div');
             div.className = 'player-pod';
-            div.innerHTML = `
-                <button type="button" class="remove-pod-btn" onclick="this.parentElement.remove()">×</button>
-                <div class="pod-row-1">
-                    <div><label style="font-size: 0.7rem; color: #94a3b8;">Player Name *</label><input type="text" class="pod-input p-name" placeholder="Full Name"></div>
-                    <div><label style="font-size: 0.7rem; color: #94a3b8;">Role</label><select class="pod-input p-role"><option value="Batter">Batter</option><option value="Bowler">Bowler</option><option value="All-Rounder">All-Rounder</option><option value="Wicketkeeper">WK</option></select></div>
-                </div>
-                <div class="pod-row-2">
-                    <div><label style="font-size: 0.7rem; color: #94a3b8;">Batting Style</label><select class="pod-input p-bat"><option value="RHB">Right-Hand Bat</option><option value="LHB">Left-Hand Bat</option></select></div>
-                    <div><label style="font-size: 0.7rem; color: #94a3b8;">Bowling Arm</label><select class="pod-input p-arm"><option value="None">None</option><option value="Right">Right-Arm</option><option value="Left">Left-Arm</option></select></div>
-                    <div><label style="font-size: 0.7rem; color: #94a3b8;">Bowling Pace/Type</label><select class="pod-input p-type"><option value="None">-</option><option value="Pace">Pace / Medium</option><option value="Spin">Spin</option></select></div>
-                </div>`;
+            div.innerHTML = `<button type="button" class="remove-pod-btn" onclick="this.parentElement.remove()">×</button><div class="pod-row-1"><div><label style="font-size: 0.7rem; color: #94a3b8;">Player Name *</label><input type="text" class="pod-input p-name" placeholder="Full Name"></div><div><label style="font-size: 0.7rem; color: #94a3b8;">Role</label><select class="pod-input p-role"><option value="Batter">Batter</option><option value="Bowler">Bowler</option><option value="All-Rounder">All-Rounder</option><option value="Wicketkeeper">WK</option></select></div></div><div class="pod-row-2"><div><label style="font-size: 0.7rem; color: #94a3b8;">Batting Style</label><select class="pod-input p-bat"><option value="RHB">Right-Hand Bat</option><option value="LHB">Left-Hand Bat</option></select></div><div><label style="font-size: 0.7rem; color: #94a3b8;">Bowling Arm</label><select class="pod-input p-arm"><option value="None">None</option><option value="Right">Right-Arm</option><option value="Left">Left-Arm</option></select></div><div><label style="font-size: 0.7rem; color: #94a3b8;">Bowling Pace/Type</label><select class="pod-input p-type"><option value="None">-</option><option value="Pace">Pace / Medium</option><option value="Spin">Spin</option></select></div></div>`;
             document.getElementById('player-inputs-container').appendChild(div);
         }
 
         async function savePlayersToDB() {
             const team = document.getElementById('squad-team-select').value;
             if(!team) { alert("Please select a team."); return; }
-            
-            const pods = document.querySelectorAll('.player-pod');
-            const payload = [];
-            const playerNamesSet = new Set();
-            let hasDuplicatePlayer = false;
+            const pods = document.querySelectorAll('.player-pod'); const payload = [];
+            const playerNamesSet = new Set(); let hasDuplicatePlayer = false;
 
             pods.forEach(pod => {
                 const name = pod.querySelector('.p-name').value.trim();
@@ -406,125 +320,46 @@
                     let lowerName = name.toLowerCase().replace(/\s+/g, ' ');
                     if(playerNamesSet.has(lowerName)) hasDuplicatePlayer = true;
                     playerNamesSet.add(lowerName);
-
-                    const arm = pod.querySelector('.p-arm').value;
-                    const type = pod.querySelector('.p-type').value;
+                    const arm = pod.querySelector('.p-arm').value; const type = pod.querySelector('.p-type').value;
                     let bowlStyle = (arm !== "None" && type !== "None") ? `${arm}-arm ${type}` : "None";
-                    
-                    payload.push({ 
-                        full_name: name, playing_role: pod.querySelector('.p-role').value,
-                        batting_style: pod.querySelector('.p-bat').value === 'RHB' ? 'Right-hand bat' : 'Left-hand bat',
-                        bowling_style: bowlStyle, current_team: team
-                    });
+                    payload.push({ full_name: name, playing_role: pod.querySelector('.p-role').value, batting_style: pod.querySelector('.p-bat').value === 'RHB' ? 'Right-hand bat' : 'Left-hand bat', bowling_style: bowlStyle, current_team: team });
                 }
             });
 
             if (hasDuplicatePlayer) { alert("❌ Error: Duplicate player names found within this squad."); return; }
             if(payload.length === 0) return;
-            
             const { error } = await db.from('master_players').insert(payload);
-            if (error) alert("Error: " + error.message); 
-            else { 
-                alert(`Saved ${payload.length} players to ${team}!`); 
-                document.getElementById('player-inputs-container').innerHTML = ''; 
-                for(let i=0; i<3; i++) { addPlayerPod(); } 
-            }
+            if (error) alert("Error: " + error.message); else { alert(`Saved ${payload.length} players to ${team}!`); document.getElementById('player-inputs-container').innerHTML = ''; for(let i=0; i<3; i++) { addPlayerPod(); } }
         }
 
-        function addManualMatch() {
-            let nextId = "M-" + (manualMatches.length + 1);
-            manualMatches.push({ id: nextId, name: `Match ${manualMatches.length + 1}`, t1: "", t2: "" });
-            renderCanvas();
-        }
+        function addManualMatch() { let nextId = "M-" + (manualMatches.length + 1); manualMatches.push({ id: nextId, name: `Match ${manualMatches.length + 1}`, t1: "", t2: "" }); renderCanvas(); }
 
         function renderCanvas() {
-            const container = document.getElementById('canvas-container');
-            container.innerHTML = "";
+            const container = document.getElementById('canvas-container'); container.innerHTML = "";
             manualMatches.forEach((match, index) => {
-                let optionsHtml = `<option value="">Select Team or Placeholder...</option>`;
-                optionsHtml += `<optgroup label="Registered Teams">`;
+                let optionsHtml = `<option value="">Select Team or Placeholder...</option><optgroup label="Registered Teams">`;
                 activeTeams.forEach(team => { optionsHtml += `<option value="${team}">${team}</option>`; });
                 optionsHtml += `</optgroup>`;
-
-                if (index > 0) {
-                    optionsHtml += `<optgroup label="Match Progressions">`;
-                    for(let i = 0; i < index; i++) {
-                        let prevM = manualMatches[i].id;
-                        optionsHtml += `<option value="Winner of ${prevM}">Winner of ${prevM}</option>`;
-                        optionsHtml += `<option value="Loser of ${prevM}">Loser of ${prevM}</option>`;
-                    }
-                    optionsHtml += `</optgroup>`;
-                }
-
-                let row = document.createElement('div');
-                row.className = 'canvas-row';
-                row.innerHTML = `
-                    <div class="canvas-header">
-                        <span class="canvas-match-id">${match.id}</span>
-                        <input type="text" class="canvas-name-input" value="${match.name}" oninput="updateMatch(${index}, 'name', this.value)" placeholder="e.g. Quarter Final 1">
-                        <button type="button" class="btn-delete" onclick="deleteMatch(${index})">X</button>
-                    </div>
-                    <div class="canvas-teams">
-                        <select class="postings-select" onchange="updateMatch(${index}, 't1', this.value)">
-                            ${optionsHtml.replace(`value="${match.t1}"`, `value="${match.t1}" selected`)}
-                        </select>
-                        <span style="color: white; font-weight: bold;">VS</span>
-                        <select class="postings-select" onchange="updateMatch(${index}, 't2', this.value)">
-                            ${optionsHtml.replace(`value="${match.t2}"`, `value="${match.t2}" selected`)}
-                        </select>
-                    </div>
-                `;
+                if (index > 0) { optionsHtml += `<optgroup label="Match Progressions">`; for(let i = 0; i < index; i++) { let prevM = manualMatches[i].id; optionsHtml += `<option value="Winner of ${prevM}">Winner of ${prevM}</option><option value="Loser of ${prevM}">Loser of ${prevM}</option>`; } optionsHtml += `</optgroup>`; }
+                let row = document.createElement('div'); row.className = 'canvas-row';
+                row.innerHTML = `<div class="canvas-header"><span class="canvas-match-id">${match.id}</span><input type="text" class="canvas-name-input" value="${match.name}" oninput="updateMatch(${index}, 'name', this.value)" placeholder="e.g. Quarter Final 1"><button type="button" class="btn-delete" onclick="deleteMatch(${index})">X</button></div><div class="canvas-teams"><select class="postings-select" onchange="updateMatch(${index}, 't1', this.value)">${optionsHtml.replace(`value="${match.t1}"`, `value="${match.t1}" selected`)}</select><span style="color: white; font-weight: bold;">VS</span><select class="postings-select" onchange="updateMatch(${index}, 't2', this.value)">${optionsHtml.replace(`value="${match.t2}"`, `value="${match.t2}" selected`)}</select></div>`;
                 container.appendChild(row);
             });
         }
 
         function updateMatch(index, field, value) { manualMatches[index][field] = value; if(field !== 'name') renderCanvas(); }
         function deleteMatch(index) { manualMatches.splice(index, 1); manualMatches.forEach((m, i) => m.id = "M-" + (i+1)); renderCanvas(); }
+        function lockCanvasAndProceed() { if(manualMatches.length === 0) { alert("Please build at least one match on the canvas."); return; } updateFinalLockedMatches(); document.querySelectorAll('.wizard-step')[3].click(); }
 
-        function lockCanvasAndProceed() {
-            if(manualMatches.length === 0) { alert("Please build at least one match on the canvas."); return; }
-            updateFinalLockedMatches();
-            document.querySelectorAll('.wizard-step')[3].click();
-        }
-
-        function initPoolsWorkspace() {
-            if(Object.keys(poolsData).length === 0) poolsData = { "Pool A": [], "Pool B": [] };
-            renderPoolsWorkspace();
-        }
-
-        function addNewPool() {
-            let poolNames = Object.keys(poolsData);
-            let nextName = "Pool " + String.fromCharCode(65 + poolNames.length);
-            poolsData[nextName] = [];
-            renderPoolsWorkspace();
-        }
+        function initPoolsWorkspace() { if(Object.keys(poolsData).length === 0) poolsData = { "Pool A": [], "Pool B": [] }; renderPoolsWorkspace(); }
+        function addNewPool() { let poolNames = Object.keys(poolsData); let nextName = "Pool " + String.fromCharCode(65 + poolNames.length); poolsData[nextName] = []; renderPoolsWorkspace(); }
 
         function renderPoolsWorkspace() {
-            let assignedTeams = [].concat(...Object.values(poolsData));
-            let unassigned = activeTeams.filter(t => !assignedTeams.includes(t));
-            
+            let assignedTeams = [].concat(...Object.values(poolsData)); let unassigned = activeTeams.filter(t => !assignedTeams.includes(t));
             const stagingEl = document.getElementById('staging-teams-list');
-            stagingEl.innerHTML = unassigned.length === 0 ? '<div style="color:#94a3b8; font-size:0.8rem;">All teams assigned!</div>' : 
-                unassigned.map(t => `<div style="background:#0f172a; padding:8px; border-radius:4px; font-size:0.85rem; font-weight:bold; display:flex; justify-content:space-between; align-items:center;">
-                    ${t} <select style="background:#1e293b; color:white; border:1px solid #475569; padding:2px; font-size:0.75rem;" onchange="assignTeamToPool('${t}', this.value)">
-                        <option value="">Move to...</option>
-                        ${Object.keys(poolsData).map(p => `<option value="${p}">${p}</option>`).join('')}
-                    </select>
-                </div>`).join('');
-
+            stagingEl.innerHTML = unassigned.length === 0 ? '<div style="color:#94a3b8; font-size:0.8rem;">All teams assigned!</div>' : unassigned.map(t => `<div style="background:#0f172a; padding:8px; border-radius:4px; font-size:0.85rem; font-weight:bold; display:flex; justify-content:space-between; align-items:center;">${t} <select style="background:#1e293b; color:white; border:1px solid #475569; padding:2px; font-size:0.75rem;" onchange="assignTeamToPool('${t}', this.value)"><option value="">Move to...</option>${Object.keys(poolsData).map(p => `<option value="${p}">${p}</option>`).join('')}</select></div>`).join('');
             const gridEl = document.getElementById('pools-container-grid');
-            gridEl.innerHTML = Object.keys(poolsData).map(poolName => `
-                <div class="pool-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="color:#f59e0b; font-weight:bold; font-size:1rem;">${poolName}</span>
-                        <button type="button" class="btn-delete" style="padding:2px 6px; font-size:0.7rem;" onclick="deletePool('${poolName}')">Delete Pool</button>
-                    </div>
-                    <div class="pool-teams-box">
-                        ${poolsData[poolName].length === 0 ? '<span style="color:#475569; font-size:0.8rem;">Drop teams here</span>' : 
-                          poolsData[poolName].map(t => `<div class="team-pill">${t} <button onclick="removeTeamFromPool('${poolName}', '${t}')">×</button></div>`).join('')}
-                    </div>
-                </div>
-            `).join('');
+            gridEl.innerHTML = Object.keys(poolsData).map(poolName => `<div class="pool-card"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:#f59e0b; font-weight:bold; font-size:1rem;">${poolName}</span><button type="button" class="btn-delete" style="padding:2px 6px; font-size:0.7rem;" onclick="deletePool('${poolName}')">Delete Pool</button></div><div class="pool-teams-box">${poolsData[poolName].length === 0 ? '<span style="color:#475569; font-size:0.8rem;">Drop teams here</span>' : poolsData[poolName].map(t => `<div class="team-pill">${t} <button onclick="removeTeamFromPool('${poolName}', '${t}')">×</button></div>`).join('')}</div></div>`).join('');
         }
 
         function assignTeamToPool(teamName, poolName) { if(!poolName) return; poolsData[poolName].push(teamName); renderPoolsWorkspace(); }
@@ -532,305 +367,66 @@
         function deletePool(poolName) { delete poolsData[poolName]; renderPoolsWorkspace(); }
 
         function generatePoolMatches() {
-            let matchCount = 1;
-            poolGeneratedMatches = [];
-            Object.keys(poolsData).forEach(poolName => {
-                let teams = poolsData[poolName];
-                for(let i=0; i<teams.length; i++) {
-                    for(let j=i+1; j<teams.length; j++) {
-                        poolGeneratedMatches.push({ matchNum: `M-${matchCount}`, matchName: `${poolName}: ${teams[i]} vs ${teams[j]}`, team1: teams[i], team2: teams[j] });
-                        matchCount++;
-                    }
-                }
-            });
-
+            let matchCount = 1; poolGeneratedMatches = [];
+            Object.keys(poolsData).forEach(poolName => { let teams = poolsData[poolName]; for(let i=0; i<teams.length; i++) { for(let j=i+1; j<teams.length; j++) { poolGeneratedMatches.push({ matchNum: `M-${matchCount}`, matchName: `${poolName}: ${teams[i]} vs ${teams[j]}`, team1: teams[i], team2: teams[j] }); matchCount++; } } });
             if(poolGeneratedMatches.length === 0) { alert("Please assign at least 2 teams to a pool first."); return; }
-
-            const resEl = document.getElementById('pool-generated-results');
-            resEl.style.display = 'block';
-            resEl.innerHTML = `<h4 style="color:#10b981; margin-bottom:10px;">Generated ${poolGeneratedMatches.length} Group Matches:</h4>` + 
-                poolGeneratedMatches.map(m => `<div style="background:#1e293b; padding:8px; margin-bottom:5px; border-radius:4px; font-size:0.85rem;"><b>${m.matchNum}</b> (${m.matchName})</div>`).join('');
+            const resEl = document.getElementById('pool-generated-results'); resEl.style.display = 'block'; resEl.innerHTML = `<h4 style="color:#10b981; margin-bottom:10px;">Generated ${poolGeneratedMatches.length} Group Matches:</h4>` + poolGeneratedMatches.map(m => `<div style="background:#1e293b; padding:8px; margin-bottom:5px; border-radius:4px; font-size:0.85rem;"><b>${m.matchNum}</b> (${m.matchName})</div>`).join('');
         }
-
-        function lockPoolsAndProceed() {
-            if(poolGeneratedMatches.length === 0) generatePoolMatches();
-            if(poolGeneratedMatches.length === 0) return;
-            updateFinalLockedMatches();
-            document.querySelectorAll('.wizard-step')[3].click();
-        }
+        function lockPoolsAndProceed() { if(poolGeneratedMatches.length === 0) generatePoolMatches(); if(poolGeneratedMatches.length === 0) return; updateFinalLockedMatches(); document.querySelectorAll('.wizard-step')[3].click(); }
 
         function generateKnockoutBracket() {
-            let size = parseInt(document.getElementById('ko-size-select').value);
-            koGeneratedMatches = [];
-            
-            if (size === 4) {
-                koGeneratedMatches.push({ id: "KO-1", name: "Semi-Final 1", t1: "", t2: "" });
-                koGeneratedMatches.push({ id: "KO-2", name: "Semi-Final 2", t1: "", t2: "" });
-                koGeneratedMatches.push({ id: "KO-3", name: "Grand Final", t1: "Winner KO-1", t2: "Winner KO-2" });
-            } else if (size === 8) {
-                for(let i=1; i<=4; i++) koGeneratedMatches.push({ id: `KO-${i}`, name: `Quarter-Final ${i}`, t1: "", t2: "" });
-                koGeneratedMatches.push({ id: "KO-5", name: "Semi-Final 1", t1: "Winner KO-1", t2: "Winner KO-2" });
-                koGeneratedMatches.push({ id: "KO-6", name: "Semi-Final 2", t1: "Winner KO-3", t2: "Winner KO-4" });
-                koGeneratedMatches.push({ id: "KO-7", name: "Grand Final", t1: "Winner KO-5", t2: "Winner KO-6" });
-            }
+            let size = parseInt(document.getElementById('ko-size-select').value); koGeneratedMatches = [];
+            if (size === 4) { koGeneratedMatches.push({ id: "KO-1", name: "Semi-Final 1", t1: "", t2: "" }); koGeneratedMatches.push({ id: "KO-2", name: "Semi-Final 2", t1: "", t2: "" }); koGeneratedMatches.push({ id: "KO-3", name: "Grand Final", t1: "Winner KO-1", t2: "Winner KO-2" }); } else if (size === 8) { for(let i=1; i<=4; i++) koGeneratedMatches.push({ id: `KO-${i}`, name: `Quarter-Final ${i}`, t1: "", t2: "" }); koGeneratedMatches.push({ id: "KO-5", name: "Semi-Final 1", t1: "Winner KO-1", t2: "Winner KO-2" }); koGeneratedMatches.push({ id: "KO-6", name: "Semi-Final 2", t1: "Winner KO-3", t2: "Winner KO-4" }); koGeneratedMatches.push({ id: "KO-7", name: "Grand Final", t1: "Winner KO-5", t2: "Winner KO-6" }); }
             renderKnockouts();
         }
 
-        function addCustomKnockoutMatch() {
-            let count = koGeneratedMatches.length + 1;
-            koGeneratedMatches.push({ id: `KO-${count}`, name: `Knockout ${count}`, t1: "", t2: "" });
-            renderKnockouts();
-        }
+        function addCustomKnockoutMatch() { let count = koGeneratedMatches.length + 1; koGeneratedMatches.push({ id: `KO-${count}`, name: `Knockout ${count}`, t1: "", t2: "" }); renderKnockouts(); }
 
         function getKnockoutDropdownOptions(currentKoIndex, selectedValue) {
-            let optionsHtml = `<option value="">Select Team or Placeholder...</option>`;
-            
-            optionsHtml += `<optgroup label="Registered Teams">`;
-            activeTeams.forEach(team => { 
-                let sel = (selectedValue === team) ? "selected" : "";
-                optionsHtml += `<option value="${team}" ${sel}>${team}</option>`; 
-            });
-            optionsHtml += `</optgroup>`;
-
-            let poolKeys = Object.keys(poolsData);
-            if (poolKeys.length > 0) {
-                optionsHtml += `<optgroup label="Pool Standings">`;
-                poolKeys.forEach(pk => {
-                    ["1st Place", "2nd Place", "3rd Place", "4th Place"].forEach(pos => {
-                        let val = `${pk} - ${pos}`;
-                        let sel = (selectedValue === val) ? "selected" : "";
-                        optionsHtml += `<option value="${val}" ${sel}>${val}</option>`;
-                    });
-                });
-                optionsHtml += `</optgroup>`;
-            }
-
-            if (currentKoIndex > 0) {
-                optionsHtml += `<optgroup label="Stage Progressions">`;
-                for(let i = 0; i < currentKoIndex; i++) {
-                    let prevM = koGeneratedMatches[i].id;
-                    let winVal = `Winner ${prevM}`;
-                    let loseVal = `Loser ${prevM}`;
-                    optionsHtml += `<option value="${winVal}" ${selectedValue === winVal ? "selected" : ""}>${winVal}</option>`;
-                    optionsHtml += `<option value="${loseVal}" ${selectedValue === loseVal ? "selected" : ""}>${loseVal}</option>`;
-                }
-                optionsHtml += `</optgroup>`;
-            }
+            let optionsHtml = `<option value="">Select Team or Placeholder...</option><optgroup label="Registered Teams">`;
+            activeTeams.forEach(team => { let sel = (selectedValue === team) ? "selected" : ""; optionsHtml += `<option value="${team}" ${sel}>${team}</option>`; });
+            optionsHtml += `</optgroup>`; let poolKeys = Object.keys(poolsData);
+            if (poolKeys.length > 0) { optionsHtml += `<optgroup label="Pool Standings">`; poolKeys.forEach(pk => { ["1st Place", "2nd Place", "3rd Place", "4th Place"].forEach(pos => { let val = `${pk} - ${pos}`; let sel = (selectedValue === val) ? "selected" : ""; optionsHtml += `<option value="${val}" ${sel}>${val}</option>`; }); }); optionsHtml += `</optgroup>`; }
+            if (currentKoIndex > 0) { optionsHtml += `<optgroup label="Stage Progressions">`; for(let i = 0; i < currentKoIndex; i++) { let prevM = koGeneratedMatches[i].id; let winVal = `Winner ${prevM}`; let loseVal = `Loser ${prevM}`; optionsHtml += `<option value="${winVal}" ${selectedValue === winVal ? "selected" : ""}>${winVal}</option>`; optionsHtml += `<option value="${loseVal}" ${selectedValue === loseVal ? "selected" : ""}>${loseVal}</option>`; } optionsHtml += `</optgroup>`; }
             return optionsHtml;
         }
 
         function renderKnockouts() {
-            const container = document.getElementById('knockout-mapping-container');
-            container.innerHTML = "";
-            
-            koGeneratedMatches.forEach((match, index) => {
-                let row = document.createElement('div');
-                row.className = 'canvas-row';
-                row.innerHTML = `
-                    <div class="canvas-header">
-                        <span class="canvas-match-id">${match.id}</span>
-                        <input type="text" class="canvas-name-input" value="${match.name}" oninput="updateKOMatch(${index}, 'name', this.value)">
-                        <button type="button" class="btn-delete" onclick="deleteKOMatch(${index})">X</button>
-                    </div>
-                    <div class="canvas-teams">
-                        <select class="postings-select" onchange="updateKOMatch(${index}, 't1', this.value)">
-                            ${getKnockoutDropdownOptions(index, match.t1)}
-                        </select>
-                        <span style="color: white; font-weight: bold;">VS</span>
-                        <select class="postings-select" onchange="updateKOMatch(${index}, 't2', this.value)">
-                            ${getKnockoutDropdownOptions(index, match.t2)}
-                        </select>
-                    </div>
-                `;
-                container.appendChild(row);
-            });
+            const container = document.getElementById('knockout-mapping-container'); container.innerHTML = "";
+            koGeneratedMatches.forEach((match, index) => { let row = document.createElement('div'); row.className = 'canvas-row'; row.innerHTML = `<div class="canvas-header"><span class="canvas-match-id">${match.id}</span><input type="text" class="canvas-name-input" value="${match.name}" oninput="updateKOMatch(${index}, 'name', this.value)"><button type="button" class="btn-delete" onclick="deleteKOMatch(${index})">X</button></div><div class="canvas-teams"><select class="postings-select" onchange="updateKOMatch(${index}, 't1', this.value)">${getKnockoutDropdownOptions(index, match.t1)}</select><span style="color: white; font-weight: bold;">VS</span><select class="postings-select" onchange="updateKOMatch(${index}, 't2', this.value)">${getKnockoutDropdownOptions(index, match.t2)}</select></div>`; container.appendChild(row); });
         }
 
         function updateKOMatch(index, field, value) { koGeneratedMatches[index][field] = value; }
         function deleteKOMatch(index) { koGeneratedMatches.splice(index, 1); koGeneratedMatches.forEach((m, i) => m.id = "KO-" + (i+1)); renderKnockouts(); }
-
-        function lockKnockoutsAndProceed() {
-            if(koGeneratedMatches.length === 0) { alert("Please build at least one knockout match."); return; }
-            updateFinalLockedMatches();
-            document.querySelectorAll('.wizard-step')[3].click();
-        }
+        function lockKnockoutsAndProceed() { if(koGeneratedMatches.length === 0) { alert("Please build at least one knockout match."); return; } updateFinalLockedMatches(); document.querySelectorAll('.wizard-step')[3].click(); }
 
         function renderTournamentTree() {
             const canvas = document.getElementById('bracket-tree-canvas');
-            
-            if(!finalLockedMatches || finalLockedMatches.length === 0) {
-                updateFinalLockedMatches();
-                if(finalLockedMatches.length === 0) {
-                    canvas.innerHTML = `<span style="color: #94a3b8; font-size: 0.9rem;">No matches found. Build your fixtures first.</span>`;
-                    return;
-                }
-            }
-
-            let pools = {};
-            let semiFinals = [];
-            let quarterFinals = [];
-            let finalMatch = null;
-            let others = [];
-
-            finalLockedMatches.forEach((m, idx) => {
-                m._dispId = m.matchNum || 'M-' + (idx+1);
-                let name = (m.matchName || m.name || '').toUpperCase();
-                
-                if (name.includes('FINAL') && !name.includes('SEMI') && !name.includes('QUARTER')) {
-                    finalMatch = m;
-                } else if (name.includes('SEMI')) {
-                    semiFinals.push(m);
-                } else if (name.includes('QUARTER')) {
-                    quarterFinals.push(m);
-                } else if (name.includes('POOL ') || name.includes('GROUP ')) {
-                    let poolName = (m.matchName || m.name).split(':')[0].trim();
-                    if (!pools[poolName]) pools[poolName] = [];
-                    pools[poolName].push(m);
-                } else {
-                    others.push(m); 
-                }
-            });
-
-            let renderNode = (m) => `
-                <div class="bracket-match-node" style="margin-bottom: 12px; width: 100%;">
-                    <div class="m-id">${m._dispId}</div>
-                    <div class="m-title">${m.matchName || m.name}</div>
-                    <div class="m-teams">
-                        <div>${m.team1 || 'TBD'}</div>
-                        <div style="color: #94a3b8; font-size: 0.6rem; margin: 2px 0;">vs</div>
-                        <div>${m.team2 || 'TBD'}</div>
-                    </div>
-                </div>
-            `;
-
+            if(!finalLockedMatches || finalLockedMatches.length === 0) { updateFinalLockedMatches(); if(finalLockedMatches.length === 0) { canvas.innerHTML = `<span style="color: #94a3b8; font-size: 0.9rem;">No matches found. Build your fixtures first.</span>`; return; } }
+            let pools = {}; let semiFinals = []; let quarterFinals = []; let finalMatch = null; let others = [];
+            finalLockedMatches.forEach((m, idx) => { m._dispId = m.matchNum || 'M-' + (idx+1); let name = (m.matchName || m.name || '').toUpperCase(); if (name.includes('FINAL') && !name.includes('SEMI') && !name.includes('QUARTER')) { finalMatch = m; } else if (name.includes('SEMI')) { semiFinals.push(m); } else if (name.includes('QUARTER')) { quarterFinals.push(m); } else if (name.includes('POOL ') || name.includes('GROUP ')) { let poolName = (m.matchName || m.name).split(':')[0].trim(); if (!pools[poolName]) pools[poolName] = []; pools[poolName].push(m); } else { others.push(m); } });
+            let renderNode = (m) => `<div class="bracket-match-node" style="margin-bottom: 12px; width: 100%;"><div class="m-id">${m._dispId}</div><div class="m-title">${m.matchName || m.name}</div><div class="m-teams"><div>${m.team1 || 'TBD'}</div><div style="color: #94a3b8; font-size: 0.6rem; margin: 2px 0;">vs</div><div>${m.team2 || 'TBD'}</div></div></div>`;
             let html = `<div style="width: 100%; display: flex; flex-direction: column; gap: 30px;">`;
-
-            let poolKeys = Object.keys(pools);
-            if (poolKeys.length > 0 || others.length > 0) {
-                html += `<div>
-                            <div class="tree-stage-title">🏏 League & Group Stage</div>
-                            <div class="tree-row" style="align-items: flex-start;">`;
-                
-                poolKeys.forEach(pk => {
-                    html += `<div class="tree-pool-col">
-                        <div class="tree-pool-title">${pk}</div>
-                        ${pools[pk].map(m => renderNode(m)).join('')}
-                    </div>`;
-                });
-
-                if (others.length > 0) {
-                    html += `<div class="tree-pool-col">
-                        <div class="tree-pool-title">${poolKeys.length > 0 ? 'Other Matches' : 'League Matches'}</div>
-                        ${others.map(m => renderNode(m)).join('')}
-                    </div>`;
-                }
-                html += `</div></div>`;
-            }
-
-            if (quarterFinals.length > 0 || semiFinals.length > 0 || finalMatch) {
-                html += `<div>
-                            <div class="tree-stage-title" style="color: #f59e0b;">🏆 Playoffs & Finals</div>`;
-                
-                if (quarterFinals.length > 0) {
-                    html += `<div style="text-align:center; margin-bottom: 10px; color: #94a3b8; font-size: 0.8rem; font-weight:bold;">QUARTER FINALS</div>
-                             <div class="tree-row">${quarterFinals.map(m => `<div style="width: 220px;">${renderNode(m)}</div>`).join('')}</div>`;
-                }
-                
-                if (semiFinals.length > 0) {
-                    if(quarterFinals.length > 0) html += `<div style="text-align:center; color:#334155; margin-bottom:10px;">▼</div>`;
-                    html += `<div style="text-align:center; margin-bottom: 10px; color: #94a3b8; font-size: 0.8rem; font-weight:bold;">SEMI FINALS</div>
-                             <div class="tree-row">${semiFinals.map(m => `<div style="width: 220px;">${renderNode(m)}</div>`).join('')}</div>`;
-                }
-
-                if (finalMatch) {
-                    if(quarterFinals.length > 0 || semiFinals.length > 0) html += `<div style="text-align:center; color:#334155; margin-bottom:10px;">▼</div>`;
-                    html += `<div style="text-align:center; margin-bottom: 10px; color: #10b981; font-size: 0.9rem; font-weight:bold;">CHAMPIONSHIP FINAL</div>
-                             <div class="tree-row">
-                                 <div class="center-final-box" style="width: 280px; margin: 0 auto;">
-                                    <div style="color: #f59e0b; font-weight: bold; font-size: 0.75rem; margin-bottom: 5px;">${finalMatch._dispId}</div>
-                                    <div style="color: white; font-weight: bold; font-size: 1rem; margin-bottom: 10px;">${finalMatch.matchName || finalMatch.name}</div>
-                                    <div style="font-size: 0.85rem; color: #10b981; font-weight: bold; background: #0f172a; padding: 10px; border-radius: 4px;">
-                                        <div>${finalMatch.team1 || 'TBD'}</div>
-                                        <div style="color: #94a3b8; font-size: 0.75rem; margin: 4px 0;">VS</div>
-                                        <div>${finalMatch.team2 || 'TBD'}</div>
-                                    </div>
-                                 </div>
-                             </div>`;
-                }
-                html += `</div>`;
-            }
-
-            html += `</div>`;
-            canvas.innerHTML = html;
-            
-            canvas.style.display = 'block'; 
-            canvas.style.padding = '10px';
-            canvas.style.background = 'transparent';
-            canvas.style.border = 'none';
+            let poolKeys = Object.keys(pools); if (poolKeys.length > 0 || others.length > 0) { html += `<div><div class="tree-stage-title">🏏 League & Group Stage</div><div class="tree-row" style="align-items: flex-start;">`; poolKeys.forEach(pk => { html += `<div class="tree-pool-col"><div class="tree-pool-title">${pk}</div>${pools[pk].map(m => renderNode(m)).join('')}</div>`; }); if (others.length > 0) { html += `<div class="tree-pool-col"><div class="tree-pool-title">${poolKeys.length > 0 ? 'Other Matches' : 'League Matches'}</div>${others.map(m => renderNode(m)).join('')}</div>`; } html += `</div></div>`; }
+            if (quarterFinals.length > 0 || semiFinals.length > 0 || finalMatch) { html += `<div><div class="tree-stage-title" style="color: #f59e0b;">🏆 Playoffs & Finals</div>`; if (quarterFinals.length > 0) { html += `<div style="text-align:center; margin-bottom: 10px; color: #94a3b8; font-size: 0.8rem; font-weight:bold;">QUARTER FINALS</div><div class="tree-row">${quarterFinals.map(m => `<div style="width: 220px;">${renderNode(m)}</div>`).join('')}</div>`; } if (semiFinals.length > 0) { if(quarterFinals.length > 0) html += `<div style="text-align:center; color:#334155; margin-bottom:10px;">▼</div>`; html += `<div style="text-align:center; margin-bottom: 10px; color: #94a3b8; font-size: 0.8rem; font-weight:bold;">SEMI FINALS</div><div class="tree-row">${semiFinals.map(m => `<div style="width: 220px;">${renderNode(m)}</div>`).join('')}</div>`; } if (finalMatch) { if(quarterFinals.length > 0 || semiFinals.length > 0) html += `<div style="text-align:center; color:#334155; margin-bottom:10px;">▼</div>`; html += `<div style="text-align:center; margin-bottom: 10px; color: #10b981; font-size: 0.9rem; font-weight:bold;">CHAMPIONSHIP FINAL</div><div class="tree-row"><div class="center-final-box" style="width: 280px; margin: 0 auto;"><div style="color: #f59e0b; font-weight: bold; font-size: 0.75rem; margin-bottom: 5px;">${finalMatch._dispId}</div><div style="color: white; font-weight: bold; font-size: 1rem; margin-bottom: 10px;">${finalMatch.matchName || finalMatch.name}</div><div style="font-size: 0.85rem; color: #10b981; font-weight: bold; background: #0f172a; padding: 10px; border-radius: 4px;"><div>${finalMatch.team1 || 'TBD'}</div><div style="color: #94a3b8; font-size: 0.75rem; margin: 4px 0;">VS</div><div>${finalMatch.team2 || 'TBD'}</div></div></div></div>`; } html += `</div>`; }
+            html += `</div>`; canvas.innerHTML = html; canvas.style.display = 'block'; canvas.style.padding = '10px'; canvas.style.background = 'transparent'; canvas.style.border = 'none';
         }
 
         function buildPostingsGrid() {
             const tbody = document.getElementById('postings-body');
-            const mockUmpires = "<option>Select Umpire...</option><option>Simon Taufel</option><option>Aleem Dar</option><option>Billy Bowden</option>";
-            const mockScorers = "<option>Select Scorer...</option><option>Official Scorer 1</option><option>Official Scorer 2</option>";
-            const mockReferees = "<option>Select Referee...</option><option>Match Ref 1</option><option>Match Ref 2</option>";
-
-            tbody.innerHTML = finalLockedMatches.map((mObj, i) => `
-                <tr>
-                    <td style="font-weight: bold; color: #10b981; font-size: 1rem;">
-                        ${mObj.matchNum}: ${mObj.matchName}
-                        <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 5px;">
-                            ${mObj.team1} <br>vs<br> ${mObj.team2}
-                        </div>
-                    </td>
-                    <td>
-                        <div class="official-select-group" id="ump-group-${i}">
-                            <select class="postings-select">${mockUmpires}</select>
-                            <select class="postings-select">${mockUmpires}</select>
-                        </div>
-                        <button type="button" class="btn-add-small" onclick="addOfficialSlot('ump-group-${i}', 5, 'Umpire')">+ Add Umpire</button>
-                    </td>
-                    <td>
-                        <div class="official-select-group" id="sco-group-${i}">
-                            <select class="postings-select">${mockScorers}</select>
-                            <select class="postings-select">${mockScorers}</select>
-                        </div>
-                        <button type="button" class="btn-add-small" onclick="addOfficialSlot('sco-group-${i}', 4, 'Scorer')">+ Add Scorer</button>
-                    </td>
-                    <td>
-                        <div class="official-select-group" id="ref-group-${i}">
-                            <select class="postings-select">${mockReferees}</select>
-                        </div>
-                        <button type="button" class="btn-add-small" onclick="addOfficialSlot('ref-group-${i}', 2, 'Referee')">+ Add Referee</button>
-                    </td>
-                </tr>
-            `).join('');
+            const mockUmpires = "<option>Select Umpire...</option><option>Simon Taufel</option><option>Aleem Dar</option><option>Billy Bowden</option>"; const mockScorers = "<option>Select Scorer...</option><option>Official Scorer 1</option><option>Official Scorer 2</option>"; const mockReferees = "<option>Select Referee...</option><option>Match Ref 1</option><option>Match Ref 2</option>";
+            tbody.innerHTML = finalLockedMatches.map((mObj, i) => `<tr><td style="font-weight: bold; color: #10b981; font-size: 1rem;">${mObj.matchNum}: ${mObj.matchName}<div style="font-size: 0.75rem; color: #94a3b8; margin-top: 5px;">${mObj.team1} <br>vs<br> ${mObj.team2}</div></td><td><div class="official-select-group" id="ump-group-${i}"><select class="postings-select">${mockUmpires}</select><select class="postings-select">${mockUmpires}</select></div><button type="button" class="btn-add-small" onclick="addOfficialSlot('ump-group-${i}', 5, 'Umpire')">+ Add Umpire</button></td><td><div class="official-select-group" id="sco-group-${i}"><select class="postings-select">${mockScorers}</select><select class="postings-select">${mockScorers}</select></div><button type="button" class="btn-add-small" onclick="addOfficialSlot('sco-group-${i}', 4, 'Scorer')">+ Add Scorer</button></td><td><div class="official-select-group" id="ref-group-${i}"><select class="postings-select">${mockReferees}</select></div><button type="button" class="btn-add-small" onclick="addOfficialSlot('ref-group-${i}', 2, 'Referee')">+ Add Referee</button></td></tr>`).join('');
         }
 
-        function addOfficialSlot(groupId, maxAllowed, roleName) {
-            const group = document.getElementById(groupId);
-            if(group.children.length >= maxAllowed) { alert(`Max ${maxAllowed} ${roleName}s allowed.`); return; }
-            const clone = group.children[0].cloneNode(true);
-            clone.selectedIndex = 0; 
-            group.appendChild(clone);
-        }
+        function addOfficialSlot(groupId, maxAllowed, roleName) { const group = document.getElementById(groupId); if(group.children.length >= maxAllowed) { alert(`Max ${maxAllowed} ${roleName}s allowed.`); return; } const clone = group.children[0].cloneNode(true); clone.selectedIndex = 0; group.appendChild(clone); }
 
-        function generateUniquePin(existingPins) {
-            let pin;
-            do {
-                pin = Math.floor(1000 + Math.random() * 9000).toString(); 
-            } while (existingPins.includes(pin));
-            return pin;
-        }
+        function generateUniquePin(existingPins) { let pin; do { pin = Math.floor(1000 + Math.random() * 9000).toString(); } while (existingPins.includes(pin)); return pin; }
 
         function savePostings() {
             let tName = document.getElementById('t-name').value || "Official Tournament";
-            
             let existingMatches = JSON.parse(localStorage.getItem('cricket_matches') || '[]');
             let existingPins = existingMatches.map(m => m.pin);
-            
-            let newMatches = [];
-            let rows = document.querySelectorAll('#postings-body tr');
+            let newMatches = []; let rows = document.querySelectorAll('#postings-body tr');
 
             rows.forEach((row, index) => {
                 if(row.cells.length === 4) {
@@ -838,57 +434,22 @@
                     let umpires = Array.from(row.cells[1].querySelectorAll('select')).map(s => s.value).filter(v => !v.includes('Select'));
                     let scorers = Array.from(row.cells[2].querySelectorAll('select')).map(s => s.value).filter(v => !v.includes('Select'));
                     let refs = Array.from(row.cells[3].querySelectorAll('select')).map(s => s.value).filter(v => !v.includes('Select'));
-
-                    let matchPin = generateUniquePin(existingPins);
-                    existingPins.push(matchPin);
-
-                    newMatches.push({
-                        pin: matchPin,
-                        matchNum: mObj.matchNum, 
-                        matchName: mObj.matchName,
-                        tournament: tName,
-                        team1: mObj.team1,
-                        team2: mObj.team2,
-                        umpires: umpires.join(", ") || "", 
-                        scorers: scorers.join(", ") || "",
-                        referees: refs.join(", ") || ""
-                    });
+                    let matchPin = generateUniquePin(existingPins); existingPins.push(matchPin);
+                    newMatches.push({ pin: matchPin, matchNum: mObj.matchNum, matchName: mObj.matchName, tournament: tName, team1: mObj.team1, team2: mObj.team2, umpires: umpires.join(", ") || "", scorers: scorers.join(", ") || "", referees: refs.join(", ") || "" });
                 }
             });
 
             let allMatches = [...existingMatches, ...newMatches];
             localStorage.setItem('cricket_matches', JSON.stringify(allMatches));
-            
             displayPinsToAdmin(newMatches);
         }
 
         function displayPinsToAdmin(matches) {
             const container = document.getElementById('step4');
-            let html = `<div style="background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #10b981; margin-top: 25px; animation: fadeIn 0.5s;">
-                <h3 style="color: #10b981; margin-top: 0;">✅ Postings Locked Successfully!</h3>
-                <p style="color: #94a3b8; font-size: 0.9rem;">Share these 4-digit PINs with your Scorers so they can access their matches.</p>
-                <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem;">
-                    <tr style="background: #1e293b; color: #cbd5e1;">
-                        <th style="padding: 10px; text-align: left;">Match</th>
-                        <th style="padding: 10px; text-align: left;">Teams</th>
-                        <th style="padding: 10px; text-align: center; color: #f59e0b;">Scorer PIN</th>
-                    </tr>`;
-            
-            matches.forEach(m => {
-                html += `<tr style="border-bottom: 1px solid #1e293b;">
-                    <td style="padding: 10px; color: white;"><b>${m.matchNum}</b>: ${m.matchName}</td>
-                    <td style="padding: 10px; color: #94a3b8;">${m.team1} vs ${m.team2}</td>
-                    <td style="padding: 10px; text-align: center; font-size: 1.5rem; font-weight: bold; color: #f59e0b; letter-spacing: 3px;">${m.pin}</td>
-                </tr>`;
-            });
+            let html = `<div style="background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #10b981; margin-top: 25px; animation: fadeIn 0.5s;"><h3 style="color: #10b981; margin-top: 0;">✅ Postings Locked Successfully!</h3><p style="color: #94a3b8; font-size: 0.9rem;">Share these 4-digit PINs with your Scorers.</p><table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem;"><tr style="background: #1e293b; color: #cbd5e1;"><th style="padding: 10px; text-align: left;">Match</th><th style="padding: 10px; text-align: left;">Teams</th><th style="padding: 10px; text-align: center; color: #f59e0b;">Scorer PIN</th></tr>`;
+            matches.forEach(m => { html += `<tr style="border-bottom: 1px solid #1e293b;"><td style="padding: 10px; color: white;"><b>${m.matchNum}</b>: ${m.matchName}</td><td style="padding: 10px; color: #94a3b8;">${m.team1} vs ${m.team2}</td><td style="padding: 10px; text-align: center; font-size: 1.5rem; font-weight: bold; color: #f59e0b; letter-spacing: 3px;">${m.pin}</td></tr>`; });
             html += `</table></div>`;
-            
-            let existingDisplay = document.getElementById('pin-display-area');
-            if(!existingDisplay) {
-                existingDisplay = document.createElement('div');
-                existingDisplay.id = 'pin-display-area';
-                container.querySelector('.admin-form').appendChild(existingDisplay);
-            }
+            let existingDisplay = document.getElementById('pin-display-area'); if(!existingDisplay) { existingDisplay = document.createElement('div'); existingDisplay.id = 'pin-display-area'; container.querySelector('.admin-form').appendChild(existingDisplay); }
             existingDisplay.innerHTML = html;
         }
     </script>
