@@ -98,6 +98,12 @@
                 <p>Build fixtures, map pools, and assign officials.</p>
             </a>
 
+            <!-- Master Roster Manager Card -->
+            <a href="admin/rosters.html" class="portal-card" id="card-rosters" style="border-color: #f43f5e; display: none;">
+                <h3 style="color: #f43f5e;">🛡️ Master Roster Manager</h3>
+                <p>Register franchises and manage global master player lineups.</p>
+            </a>
+
             <!-- Scorer / Admin / Super Admin Card -->
             <a href="scorer/live.html" class="portal-card" id="card-scorer" style="border-color: #10b981;">
                 <h3 style="color: #10b981;">📊 Live Scoring Engine</h3>
@@ -189,7 +195,7 @@
                 if (error) { alert("Auth Error: " + error.message); btn.innerText = "Register"; return; }
                 
                 if (data.user) {
-                    // 2. Insert profile record and catch errors explicitly (Step 2 Applied!)
+                    // 2. Insert profile record and catch errors explicitly
                     const { error: profileError } = await db.from('profiles').upsert([{ 
                         id: data.user.id, 
                         full_name: fullName, 
@@ -231,6 +237,7 @@
             // Reset visibilities
             document.getElementById('card-directory').style.display = 'none';
             document.getElementById('card-admin').style.display = 'none';
+            document.getElementById('card-rosters').style.display = 'none';
             document.getElementById('card-scorer').style.display = 'none';
             document.getElementById('card-selector').style.display = 'none';
 
@@ -239,6 +246,7 @@
                 document.getElementById('directory-card-title').innerText = "🌍 Master Tournament Directory";
                 document.getElementById('directory-card-desc').innerText = "Global view of all tournaments, matches, and PINs across the entire database.";
                 document.getElementById('card-admin').style.display = 'block'; 
+                document.getElementById('card-rosters').style.display = 'block';
                 document.getElementById('card-scorer').style.display = 'block'; 
                 document.getElementById('card-selector').style.display = 'block'; 
             } 
@@ -247,6 +255,7 @@
                 document.getElementById('directory-card-title').innerText = "📁 My Tournaments & Matches";
                 document.getElementById('directory-card-desc').innerText = "View fixtures, Match IDs, and Scorer PINs for tournaments you created.";
                 document.getElementById('card-admin').style.display = 'block'; 
+                document.getElementById('card-rosters').style.display = 'block';
                 document.getElementById('card-scorer').style.display = 'block'; 
             } 
             else if (userRole === 'scorer') {
