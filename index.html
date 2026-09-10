@@ -25,7 +25,7 @@
         .portal-card p { margin: 0; color: #94a3b8; font-size: 0.85rem; line-height: 1.4; }
         .hidden { display: none; }
 
-        /* MATCH HUB WIDGET (Swipeable Carousel) */
+        /* MATCH HUB WIDGET (Carousel) */
         .match-hub-container { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 15px; margin-bottom: 25px; text-align: left; }
         .hub-tabs { display: flex; gap: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 15px; overflow-x: auto;}
         .hub-tab { background: transparent; color: #94a3b8; border: none; font-size: 0.9rem; font-weight: bold; cursor: pointer; padding: 5px 10px; white-space: nowrap;}
@@ -83,7 +83,7 @@
             <button onclick="signOut(event)" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">Sign Out</button>
         </div>
 
-        <!-- NEW: MATCH HUB WIDGET (Carousel) -->
+        <!-- MATCH HUB WIDGET (Carousel) -->
         <div class="match-hub-container" id="match-hub-widget">
             <div class="hub-tabs">
                 <button class="hub-tab active" id="tab-live" onclick="switchHubTab('live')">🔴 LIVE (0)</button>
@@ -205,7 +205,6 @@
                 document.getElementById('card-selector').style.display = 'block'; 
             }
             
-            // Load the Hub
             await fetchMatchHubData();
         }
 
@@ -213,8 +212,11 @@
         // MATCH HUB WIDGET LOGIC
         // ==========================================
         async function fetchMatchHubData() {
-            // Fetch all matches from cloud, leveraging the JSON payload for reliable team names
-            const { data: matches, error } = await db.from('matches').select('match_id, match_state, scorer_pin, full_state');
+            // FIX: We now explicitly fetch the admin_id from the linked tournaments table
+            const { data: matches, error } = await db
+                .from('matches')
+                .select('match_id, match_state, scorer_pin, full_state, tournaments(admin_id)');
+                
             if (error || !matches) return;
 
             hubMatches = { live: [], upcoming: [], completed: [] };
@@ -223,14 +225,13 @@
                 const state = m.match_state.toLowerCase();
                 if (state === 'live' || state === 'innings_break') hubMatches.live.push(m);
                 else if (state === 'completed') hubMatches.completed.push(m);
-                else hubMatches.upcoming.push(m); // 'scheduled', 'draft', etc.
+                else hubMatches.upcoming.push(m); 
             });
 
             document.getElementById('tab-live').innerText = `🔴 LIVE (${hubMatches.live.length})`;
             document.getElementById('tab-upcoming').innerText = `📅 UPCOMING (${hubMatches.upcoming.length})`;
             document.getElementById('tab-completed').innerText = `✅ COMPLETED (${hubMatches.completed.length})`;
 
-            // Default to 'Upcoming' tab unless there are live games
             if(hubMatches.live.length > 0) switchHubTab('live');
             else switchHubTab('upcoming');
         }
@@ -254,9 +255,10 @@
                 let p = m.full_state || {};
                 let t1 = p.team1 || 'Team A'; let t2 = p.team2 || 'Team B';
                 let tourney = p.tournament || 'Independent Match';
+                let adminId = m.tournaments ? m.tournaments.admin_id : 'none';
                 
                 return `
-                    <div class="hub-card" onclick="handleSmartClick('${m.match_id}', '${tabName}', '${m.scorer_pin}')">
+                    <div class="hub-card" onclick="handleSmartClick('${m.match_id}', '${tabName}', '${m.scorer_pin}', '${adminId}')">
                         <div class="hub-badge ${badgeClass}">${badgeText}</div>
                         <div class="hub-tourney">${tourney}</div>
                         <div class="hub-teams">${t1} <span style="color:#94a3b8; font-size:0.75rem;">vs</span> ${t2}</div>
@@ -266,29 +268,32 @@
             }).join('');
         }
 
-        function handleSmartClick(matchId, tabCategory, pin) {
+        // FIX: The Smart Click now enforces ownership rules before exposing the PIN
+        function handleSmartClick(matchId, tabCategory, pin, matchAdminId) {
             const role = currentUserProfile.role.toLowerCase();
 
             if (role === 'scorer' && tabCategory !== 'completed') {
                 const userPin = prompt(`Please enter your 4-Digit Scorer PIN for match ${matchId}:`);
                 if (userPin === pin) {
-                    // Safe injection for live.html to pick up automatically if built, or direct redirect
                     alert("PIN Verified. Routing to Live Engine...");
                     window.location.href = `scorer/live.html`; 
-                    // Note: We will update live.html to read parameters from the URL shortly
                 } else if (userPin) {
                     alert("❌ Incorrect PIN. Access Denied.");
                 }
             } 
-            else if (role === 'admin' || role === 'superadmin') {
-                // Admin Quick Actions (Currently a readout, later a deep-link to edit)
+            else if (role === 'superadmin') {
+                // God Mode: Sees everything
                 alert(`ADMIN ACTIONS FOR: ${matchId}\n\nStatus: ${tabCategory.toUpperCase()}\nScorer PIN: ${pin}\n\n(Edit/Delete functionality routing here in Phase 4)`);
             } 
+            else if (role === 'admin' && matchAdminId === currentUser.id) {
+                // Verified Owner: Sees their own match tools
+                alert(`ADMIN ACTIONS FOR: ${matchId}\n\nStatus: ${tabCategory.toUpperCase()}\nScorer PIN: ${pin}\n\n(Edit/Delete functionality routing here in Phase 4)`);
+            }
             else if (role === 'selector' && tabCategory === 'completed') {
                 alert(`Routing to deep analytics scorecard for match ${matchId}...`);
             } 
             else {
-                // Fan & default fallback: Route to public scorecard view
+                // Fan & Default Fallback: (Also intercepts non-owner Admins)
                 alert(`Routing to public Fan Scorecard for match ${matchId}...`);
                 window.location.href = `fan.html`;
             }
@@ -304,8 +309,16 @@
             const tbody = document.getElementById('directory-tbody');
             tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8; padding: 20px;">Fetching records...</td></tr>`;
 
-            const { data: matches, error } = await db.from('matches').select('match_id, match_state, scorer_pin, full_state');
-            if (error || !matches) { tbody.innerHTML = `<tr><td colspan="4" style="text-align: center;">Error loading directory.</td></tr>`; return; }
+            const isSuperAdmin = currentUserProfile.role.toLowerCase() === 'superadmin';
+            
+            // Build query based on role
+            let query = db.from('matches').select('match_id, match_state, scorer_pin, full_state, tournaments!inner(admin_id)');
+            if (!isSuperAdmin) {
+                query = query.eq('tournaments.admin_id', currentUser.id);
+            }
+
+            const { data: matches, error } = await query;
+            if (error || !matches || matches.length === 0) { tbody.innerHTML = `<tr><td colspan="4" style="text-align: center;">No active matches found for your account.</td></tr>`; return; }
 
             tbody.innerHTML = matches.map(m => {
                 let p = m.full_state || {};
