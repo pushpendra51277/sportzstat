@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sportzstat - Master Roster Manager</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 30px; text-align: center; }
+        .container { max-width: 1000px; margin: 0 auto; text-align: left; }
+        .header-link { color: #cbd5e1; text-decoration: none; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 20px; }
+        
+        .grid-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; align-items: start; }
+        .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 25px; }
+        
+        h3 { color: #38bdf8; margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 20px; }
+        
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; font-weight: bold;}
+        .input-group input, .input-group select { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; box-sizing: border-box; }
+        
+        .btn-primary { background: #3b82f6; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
+        .btn-success { background: #10b981; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
+        .btn-outline { background: transparent; border: 1px dashed #10b981; color: #10b981; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px;}
+        
+        .roster-list { max-height: 500px; overflow-y: auto; margin-top: 15px; }
+        .player-row { background: #0f172a; border: 1px solid #334155; padding: 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .player-info { display: flex; flex-direction: column; }
+        .player-name { font-weight: bold; color: #f8fafc; font-size: 1rem;}
+        .player-meta { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
+        .btn-remove { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold;}
+
+        /* Search Results */
+        .search-result { background: #0f172a; border: 1px solid #3b82f6; padding: 10px; margin-top: 5px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;}
+        .search-result:hover { background: rgba(59, 130, 246, 0.1); }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <a href="../index.html" class="header-link">← Back to Dashboard</a>
+        <h2 style="color: #f59e0b; letter-spacing: 1px; margin-bottom: 5px; margin-top: 0;">MASTER ROSTER MANAGER</h2>
+        <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 25px;">Manage franchises, clubs, and global player registrations.</p>
+
+        <div class="grid-layout">
+            <!-- LEFT COLUMN: TEAM SELECTION -->
+            <div class="card">
+                <h3>1. Select or Create Club</h3>
+                
+                <div class="input-group">
+                    <label>Select Existing Club</label>
+                    <select id="team-select" onchange="loadTeamRoster(this.value)">
+                        <option value="">-- Choose a Team --</option>
+                    </select>
+                </div>
+                
+                <div style="text-align: center; color: #94a3b8; margin: 20px 0; font-size: 0.85rem;">OR</div>
+                
+                <div class="input-group" style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px dashed #475569;">
+                    <label style="color: #38bdf8;">Register New Club / Franchise</label>
+                    <input type="text" id="new-team-input" placeholder="e.g. Gwalior Strikers">
+                    <button class="btn-primary" style="margin-top: 10px;" onclick="createNewTeam()">Save New Club</button>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: ROSTER MANAGEMENT -->
+            <div class="card" id="roster-panel" style="opacity: 0.5; pointer-events: none;">
+                <h3 id="roster-title">2. Squad Lineup: <span style="color: white;">None Selected</span></h3>
+                
+                <!-- Player Search & Add Area -->
+                <div style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: #10b981; font-size: 0.9rem;">Add Player to Squad</h4>
+                    
+                    <input type="text" id="player-search" placeholder="Search Master Database by Name..." style="width: 100%; padding: 10px; background: #1e293b; border: 1px solid #475569; color: white; border-radius: 4px;" oninput="searchGlobalPlayers(this.value)">
+                    <div id="search-results-area"></div>
+                    
+                    <button class="btn-outline" onclick="toggleNewPlayerForm()">+ Register Brand New Player</button>
+                    
+                    <!-- Strict Registration Form -->
+                    <div id="strict-registration-form" class="hidden" style="margin-top: 15px; border-top: 1px dashed #475569; padding-top: 15px;">
+                        <div class="input-group"><label>Full Name *</label><input type="text" id="reg-name"></div>
+                        <div class="input-group"><label>Father's Name *</label><input type="text" id="reg-father"></div>
+                        <div class="input-group"><label>Date of Birth *</label><input type="date" id="reg-dob"></div>
+                        <div class="input-group"><label>Primary Role</label>
+                            <select id="reg-role"><option>Batter</option><option>Bowler</option><option>All-Rounder</option><option>Wicketkeeper</option></select>
+                        </div>
+                        <button class="btn-success" onclick="registerStrictPlayer()">Save to Master & Add to Squad</button>
+                    </div>
+                </div>
+
+                <!-- Active Roster List -->
+                <div class="roster-list" id="active-roster-list">
+                    <p style="color: #94a3b8; text-align: center; font-size: 0.85rem;">Select a team to view its players.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
+        const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let currentActiveTeam = null;
+
+        window.onload = async () => {
+            const { data: { session } } = await db.auth.getSession();
+            if (!session) { alert("Admin access required."); window.location.href = '../index.html'; return; }
+            await loadAllTeams();
+        };
+
+        // 1. LOAD TEAMS
+        async function loadAllTeams() {
+            const select = document.getElementById('team-select');
+            const { data, error } = await db.from('teams').select('name').order('name');
+            if (error) { console.error(error); return; }
+            
+            select.innerHTML = '<option value="">-- Choose a Team --</option>';
+            data.forEach(t => {
+                select.innerHTML += `<option value="${t.name}">${t.name}</option>`;
+            });
+        }
+
+        async function createNewTeam() {
+            const teamName = document.getElementById('new-team-input').value.trim();
+            if(!teamName) return;
+
+            const { error } = await db.from('teams').upsert([{ name: teamName }], { onConflict: 'name' });
+            if(error) { alert("Error creating team: " + error.message); return; }
+            
+            alert(`✅ ${teamName} registered successfully!`);
+            document.getElementById('new-team-input').value = "";
+            await loadAllTeams();
+            
+            // Auto-select the new team
+            document.getElementById('team-select').value = teamName;
+            loadTeamRoster(teamName);
+        }
+
+        // 2. LOAD ACTIVE ROSTER
+        async function loadTeamRoster(teamName) {
+            currentActiveTeam = teamName;
+            const panel = document.getElementById('roster-panel');
+            
+            if(!teamName) {
+                panel.style.opacity = "0.5"; panel.style.pointerEvents = "none";
+                document.getElementById('roster-title').innerHTML = `2. Squad Lineup: <span style="color: white;">None Selected</span>`;
+                return;
+            }
+
+            panel.style.opacity = "1"; panel.style.pointerEvents = "all";
+            document.getElementById('roster-title').innerHTML = `2. Squad Lineup: <span style="color: #38bdf8;">${teamName}</span>`;
+            
+            const listArea = document.getElementById('active-roster-list');
+            listArea.innerHTML = '<p style="color: #94a3b8; text-align: center;">Loading roster...</p>';
+
+            // Join team_rosters with players table
+            const { data, error } = await db
+                .from('team_rosters')
+                .select(`
+                    id, 
+                    player_id, 
+                    players (full_name, father_name, dob, playing_role)
+                `)
+                .eq('team_name', teamName)
+                .order('added_at', { ascending: false });
+
+            if(error) { listArea.innerHTML = `<p style="color:#ef4444;">Error fetching roster.</p>`; return; }
+
+            if(data.length === 0) {
+                listArea.innerHTML = `<p style="color: #94a3b8; text-align: center; font-size: 0.85rem;">This squad is currently empty.</p>`;
+                return;
+            }
+
+            listArea.innerHTML = data.map((row, idx) => `
+                <div class="player-row">
+                    <div class="player-info">
+                        <span class="player-name">${idx + 1}. ${row.players.full_name} <span style="font-size:0.75rem; color:#f59e0b; font-weight:normal;">(${row.players.playing_role || 'Player'})</span></span>
+                        <span class="player-meta">DOB: ${row.players.dob || 'N/A'} | Father: ${row.players.father_name || 'N/A'}</span>
+                    </div>
+                    <button class="btn-remove" onclick="removePlayerFromTeam('${row.id}')">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        // 3. SEARCH & ASSIGN EXISTING PLAYERS
+        async function searchGlobalPlayers(query) {
+            const resArea = document.getElementById('search-results-area');
+            if (query.trim().length < 2) { resArea.innerHTML = ""; return; }
+            
+            const { data, error } = await db.from('players').select('*').ilike('full_name', `%${query}%`).limit(5);
+            
+            if (error || !data || data.length === 0) {
+                resArea.innerHTML = '<div style="color:#ef4444; font-size:0.8rem; padding:10px;">No players found. Register them below.</div>';
+                return;
+            }
+
+            resArea.innerHTML = data.map(p => `
+                <div class="search-result" onclick="assignPlayerToSquad('${p.player_id}')">
+                    <div>
+                        <div style="font-weight:bold; color:white;">${p.full_name}</div>
+                        <div style="font-size:0.7rem; color:#94a3b8;">DOB: ${p.dob} | Father: ${p.father_name}</div>
+                    </div>
+                    <span style="color:#10b981; font-weight:bold; font-size:0.8rem;">+ Add to Squad</span>
+                </div>
+            `).join('');
+        }
+
+        async function assignPlayerToSquad(playerId) {
+            if(!currentActiveTeam) return;
+
+            const { error } = await db.from('team_rosters').insert([{ 
+                team_name: currentActiveTeam, 
+                player_id: playerId 
+            }]);
+
+            if(error) {
+                if(error.code === '23505') alert("This player is already in the squad!");
+                else alert("Database Error: " + error.message);
+            } else {
+                document.getElementById('player-search').value = "";
+                document.getElementById('search-results-area').innerHTML = "";
+                loadTeamRoster(currentActiveTeam);
+            }
+        }
+
+        // 4. STRICT NEW PLAYER REGISTRATION
+        function toggleNewPlayerForm() {
+            document.getElementById('strict-registration-form').classList.toggle('hidden');
+        }
+
+        async function registerStrictPlayer() {
+            const name = document.getElementById('reg-name').value.trim();
+            const father = document.getElementById('reg-father').value.trim();
+            const dob = document.getElementById('reg-dob').value;
+            const role = document.getElementById('reg-role').value;
+
+            if(!name || !father || !dob) { alert("Name, Father's Name, and DOB are strictly required."); return; }
+
+            // DUPLICATE CHECK
+            const { data: existing } = await db.from('players').select('player_id')
+                .ilike('full_name', name).eq('father_name', father).eq('dob', dob);
+
+            if (existing && existing.length > 0) {
+                alert(`Duplicate Blocked: ${name} is already registered in the Master Database.\n\nThey have been automatically added to ${currentActiveTeam} instead of creating a duplicate.`);
+                await assignPlayerToSquad(existing[0].player_id);
+                toggleNewPlayerForm();
+                return;
+            }
+
+            // INSERT NEW PLAYER
+            const { data: newP, error } = await db.from('players').insert([{ 
+                full_name: name, father_name: father, dob: dob, playing_role: role 
+            }]).select();
+
+            if (error) { alert("Registration Error: " + error.message); return; }
+
+            // ASSIGN TO SQUAD
+            await assignPlayerToSquad(newP[0].player_id);
+            alert(`✅ ${name} registered globally and added to ${currentActiveTeam}!`);
+            
+            // Clear inputs
+            document.getElementById('reg-name').value = "";
+            document.getElementById('reg-father').value = "";
+            document.getElementById('reg-dob').value = "";
+            toggleNewPlayerForm();
+        }
+
+        // 5. REMOVE FROM SQUAD (Does not delete the global player)
+        async function removePlayerFromTeam(rosterId) {
+            if(!confirm("Remove this player from the squad? (They will remain in the global master database).")) return;
+            
+            const { error } = await db.from('team_rosters').delete().eq('id', rosterId);
+            if(error) alert("Error: " + error.message);
+            else loadTeamRoster(currentActiveTeam);
+        }
+    </script>
+</body>
+</html>
