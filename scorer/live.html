@@ -60,6 +60,13 @@
                 <div id="rosterB"></div>
             </div>
         </div>
+
+        <!-- PHASE 4.2 TEST CONTROLS -->
+        <div style="background: #0f172a; padding: 20px; border-radius: 8px; margin-top: 20px; border: 1px dashed #f59e0b; text-align: center;">
+            <h3 style="color: #f59e0b; margin-top: 0;">Phase 4.2: Cloud Sync Test</h3>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 15px;">Map at least one real player to Team A and Team B using the Set/Replace buttons above. Then, click this button to fire a live data packet directly to Supabase.</p>
+            <button id="test-sync-btn" onclick="testLogDelivery()" style="background: #10b981; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem;">🏏 Simulate: Log 4 Runs (Over 1.1)</button>
+        </div>
     </div>
 
     <!-- PLAYER SEARCH & REGISTRATION MODAL -->
@@ -221,6 +228,92 @@
             // Assign new UUID directly to the squad slot
             assignExistingPlayer(newPlayer.player_id, newPlayer.full_name);
             btn.innerText = "Save & Insert into Lineup";
+        }
+
+        // ==========================================
+        // PHASE 4.2: LIVE CLOUD SYNCING
+        // ==========================================
+        async function logDeliveryToCloud(deliveryData) {
+            // 1. Log the exact delivery to the statistical ledger
+            const { error: ledgerError } = await supabaseClient
+                .from('ball_by_ball')
+                .insert([{
+                    match_id: state.matchId,
+                    innings: deliveryData.innings,
+                    over_number: deliveryData.over,
+                    ball_number: deliveryData.ball,
+                    striker_id: deliveryData.striker_id,
+                    non_striker_id: deliveryData.non_striker_id,
+                    bowler_id: deliveryData.bowler_id,
+                    runs_batter: deliveryData.runs || 0,
+                    extras: deliveryData.extras || 0,
+                    extra_type: deliveryData.extra_type || null,
+                    is_wicket: deliveryData.is_wicket || false,
+                    wicket_type: deliveryData.wicket_type || null
+                }]);
+
+            if (ledgerError) {
+                console.error("Ledger Sync Failed:", ledgerError);
+                alert("Cloud Sync Warning: Failed to log ball to ledger.\n" + ledgerError.message);
+                return false;
+            }
+
+            // 2. Update the LIVE 'full_state' so the Fan Portal auto-refreshes instantly
+            const { error: stateError } = await supabaseClient
+                .from('matches')
+                .update({ 
+                    full_state: state,
+                    match_state: 'live' 
+                })
+                .eq('match_id', state.matchId);
+
+            if (stateError) {
+                console.error("Match State Sync Failed:", stateError);
+                return false;
+            }
+
+            console.log(`✅ Cloud Sync Success: Over ${deliveryData.over}.${deliveryData.ball} logged.`);
+            return true;
+        }
+
+        // Dummy function to test the Cloud Sync without needing the full scoring UI yet
+        async function testLogDelivery() {
+            // Find a valid UUID from Team A and Team B for testing
+            const striker = state.teams.A.players.find(p => p.player_id);
+            const bowler = state.teams.B.players.find(p => p.player_id);
+
+            if (!striker || !bowler) {
+                alert("⚠️ Please map at least one real player to Team A and Team B using the 'Set/Replace' buttons first. The database requires real UUIDs to log the delivery!");
+                return;
+            }
+
+            // Simulate updating local state first
+            if (!state.current) {
+                state.current = { innings: 1, over: 1, ballsInOver: 0, runs: 0 };
+            }
+            state.current.ballsInOver += 1;
+            state.current.runs += 4; // Mocking 4 runs
+
+            const btn = document.getElementById('test-sync-btn');
+            const originalText = btn.innerText;
+            btn.innerText = "Syncing to Supabase...";
+            
+            // Fire packet to cloud
+            const success = await logDeliveryToCloud({
+                innings: state.current.innings,
+                over: state.current.over,
+                ball: state.current.ballsInOver,
+                striker_id: striker.player_id,
+                non_striker_id: null, // Left null for dummy test
+                bowler_id: bowler.player_id,
+                runs: 4 // The mock run value
+            });
+
+            if (success) {
+                alert(`✅ BOOM! 4 Runs logged successfully.\n\nOpen your Supabase 'ball_by_ball' table to see the row! Your engine is successfully wired to the cloud.`);
+            }
+            
+            btn.innerText = originalText;
         }
     </script>
 </body>
