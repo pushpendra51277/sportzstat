@@ -3,92 +3,266 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sportzstat - Live Cricket Match Center</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Sportzstat - Fan Scorecard</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <style>
-        .tournament-banner {
-            background: var(--card-bg);
-            border-left: 6px solid var(--tourney-color);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-top: 1px solid var(--border);
-            border-right: 1px solid var(--border);
-            border-bottom: 1px solid var(--border);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
-            transition: transform 0.2s ease;
-            cursor: pointer;
-        }
-        .tournament-banner:hover {
-            transform: translateY(-3px);
-            border-left-width: 10px;
-        }
-        .banner-header {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-        }
-        .tourney-name { color: var(--tourney-color); }
-        .banner-teams {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .team-name {
-            font-size: 1.4rem;
-            font-weight: 900;
-            color: var(--text);
-            width: 40%;
-            text-align: center;
-        }
-        .vs-badge {
-            background: #020617;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            color: var(--text-muted);
-            border: 1px solid var(--border);
-        }
-        .banner-footer {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            border-top: 1px dashed var(--border);
-            padding-top: 10px;
-        }
-        .live-indicator {
-            color: var(--danger);
-            font-weight: bold;
-            animation: pulseHit 1.5s infinite;
-        }
+        body { background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
+        * { box-sizing: border-box; }
+
+        /* VIEW: MATCH LIST */
+        #view-list { padding: 20px; max-width: 800px; margin: 0 auto; }
+        .header { margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 15px; position: relative; }
+        .back-link { color: #cbd5e1; text-decoration: none; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 10px; }
+        .match-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 15px; cursor: pointer; transition: 0.2s; }
+        .match-card:active { transform: scale(0.98); border-color: #38bdf8; }
+        .live-pulse { display: inline-flex; align-items: center; gap: 5px; color: #ef4444; font-size: 0.75rem; font-weight: bold; background: rgba(239, 68, 68, 0.15); padding: 3px 6px; border-radius: 4px; }
+        .pulse-dot { width: 6px; height: 6px; background: #ef4444; border-radius: 50%; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
+        /* VIEW: DEEP DIVE SCORECARD */
+        #view-scorecard { display: none; height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: #0f172a; }
+        
+        /* Sticky Header */
+        .sc-header { background: #1e293b; border-bottom: 1px solid #334155; padding: 15px 20px 10px 20px; flex-shrink: 0; z-index: 10;}
+        .sc-tourney { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .sc-main-score { font-size: 1.6rem; font-weight: 900; color: #f8fafc; margin-bottom: 2px; }
+        .sc-equation { font-size: 0.8rem; color: #f59e0b; font-weight: bold; }
+        
+        /* Swipeable Tabs */
+        .sc-tabs { display: flex; overflow-x: auto; background: #1e293b; border-bottom: 1px solid #334155; scrollbar-width: none; flex-shrink: 0;}
+        .sc-tabs::-webkit-scrollbar { display: none; }
+        .sc-tab { padding: 12px 20px; color: #94a3b8; font-size: 0.85rem; font-weight: bold; cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; }
+        .sc-tab.active { color: #38bdf8; border-bottom: 2px solid #38bdf8; }
+        
+        /* Tab Content Area */
+        .sc-content { flex-grow: 1; overflow-y: auto; padding: 15px; }
+        .tab-pane { display: none; animation: fadeIn 0.3s ease; }
+        .tab-pane.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Tables & Grids */
+        .data-card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; margin-bottom: 15px; overflow: hidden; }
+        .data-header { background: #0f172a; padding: 8px 15px; font-size: 0.75rem; color: #94a3b8; font-weight: bold; display: grid; border-bottom: 1px solid #334155; }
+        .data-row { padding: 12px 15px; border-bottom: 1px solid #334155; display: grid; font-size: 0.85rem; align-items: center; }
+        .data-row:last-child { border-bottom: none; }
+        
+        /* Grid Layouts for specific tables */
+        .grid-bat { grid-template-columns: 3fr 1fr 1fr 1fr 1fr 1.5fr; }
+        .grid-bowl { grid-template-columns: 3fr 1fr 1fr 1fr 1fr 1.5fr; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        
+        /* Timeline Circles */
+        .timeline-box { display: flex; align-items: center; gap: 8px; overflow-x: auto; padding: 15px; background: #1e293b; border-radius: 8px; border: 1px solid #334155; scrollbar-width: none;}
+        .timeline-box::-webkit-scrollbar { display: none; }
+        .ball-circle { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; color: white; background: #334155; }
+        .ball-4 { background: #3b82f6; }
+        .ball-6 { background: #8b5cf6; }
+        .ball-w { background: #ef4444; }
+        .ball-0 { color: #94a3b8; }
+        
+        /* Utility */
+        .hidden { display: none !important; }
+        .striker-icon { color: #f59e0b; margin-right: 4px; font-size: 0.8rem; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="text-center mb-15">
-        <h1 class="text-primary mt-10">LIVE MATCH CENTER</h1>
-        <p class="text-muted">Select an active tournament match to view live ball-by-ball updates</p>
+    <!-- 1. MATCH LIST VIEW (Default) -->
+    <div id="view-list">
+        <a href="index.html" class="back-link">← Return to Dashboard</a>
+        <div class="header">
+            <h1 style="color: #06b6d4; letter-spacing: 2px; margin: 10px 0 5px 0;">📺 FAN PORTAL</h1>
+            <p style="color: #94a3b8; margin: 0; font-size: 0.9rem;">Live match center and global scorecards.</p>
+        </div>
+        
+        <h3 style="color: #38bdf8; border-bottom: 1px solid #334155; padding-bottom: 5px;">🔴 Live Matches</h3>
+        <div id="live-matches-container">
+            <!-- Dummy Card (Will be replaced by JS) -->
+            <div class="match-card" onclick="openScorecard('M-TEST')">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <div style="font-size: 0.75rem; color: #94a3b8;">SUMMER CUP 2026</div>
+                    <div class="live-pulse"><div class="pulse-dot"></div> LIVE</div>
+                </div>
+                <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 5px;">Gwalior Strikers <span style="color:#94a3b8; font-size:0.9rem;">vs</span> Indore Royals</div>
+                <div style="color: #10b981; font-weight: bold; font-size: 1rem;">GS: 124/3 (14.2)</div>
+                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">Tap to view full scorecard →</div>
+            </div>
+        </div>
     </div>
 
-    <div id="live-matches-container">
-        <div class="text-center text-muted mt-20">No active matches at the moment. Check back on match day!</div>
+    <!-- 2. DEEP DIVE SCORECARD VIEW -->
+    <div id="view-scorecard" class="hidden">
+        
+        <!-- Sticky Header -->
+        <div class="sc-header">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <button onclick="closeScorecard()" style="background: transparent; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer; padding: 0;">←</button>
+                <div class="live-pulse"><div class="pulse-dot"></div> LIVE</div>
+            </div>
+            <div class="sc-tourney" id="sc-header-tourney">SUMMER CUP 2026 • FINAL</div>
+            <div class="sc-main-score" id="sc-header-score">GS 124/3 <span style="font-size:1rem; color:#94a3b8;">(14.2)</span></div>
+            <div class="sc-equation" id="sc-header-equation">Indore Royals won the toss and elected to field.</div>
+        </div>
+
+        <!-- Horizontal Swipeable Nav -->
+        <div class="sc-tabs">
+            <div class="sc-tab active" onclick="switchTab('tab-live', this)">LIVE</div>
+            <div class="sc-tab" onclick="switchTab('tab-scorecard', this)">SCORECARD</div>
+            <div class="sc-tab" onclick="switchTab('tab-squads', this)">SQUADS</div>
+            <div class="sc-tab" onclick="switchTab('tab-info', this)">INFO</div>
+        </div>
+
+        <!-- Scrollable Content Area -->
+        <div class="sc-content">
+            
+            <!-- LIVE TAB (Current Action) -->
+            <div id="tab-live" class="tab-pane active">
+                <div class="data-card">
+                    <div class="data-header grid-bat">
+                        <div>BATTER</div><div class="text-center">R</div><div class="text-center">B</div><div class="text-center">4s</div><div class="text-center">6s</div><div class="text-right">SR</div>
+                    </div>
+                    <div class="data-row grid-bat">
+                        <div style="font-weight:bold; color:white;"><span class="striker-icon">🏏</span>Pushpendra S.</div>
+                        <div class="text-center font-bold">45</div><div class="text-center">32</div><div class="text-center">4</div><div class="text-center">1</div><div class="text-right">140.6</div>
+                    </div>
+                    <div class="data-row grid-bat">
+                        <div style="font-weight:bold; color:#cbd5e1;">Rohit S.</div>
+                        <div class="text-center font-bold">12</div><div class="text-center">10</div><div class="text-center">1</div><div class="text-center">0</div><div class="text-right">120.0</div>
+                    </div>
+                </div>
+
+                <div class="data-card">
+                    <div class="data-header grid-bowl">
+                        <div>BOWLER</div><div class="text-center">O</div><div class="text-center">M</div><div class="text-center">R</div><div class="text-center">W</div><div class="text-right">ER</div>
+                    </div>
+                    <div class="data-row grid-bowl">
+                        <div style="font-weight:bold; color:white;">R. Ashwin</div>
+                        <div class="text-center">2.2</div><div class="text-center">0</div><div class="text-center">18</div><div class="text-center font-bold" style="color:#ef4444;">1</div><div class="text-right">7.71</div>
+                    </div>
+                </div>
+
+                <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 8px; font-weight: bold;">RECENT DELIVERIES</div>
+                <div class="timeline-box">
+                    <div class="ball-circle">1</div>
+                    <div class="ball-circle ball-0">0</div>
+                    <div class="ball-circle ball-w">W</div>
+                    <div class="ball-circle">1</div>
+                    <div class="ball-circle ball-0">0</div>
+                    <div class="ball-circle ball-4">4</div>
+                    <div class="ball-circle">2</div>
+                    <div class="ball-circle ball-6">6</div>
+                    <div class="ball-circle">1</div>
+                </div>
+            </div>
+
+            <!-- SCORECARD TAB (Deep Dive) -->
+            <div id="tab-scorecard" class="tab-pane">
+                <div style="background:#1e293b; padding:10px; border-radius:8px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid #3b82f6;">
+                    <div style="font-weight:bold;">Gwalior Strikers</div>
+                    <div style="color:#38bdf8; font-weight:bold;">124/3 (14.2)</div>
+                </div>
+                
+                <div class="data-card">
+                    <div class="data-header grid-bat">
+                        <div>BATTER</div><div class="text-center">R</div><div class="text-center">B</div><div class="text-center">4s</div><div class="text-center">6s</div><div class="text-right">SR</div>
+                    </div>
+                    <!-- Dismissed -->
+                    <div class="data-row grid-bat" style="background:#0f172a;">
+                        <div>
+                            <div style="font-weight:bold; color:#cbd5e1;">Rahul S.</div>
+                            <div style="font-size:0.65rem; color:#94a3b8;">c. Kohli b. Ashwin</div>
+                        </div>
+                        <div class="text-center font-bold">22</div><div class="text-center">18</div><div class="text-center">2</div><div class="text-center">0</div><div class="text-right">122.2</div>
+                    </div>
+                    <!-- Not Out -->
+                    <div class="data-row grid-bat">
+                        <div>
+                            <div style="font-weight:bold; color:white;">Pushpendra S.</div>
+                            <div style="font-size:0.65rem; color:#10b981;">not out</div>
+                        </div>
+                        <div class="text-center font-bold">45</div><div class="text-center">32</div><div class="text-center">4</div><div class="text-center">1</div><div class="text-right">140.6</div>
+                    </div>
+                </div>
+
+                <div class="data-card">
+                    <div class="data-header grid-bowl">
+                        <div>BOWLER</div><div class="text-center">O</div><div class="text-center">M</div><div class="text-center">R</div><div class="text-center">W</div><div class="text-right">ER</div>
+                    </div>
+                    <div class="data-row grid-bowl">
+                        <div style="font-weight:bold; color:white;">Bumrah</div>
+                        <div class="text-center">4.0</div><div class="text-center">1</div><div class="text-center">22</div><div class="text-center font-bold">2</div><div class="text-right">5.50</div>
+                    </div>
+                    <div class="data-row grid-bowl">
+                        <div style="font-weight:bold; color:white;">R. Ashwin</div>
+                        <div class="text-center">2.2</div><div class="text-center">0</div><div class="text-center">18</div><div class="text-center font-bold">1</div><div class="text-right">7.71</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SQUADS TAB -->
+            <div id="tab-squads" class="tab-pane">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <div style="font-size: 0.8rem; font-weight: bold; color: #10b981; margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 5px;">Gwalior Strikers</div>
+                        <div style="font-size: 0.85rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 8px;">
+                            <div>1. Rahul S.</div>
+                            <div>2. Pushpendra S. (c)</div>
+                            <div>3. Rohit S.</div>
+                            <div>4. Suryakumar Y.</div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.8rem; font-weight: bold; color: #f59e0b; margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 5px;">Indore Royals</div>
+                        <div style="font-size: 0.85rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 8px;">
+                            <div>1. Virat K. (c)</div>
+                            <div>2. Ishan K. (wk)</div>
+                            <div>3. Hardik P.</div>
+                            <div>4. R. Ashwin</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INFO TAB -->
+            <div id="tab-info" class="tab-pane">
+                <div class="data-card" style="padding: 15px; font-size: 0.9rem;">
+                    <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Tournament:</span> <b style="color:white;">Summer Cup 2026</b></div>
+                    <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Format:</span> <b style="color:white;">T20</b></div>
+                    <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Toss:</span> <b style="color:white;">Indore Royals won the toss and elected to field.</b></div>
+                    <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Venue:</span> <b style="color:white;">Captain Roop Singh Stadium, Gwalior</b></div>
+                    <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Umpires:</span> <b style="color:white;">Simon Taufel, Aleem Dar</b></div>
+                    <div><span style="color:#94a3b8;">Match ID:</span> <b style="color:#38bdf8;">M-TEST</b></div>
+                </div>
+            </div>
+            
+        </div>
     </div>
-</div>
 
-<script>
-    console.log("Fan View Landing Page Initialized.");
-</script>
+    <script>
+        // Tab Navigation Logic
+        function switchTab(tabId, el) {
+            document.querySelectorAll('.sc-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
 
+        // View Toggling Logic
+        function openScorecard(matchId) {
+            // In Phase 4.2, we will use matchId to fetch the specific data from Supabase here.
+            // For now, we just slide the UI over.
+            document.getElementById('view-list').classList.add('hidden');
+            
+            const detailView = document.getElementById('view-scorecard');
+            detailView.classList.remove('hidden');
+            detailView.style.display = 'flex'; // Enforce flex layout on unhide
+        }
+
+        function closeScorecard() {
+            document.getElementById('view-scorecard').classList.add('hidden');
+            document.getElementById('view-list').classList.remove('hidden');
+        }
+    </script>
 </body>
 </html>
