@@ -3,358 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sportzstat - Live Scoring Engine</title>
+    <title>Sportzstat - Scoring Engine</title>
+    <link rel="stylesheet" href="../style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        body { background: #0f172a; color: #f8fafc; font-family: sans-serif; padding: 20px; margin: 0;}
-        .auth-box { max-width: 400px; margin: 50px auto; background: #1e293b; padding: 30px; border-radius: 12px; border: 1px solid #334155; }
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; }
-        .input-group input, .input-group select { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; box-sizing: border-box; }
-        .btn-launch { width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-content { background: #1e293b; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; border: 1px solid #334155; max-height: 90vh; overflow-y: auto; text-align: left; }
-        .hidden { display: none !important; }
-
-        /* MERGED OFFLINE UI STYLES */
-        .score-display { background:#0f172a; padding:20px; border-radius:12px; border:1px solid #334155; text-align:center; margin-bottom: 20px;}
-        .big-score { font-size:4rem; font-weight:900; color:#f8fafc; line-height:1; margin: 10px 0; }
-        .btn-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        .btn-action { background: #1e293b; color: white; border: 1px solid #334155; border-radius: 8px; padding: 15px 5px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: 0.1s; }
-        .btn-action:active { transform: scale(0.95); }
-        .btn-col-2 { grid-column: span 2; }
-        .section-label { grid-column: span 4; color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 15px; border-bottom: 1px solid #334155; padding-bottom: 5px; text-align: left;}
-        .postings-select { width: 100%; padding: 8px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 4px; font-size: 0.9rem;}
-        
-        .search-result-item { background: #0f172a; border: 1px solid #334155; padding: 10px; margin-bottom: 8px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+   <div id="animContainer" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9999; overflow:hidden;"></div>
+<datalist id="savedTeamsList"></datalist>
 
-    <!-- AUTH GATE -->
-    <div id="setupView" class="auth-box">
-        <h2 style="color: #10b981; margin-top: 0; text-align: center;">Scorer Authentication</h2>
-        <div class="input-group"><label>Match ID</label><input type="text" id="match-id-input" placeholder="e.g. M-9A3K7"></div>
-        <div class="input-group"><label>Scorer PIN</label><input type="password" id="match-pin-input" placeholder="4-Digit PIN"></div>
-        <button class="btn-launch" onclick="fetchOfficialMatch()">Authenticate & Sync</button>
-        <div id="sync-status" style="margin-top: 15px; text-align: center; font-size: 0.9rem;"></div>
+<div class="container">
+    <div id="setupView" class="setup-screen">
+        <h1 class="text-center text-primary mb-30">Pre Match Registry</h1>
+        
+        <!-- CLOUD SYNC MODULE (Added carefully to your original UI) -->
+        <div style="background: #1e293b; padding: 20px; border-radius: 8px; border: 1px dashed #10b981; margin-bottom: 25px; text-align: left;">
+            <h3 style="color: #10b981; margin-top: 0; font-size: 1.2rem;">🌩️ Cloud Match Sync</h3>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 15px;">Enter the Match ID and PIN from the Tournament Wizard to auto-fill your squads.</p>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="cloudMatchId" placeholder="Match ID (e.g., M-XYZ)" style="flex: 1; padding: 10px; border-radius: 4px; border: 1px solid #475569; background: #0f172a; color: white;">
+                <input type="password" id="cloudMatchPin" placeholder="4-Digit PIN" style="flex: 1; padding: 10px; border-radius: 4px; border: 1px solid #475569; background: #0f172a; color: white;">
+                <button type="button" onclick="fetchCloudMatch()" class="btn-action" style="background: #10b981; padding: 10px 20px; border: none; font-weight: bold; border-radius: 4px; cursor: pointer; color: white;">Sync & Auto-Fill</button>
+            </div>
+            <div id="cloudSyncStatus" style="margin-top: 10px; font-size: 0.85rem; font-weight: bold;"></div>
+        </div>
+
+        <div class="admin-grid">
+            <div class="input-group btn-col-2"><label>Tournament Name</label><input type="text" id="setupTournament" placeholder="Tournament Name"></div>
+            <div class="input-group btn-col-2" style="background:rgba(59,130,246,0.1); padding:8px; border-radius:8px; border:1px solid var(--primary);"><label style="color:var(--primary);">Venue / Ground (Used for Live Link)</label><input type="text" id="setupVenue" placeholder="e.g. Ground A" style="font-weight:bold; border-color:var(--primary);"></div>
+            <div class="input-group"><label>Match Date</label><input type="date" id="setupDate" onchange="generateMatchId()" onclick="this.showPicker && this.showPicker()"></div>
+            <div class="input-group"><label>Match ID (Auto-Generated)</label><input type="text" id="setupMatchId" readonly placeholder="Select Date First..." style="background: rgba(16, 185, 129, 0.1); border-color: var(--success); color: var(--success); font-weight: bold; letter-spacing: 1px;"></div>
+            <div class="input-group"><label>Match Type</label><select id="setupMatchType"><option value="t20">T-20</option><option value="oneday">One Day</option><option value="multiday">Multi-Day</option></select></div>
+            <div class="input-group"><label>Category</label><select id="setupCategory"><option value="men">Men</option><option value="women">Women</option></select></div>
+            <div class="input-group btn-col-2"><label>Host Organization</label><input type="text" id="setupHost"></div>
+            <div class="input-group"><label>Venue In-Charge</label><input type="text" id="setupIncharge"></div>
+            <div class="input-group"><label>Observer / Referee</label><input type="text" id="setupObsRef" placeholder="Observer / Referee Name"></div>
+            <div class="input-group"><label>Umpire 1</label><input type="text" id="u1"></div>
+            <div class="input-group"><label>Umpire 2</label><input type="text" id="u2"></div>
+            <div class="input-group"><label>TV Umpire</label><input type="text" id="tvUmpire"></div>
+            <div class="input-group"><label>4th Umpire</label><input type="text" id="u4"></div>
+            
+            <div class="input-group">
+                <label>Selectors Count</label>
+                <select id="selCount" onchange="updMatchSel()">
+                    <option value="0">None</option><option value="1">1 Selector</option><option value="2">2 Selectors</option>
+                    <option value="3">3 Selectors</option><option value="4">4 Selectors</option><option value="5">5 Selectors</option>
+                    <option value="6">6 Selectors</option><option value="7">7 Selectors</option><option value="8">8 Selectors</option>
+                </select>
+            </div>
+            <div class="input-group"><label>Scorer (Offline)</label><input type="text" id="s1"></div>
+            <div class="input-group"><label>Scorer (Online)</label><input type="text" id="s2"></div>
+            
+            <div class="input-group hidden" id="sel-grp-1"><label class="text-accent">Selector 1</label><input type="text" id="msel-1"></div>
+            <div class="input-group hidden" id="sel-grp-2"><label class="text-accent">Selector 2</label><input type="text" id="msel-2"></div>
+            <div class="input-group hidden" id="sel-grp-3"><label class="text-accent">Selector 3</label><input type="text" id="msel-3"></div>
+            <div class="input-group hidden" id="sel-grp-4"><label class="text-accent">Selector 4</label><input type="text" id="msel-4"></div>
+            <div class="input-group hidden" id="sel-grp-5"><label class="text-accent">Selector 5</label><input type="text" id="msel-5"></div>
+            <div class="input-group hidden" id="sel-grp-6"><label class="text-accent">Selector 6</label><input type="text" id="msel-6"></div>
+            <div class="input-group hidden" id="sel-grp-7"><label class="text-accent">Selector 7</label><input type="text" id="msel-7"></div>
+            <div class="input-group hidden" id="sel-grp-8"><label class="text-accent">Selector 8</label><input type="text" id="msel-8"></div>
+        </div>
+        
+        <h2>Squad Registration</h2>
+        <div class="tabs">
+            <input type="text" id="nameTeamA" class="tab-input active" placeholder="Enter Team A Name" list="savedTeamsList" onfocus="toggleTeam('A')" oninput="updateTeamNames()" onchange="loadTeamRoster('A', this.value)">
+            <input type="text" id="nameTeamB" class="tab-input" placeholder="Enter Team B Name" list="savedTeamsList" onfocus="toggleTeam('B')" oninput="updateTeamNames()" onchange="loadTeamRoster('B', this.value)">
+        </div>
+        <div id="boxA" class="team-box"><table class="roster-table"><tbody id="rosterA"></tbody></table></div>
+        <div id="boxB" class="team-box hidden"><table class="roster-table"><tbody id="rosterB"></tbody></table></div>
+        
+        <div class="toss-box mt-20">Toss Winner: <select id="tossWinner"><option value="A">Team A</option><option value="B">Team B</option></select> Decision: <select id="tossDecision"><option value="bat">Bat First</option><option value="bowl">Bowl First</option></select></div>
+        
+        <button type="button" onclick="confirmStart()" class="btn-launch mt-20">🚀 CALL 'PLAY' & INITIALIZE MATCH</button>
+        <div class="flex-row gap-10 mt-10">
+            <button type="button" onclick="hardResetSystem()" class="btn-action w-100" style="background:#b91c1c; padding:12px;">⚠️ Emergency Clear Match</button>
+            <button type="button" onclick="openManualEntryView()" class="btn-action w-100" style="background:#4f46e5; padding:12px;">📝 LOG PAST MATCH (MANUAL DATA ENTRY)</button>
+        </div>
     </div>
 
-    <!-- MAIN SCORING VIEW -->
-    <div id="scoringView" class="hidden">
+    <div id="manualEntryView" class="setup-screen hidden">
+        <h1 class="text-center text-primary mb-10">Manual Data Entry Sync</h1>
+        <p class="text-center text-muted mb-20" style="font-size:0.85rem;">Use this portal to enter stats for historical matches not scored live on the app. Data will sync directly to your Google Sheet.</p>
         
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 15px; margin-bottom: 20px;">
-            <h2 style="margin: 0; color: #38bdf8;" id="displayTournament">MATCH IN PROGRESS</h2>
-            <button onclick="toggleRosters()" id="btn-toggle-rosters" style="background: transparent; color: #cbd5e1; border: 1px solid #475569; padding: 8px 15px; border-radius: 6px; cursor: pointer;">Hide Squad Editors</button>
-        </div>
-        
-        <div id="rosters-container" style="display: flex; gap: 20px; margin-bottom: 25px;">
-            <div style="flex: 1; background: #1e293b; padding: 20px; border-radius: 8px;"><h3 id="nameTeamA" style="margin-top: 0; color: #10b981;">Team A (Batting)</h3><div id="rosterA"></div></div>
-            <div style="flex: 1; background: #1e293b; padding: 20px; border-radius: 8px;"><h3 id="nameTeamB" style="margin-top: 0; color: #f59e0b;">Team B (Bowling)</h3><div id="rosterB"></div></div>
+        <div class="admin-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="input-group"><label>Match Date</label><input type="date" id="meDate" onclick="this.showPicker && this.showPicker()"></div>
+            <div class="input-group"><label>Tournament Name</label><input type="text" id="meTourn" placeholder="Tournament Name"></div>
+            <div class="input-group"><label>Match Type</label><select id="meType"><option value="T20">T-20</option><option value="ONEDAY">One Day</option><option value="MULTIDAY">Multi-Day</option></select></div>
+            <div class="input-group"><label>Match ID (Custom or Auto)</label><input type="text" id="meId" placeholder="e.g. FINAL-01"></div>
+            <div class="input-group"><label class="text-accent">Team A Name</label><input type="text" id="meTeamA" placeholder="Team A"></div>
+            <div class="input-group"><label class="text-accent">Team B Name</label><input type="text" id="meTeamB" placeholder="Team B"></div>
         </div>
 
-        <!-- THE MERGED OFFLINE DASHBOARD -->
-        <div style="max-width: 600px; margin: 0 auto;">
-            
-            <div class="score-display">
-                <div style="font-size:0.9rem; color:#94a3b8; text-transform:uppercase; letter-spacing:2px;">Live Score</div>
-                <div class="big-score"><span id="score-display">0/0</span></div>
-                <div style="font-size:1.3rem; color:#38bdf8; font-weight:bold;">Overs: <span id="overs-display">0.0</span></div>
-                
-                <div style="display:flex; justify-content:space-between; margin-top:20px; background:#1e293b; padding:15px; border-radius:8px; text-align:left;">
-                    <div style="flex:1;">
-                        <div style="color:#10b981; font-weight:bold; font-size:0.8rem; margin-bottom:5px;">BATTERS</div>
-                        <div style="margin-bottom:8px;"><span style="color:#f59e0b;">🏏</span> <select id="sel-striker" class="postings-select" style="width:85%; background:#0f172a;"><option value="">Select Striker...</option></select></div>
-                        <div><span style="color:#64748b;">🏃</span> <select id="sel-nonstriker" class="postings-select" style="width:85%; background:#0f172a;"><option value="">Select Non-Striker...</option></select></div>
+        <button type="button" class="btn-action w-100 mt-10" style="background:var(--success); padding:12px; font-size:1.1rem;" onclick="generateManualGrids()">1. Create Data Grids for Teams</button>
+
+        <div id="meGridsContainer" class="hidden">
+            <div class="manual-grid">
+                <div class="stat-card" style="border-color:var(--border);">
+                    <h3 class="mt-0 text-accent" id="meTitleA">Team A Stats</h3>
+                    <div class="custom-scroll" style="overflow-x: auto; padding-bottom: 10px;">
+                        <table class="manual-table"><tbody id="meGridA"></tbody></table>
                     </div>
-                    <div style="flex:1; border-left:1px solid #334155; padding-left:15px;">
-                        <div style="color:#f59e0b; font-weight:bold; font-size:0.8rem; margin-bottom:5px;">BOWLER</div>
-                        <div><span style="color:#38bdf8;">🎯</span> <select id="sel-bowler" class="postings-select" style="width:85%; background:#0f172a;"><option value="">Select Bowler...</option></select></div>
+                </div>
+                <div class="stat-card" style="border-color:var(--border);">
+                    <h3 class="mt-0 text-accent" id="meTitleB">Team B Stats</h3>
+                    <div class="custom-scroll" style="overflow-x: auto; padding-bottom: 10px;">
+                        <table class="manual-table"><tbody id="meGridB"></tbody></table>
                     </div>
                 </div>
             </div>
-
-            <!-- MERGED KEYPAD -->
-            <div class="btn-grid">
-                <div class="section-label">Runs Scored</div>
-                <button type="button" class="btn-action" onclick="processDelivery(0)">0</button>
-                <button type="button" class="btn-action" onclick="processDelivery(1)">1</button>
-                <button type="button" class="btn-action" onclick="processDelivery(2)">2</button>
-                <button type="button" class="btn-action" onclick="processDelivery(3)">3</button>
-                
-                <button type="button" class="btn-action btn-col-2" style="background:#3b82f6; border-color:#2563eb;" onclick="processDelivery(4)">4</button>
-                <button type="button" class="btn-action btn-col-2" style="background:#8b5cf6; border-color:#7c3aed;" onclick="processDelivery(6)">6</button>
-                
-                <div class="section-label">Extras & Wickets</div>
-                <button type="button" class="btn-action" style="background:#0891b2;" onclick="openExtraModal('wd')">WIDE</button>
-                <button type="button" class="btn-action" style="background:#0891b2;" onclick="openExtraModal('nb')">NO BALL</button>
-                <button type="button" class="btn-action" style="background:#0891b2;" onclick="openExtraModal('b')">BYES</button>
-                <button type="button" class="btn-action" style="background:#0891b2;" onclick="openExtraModal('lb')">LEG BYES</button>
-                
-                <button type="button" class="btn-action btn-col-2" style="background:#ef4444; border-color:#dc2626; font-size:1.1rem;" onclick="openWicketModal()">🚨 WICKET</button>
-                <button type="button" class="btn-action btn-col-2" style="background:#475569;" onclick="swapStrike()">🔄 SWAP STRIKE</button>
+            <div class="flex-row gap-10 mt-20">
+                <button type="button" class="btn-action w-100" style="background:#334155; padding:15px;" onclick="closeManualEntryView()">🔙 Back to Setup</button>
+                <button type="button" class="btn-action w-100" style="background:#0284c7; padding:15px; font-size:1.1rem;" onclick="syncManualMatchData()">☁️ 2. Sync Manual Match to Cloud</button>
             </div>
         </div>
+        <div id="meNoGridsBtn" class="mt-20"><button type="button" class="btn-action" style="background:#334155; width:200px;" onclick="closeManualEntryView()">🔙 Back to Setup</button></div>
     </div>
-
-    <!-- EXTRAS MODAL -->
-    <div id="extraModal" class="modal-overlay">
-        <div class="modal-content" style="max-width: 350px;">
-            <h3 style="margin-top: 0; color: #0891b2;" id="extra-title">Log Extra</h3>
-            <input type="hidden" id="extra-type-hidden">
-            <div class="input-group">
-                <label>Runs scored off the extra (Default 0)</label>
-                <input type="number" id="extra-runs-input" value="0" min="0">
-            </div>
-            <div class="input-group hidden" id="nb-type-group">
-                <label>Runs came from:</label>
-                <select id="nb-run-type"><option value="bat">Off the Bat</option><option value="bye">Byes</option><option value="legbye">Leg Byes</option></select>
-            </div>
-            <button onclick="submitExtra()" style="width: 100%; padding: 12px; background: #0891b2; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 10px;">Confirm Extra</button>
-            <button onclick="document.getElementById('extraModal').classList.add('hidden')" style="width: 100%; padding: 10px; background: transparent; border: 1px solid #475569; color: #cbd5e1; border-radius: 6px; cursor: pointer;">Cancel</button>
-        </div>
-    </div>
-
-    <!-- WICKET MODAL -->
-    <div id="wicketModal" class="modal-overlay">
-        <div class="modal-content" style="max-width: 400px;">
-            <h3 style="margin-top: 0; color: #ef4444;">🚨 Log Wicket</h3>
-            <div class="input-group">
-                <label>Who got out?</label>
-                <select id="wicket-who"><option value="striker">Striker</option><option value="nonstriker">Non-Striker</option></select>
-            </div>
-            <div class="input-group">
-                <label>Dismissal Type</label>
-                <select id="wicket-type">
-                    <option value="Bowled">Bowled</option><option value="Caught">Caught</option><option value="LBW">LBW</option>
-                    <option value="Run Out">Run Out</option><option value="Stumped">Stumped</option><option value="Hit Wicket">Hit Wicket</option>
-                </select>
-            </div>
-            <button onclick="submitWicket()" style="width: 100%; padding: 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 10px;">Confirm Wicket</button>
-            <button onclick="document.getElementById('wicketModal').classList.add('hidden')" style="width: 100%; padding: 10px; background: transparent; border: 1px solid #475569; color: #cbd5e1; border-radius: 6px; cursor: pointer;">Cancel</button>
-        </div>
-    </div>
-
-    <!-- PLAYER SEARCH MODAL (Preserved) -->
-    <div id="playerSearchModal" class="modal-overlay">
-        <div class="modal-content">
-            <h3 style="margin-top: 0; color: #f59e0b;" id="modal-title">Replace Player</h3>
-            <div id="team-roster-suggestions" style="margin-bottom: 20px; border-bottom: 1px dashed #475569; padding-bottom: 15px;"></div>
-            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Not in the master squad? Search globally:</p>
-            <input type="text" id="player-search-input" placeholder="Search global database..." style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; box-sizing: border-box; margin-bottom: 15px;" oninput="searchDatabasePlayers(this.value)">
-            <div id="search-results-container" style="max-height: 150px; overflow-y: auto; margin-bottom: 15px;"></div>
-            <button onclick="toggleNewPlayerForm()" style="width: 100%; padding: 10px; background: transparent; border: 1px dashed #10b981; color: #10b981; border-radius: 6px; cursor: pointer; margin-bottom: 15px;">+ Register Brand New Player</button>
-            <div id="new-player-form" class="hidden" style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 15px;">
-                <div class="input-group"><label>Full Name *</label><input type="text" id="new-p-name"></div>
-                <div class="input-group"><label>Father's Name *</label><input type="text" id="new-p-father"></div>
-                <div class="input-group"><label>Date of Birth *</label><input type="date" id="new-p-dob"></div>
-                <button onclick="registerAndSwapPlayer()" style="width: 100%; padding: 10px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Save & Insert into Lineup</button>
-            </div>
-            <button onclick="document.getElementById('playerSearchModal').classList.add('hidden')" style="width: 100%; padding: 10px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">Cancel</button>
-        </div>
-    </div>
-
-    <script>
-        const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
-        const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        window.currentScorerSession = Math.random().toString(36).substring(2, 15);
-        let state = { matchId: null, teams: { A: { name: "", players: [] }, B: { name: "", players: [] } } };
-        let currentTargetTeam = null; let currentTargetSlotIndex = null;
-
-        let matchState = { runs: 0, wickets: 0, overs: 0, balls: 0 };
-
-        async function fetchOfficialMatch() {
-            const matchId = document.getElementById('match-id-input').value.trim().toUpperCase();
-            const pin = document.getElementById('match-pin-input').value.trim();
-            const statusEl = document.getElementById('sync-status');
-            
-            if(!matchId || !pin) { statusEl.innerHTML = '<span style="color: #ef4444;">❌ Enter Match ID and PIN.</span>'; return; }
-            statusEl.innerHTML = '<span style="color: #f59e0b;">⏳ Authenticating...</span>';
-
-            const { data: matchRow, error: matchErr } = await supabaseClient.from('matches').select('*').eq('match_id', matchId).single();
-            if (matchErr || !matchRow || matchRow.scorer_pin !== pin) { statusEl.innerHTML = `<span style="color: #ef4444;">❌ Access Denied.</span>`; return; }
-
-            await supabaseClient.from('matches').update({ active_session: window.currentScorerSession }).eq('match_id', matchId);
-
-            const matchData = matchRow.full_state || {};
-            state.matchId = matchId;
-            state.teams.A.name = matchData.team1 || "Team A";
-            state.teams.B.name = matchData.team2 || "Team B";
-
-            if (matchData.currentScore) matchState = matchData.currentScore;
-
-            if(state.teams.A.players.length === 0) {
-                for(let i=0; i<11; i++) {
-                    state.teams.A.players.push({ player_id: null, name: "Empty Slot" });
-                    state.teams.B.players.push({ player_id: null, name: "Empty Slot" });
-                }
-            }
-
-            document.getElementById('setupView').classList.add('hidden'); 
-            document.getElementById('scoringView').classList.remove('hidden'); 
-            document.getElementById('displayTournament').innerText = matchData.tournament || "MATCH IN PROGRESS"; 
-            document.getElementById('nameTeamA').innerText = state.teams.A.name;
-            document.getElementById('nameTeamB').innerText = state.teams.B.name;
-            
-            renderRosters();
-            updateScoreboardUI();
-        }
-
-        function renderRosters() {
-            ['A', 'B'].forEach(teamKey => {
-                const container = document.getElementById(teamKey === 'A' ? 'rosterA' : 'rosterB');
-                container.innerHTML = state.teams[teamKey].players.map((p, index) => {
-                    let pText = p.player_id ? `<span style="color:#10b981; font-weight:bold;">${p.name}</span>` : `<span style="color:#ef4444; font-style:italic;">${p.name}</span>`;
-                    return `<div style="background:#0f172a; padding:8px; border:1px solid #334155; margin-bottom:5px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
-                        <div style="font-size:0.85rem;">${index + 1}. ${pText}</div>
-                        <button onclick="openPlayerSearchModal('${teamKey}', ${index})" style="background:transparent; border:1px solid #3b82f6; color:#3b82f6; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">Set</button>
-                    </div>`;
-                }).join('');
-            });
-            populateActiveDropdowns();
-        }
-
-        function toggleRosters() {
-            const container = document.getElementById('rosters-container');
-            const btn = document.getElementById('btn-toggle-rosters');
-            if(container.style.display === 'none') { container.style.display = 'flex'; btn.innerText = "Hide Squad Editors"; } 
-            else { container.style.display = 'none'; btn.innerText = "Show Squad Editors"; }
-        }
-
-        function populateActiveDropdowns() {
-            let batHtml = `<option value="">Select Batter...</option>` + state.teams.A.players.filter(p => p.player_id).map(p => `<option value="${p.player_id}">${p.name}</option>`).join('');
-            let bowlHtml = `<option value="">Select Bowler...</option>` + state.teams.B.players.filter(p => p.player_id).map(p => `<option value="${p.player_id}">${p.name}</option>`).join('');
-            if(!document.getElementById('sel-striker').value) document.getElementById('sel-striker').innerHTML = batHtml;
-            if(!document.getElementById('sel-nonstriker').value) document.getElementById('sel-nonstriker').innerHTML = batHtml;
-            if(!document.getElementById('sel-bowler').value) document.getElementById('sel-bowler').innerHTML = bowlHtml;
-        }
-
-        function updateScoreboardUI() {
-            document.getElementById('score-display').innerText = `${matchState.runs}/${matchState.wickets}`;
-            document.getElementById('overs-display').innerText = `${matchState.overs}.${matchState.balls}`;
-        }
-
-        function swapStrike() {
-            let s = document.getElementById('sel-striker'); let ns = document.getElementById('sel-nonstriker');
-            let temp = s.value; s.value = ns.value; ns.value = temp;
-        }
-
-        function validateActivePlayers() {
-            let s = document.getElementById('sel-striker').value; let ns = document.getElementById('sel-nonstriker').value; let b = document.getElementById('sel-bowler').value;
-            if(!s || !ns || !b) { alert("⚠️ Select the Striker, Non-Striker, and Bowler first!"); return false; }
-            if(s === ns) { alert("⚠️ Striker and Non-Striker cannot be the same person!"); return false; }
-            return { s, ns, b };
-        }
-
-        // ==========================================
-        // 4.3 CLOUD CRICKET LOGIC ENGINE
-        // ==========================================
-
-        async function processDelivery(runs) {
-            let players = validateActivePlayers(); if(!players) return;
-            
-            matchState.runs += runs;
-            matchState.balls += 1;
-            updateScoreboardUI();
-
-            const success = await logDeliveryToCloud({ innings: 1, over: matchState.overs, ball: matchState.balls, striker_id: players.s, non_striker_id: players.ns, bowler_id: players.b, runs: runs, extras: 0, is_wicket: false });
-            if(success) checkOverCompletion(runs);
-        }
-
-        function openExtraModal(type) {
-            let titles = { 'wd': 'Wide', 'nb': 'No Ball', 'b': 'Byes', 'lb': 'Leg Byes' };
-            document.getElementById('extra-title').innerText = `Log ${titles[type]}`;
-            document.getElementById('extra-type-hidden').value = type;
-            document.getElementById('extra-runs-input').value = 0;
-            document.getElementById('nb-type-group').classList.toggle('hidden', type !== 'nb');
-            document.getElementById('extraModal').classList.remove('hidden');
-        }
-
-        async function submitExtra() {
-            let players = validateActivePlayers(); if(!players) return;
-            let type = document.getElementById('extra-type-hidden').value;
-            let extraRunsScored = parseInt(document.getElementById('extra-runs-input').value) || 0;
-            
-            let totalRunsToAdd = extraRunsScored;
-            let totalExtrasForDB = extraRunsScored;
-            let isLegalDelivery = false;
-
-            if (type === 'wd' || type === 'nb') {
-                totalRunsToAdd += 1; // Base penalty
-                totalExtrasForDB += 1;
-            } else {
-                isLegalDelivery = true; // Byes and Leg Byes are legal deliveries
-            }
-
-            matchState.runs += totalRunsToAdd;
-            if (isLegalDelivery) matchState.balls += 1;
-            updateScoreboardUI();
-            
-            document.getElementById('extraModal').classList.add('hidden');
-
-            const success = await logDeliveryToCloud({ innings: 1, over: matchState.overs, ball: matchState.balls, striker_id: players.s, non_striker_id: players.ns, bowler_id: players.b, runs: 0, extras: totalExtrasForDB, extra_type: type, is_wicket: false });
-            if(success && isLegalDelivery) checkOverCompletion(extraRunsScored);
-        }
-
-        function openWicketModal() {
-            document.getElementById('wicketModal').classList.remove('hidden');
-        }
-
-        async function submitWicket() {
-            let players = validateActivePlayers(); if(!players) return;
-            let whoOut = document.getElementById('wicket-who').value;
-            let wicketType = document.getElementById('wicket-type').value;
-
-            matchState.wickets += 1;
-            matchState.balls += 1; // Standard wickets count as legal balls
-            updateScoreboardUI();
-
-            document.getElementById('wicketModal').classList.add('hidden');
-
-            const success = await logDeliveryToCloud({ innings: 1, over: matchState.overs, ball: matchState.balls, striker_id: players.s, non_striker_id: players.ns, bowler_id: players.b, runs: 0, extras: 0, is_wicket: true, wicket_type: wicketType });
-            
-            if(success) {
-                // Clear the dismissed batter from the dropdown so the scorer is forced to pick a new one
-                if(whoOut === 'striker') document.getElementById('sel-striker').value = "";
-                else document.getElementById('sel-nonstriker').value = "";
+    <div id="scoringView" class="scoring-screen hidden">
+        <aside>
+            <h3 id="dispBatTeamName" class="text-accent mt-0" style="text-transform: uppercase;">BATTING TEAM</h3>
+            <div id="battersContainer"></div>
+        </aside>
+        
+        <main>
+            <div class="score-display">
+                <div id="freeHitBadge" class="free-hit-badge hidden">🚨 FREE HIT 🚨</div>
+                <div id="inningsBadge" class="innings-badge">INNINGS 1</div>
+                <p id="displayTournament" class="text-primary font-bold mt-0 mb-0" style="font-size:0.9rem;"></p>
+                <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px; margin-bottom:5px;">📍 <span id="dispGroundName"></span> | Batting: <span id="dispBatTeamNameTop" class="text-accent font-bold"></span></div>
+                <div id="targetDisplayBox" class="target-box hidden" onclick="openEditTarget()" title="Edit Target"><span style="font-size:1.2rem;">🎯</span> <span id="dispTargetText" style="font-size:1rem;"></span> <span style="font-size:0.7rem; opacity:0.6;">✏️</span></div>
+                <div id="inningsHistoryText"></div>
                 
-                checkOverCompletion(0);
-            }
-        }
+                <div style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 5px; margin: 10px 0;">
+                    <div id="miniLiveBatters" style="text-align: left; font-size: 0.8rem; line-height: 1.4; padding-left: 5px; overflow: hidden;"></div>
+                    <div style="text-align: center;">
+                        <h1 class="big-score" style="margin-bottom: 5px;"><span id="liveRuns">0</span>/<span id="liveWkts" style="color: var(--danger);">0</span></h1>
+                        <p class="font-bold text-success mt-0 mb-0" style="font-size:0.85rem;">🏏 P'ship: <span id="livePartnership">0 (0)</span></p>
+                    </div>
+                    <div id="miniLiveBowler" style="text-align: right; font-size: 0.8rem; line-height: 1.4; padding-right: 5px; overflow: hidden;"></div>
+                </div>
 
-        function checkOverCompletion(runsScored) {
-            if(matchState.balls === 6) {
-                matchState.overs += 1;
-                matchState.balls = 0;
-                updateScoreboardUI();
-                swapStrike();
-                alert(`✅ Over ${matchState.overs} Completed! Select a new Bowler.`);
-                document.getElementById('sel-bowler').value = ""; 
-            } else if (runsScored === 1 || runsScored === 3) {
-                swapStrike(); 
-            }
-        }
+                <div id="leadTrailBox"></div>
+                <p style="font-size:1.3rem;" class="mt-5 mb-0">Overs: <span id="liveOvers" class="font-bold">0.0</span> <span class="text-muted ml-10" style="font-size:0.9rem;">CRR: <span id="liveCrr" class="text-white font-bold">0.00</span></span><span id="rrrBox" class="text-muted ml-10 hidden" style="font-size:0.9rem;">| Req: <span id="liveReq"></span> | RRR: <span id="liveRrr" class="text-accent font-bold">0.00</span></span></p>
+                <p style="font-size:0.75rem;" class="text-muted mt-5">Extras: <span id="liveExtras">0</span> (W:<span id="exW">0</span>, NB:<span id="exNB">0</span>, B:<span id="exB">0</span>, LB:<span id="exLB">0</span>) <span class="text-accent font-bold">| PEN: <span id="livePenalties">0</span></span></p>
+            </div>
+            
+            <div class="recent-balls-box flex-row gap-5" style="justify-content: center;"><span style="font-size:0.65rem; text-transform:uppercase;" class="text-muted font-bold">Recent:</span><div id="recentBallsData" class="flex-row gap-5" style="flex-wrap: wrap; justify-content: center;"></div></div>
 
-        async function logDeliveryToCloud(data) {
-            state.currentScore = matchState;
-            const { error: ledgerError } = await supabaseClient.from('ball_by_ball').insert([{
-                match_id: state.matchId, innings: data.innings, over_number: data.over, ball_number: data.ball, striker_id: data.striker_id, non_striker_id: data.non_striker_id, bowler_id: data.bowler_id, runs_batter: data.runs, extras: data.extras, extra_type: data.extra_type, is_wicket: data.is_wicket, wicket_type: data.wicket_type
-            }]);
-            if (ledgerError) { alert("Cloud Sync Failed: " + ledgerError.message); return false; }
-            await supabaseClient.from('matches').update({ full_state: state, match_state: 'live' }).eq('match_id', state.matchId);
-            return true;
-        }
+            <div id="scoringEventsBox">
+                <div class="btn-grid">
+                    <div class="section-label">Scoring Events</div>
+                    <button type="button" class="btn-action" onclick="ballScored(0, false)">0</button><button type="button" class="btn-action" onclick="ballScored(1, false)">1</button><button type="button" class="btn-action" onclick="ballScored(2, false)">2</button><button type="button" class="btn-action" onclick="ballScored(3, false)">3</button>
+                    <button type="button" class="btn-action btn-col-2" style="background:var(--manual);" onclick="openManualRun()">Manual</button><button type="button" class="btn-action" style="background:var(--b4);" onclick="ballScored(4, true)">4</button><button type="button" class="btn-action" style="background:var(--b6);" onclick="ballScored(6, true)">6</button>
+                    <button type="button" class="btn-action" style="background:#0891b2;" onclick="openExtra('W')">WIDE</button><button type="button" class="btn-action" style="background:#0891b2;" onclick="openExtra('NB')">NO BALL</button><button type="button" class="btn-action" style="background:#0891b2;" onclick="openExtra('B')">BYES</button><button type="button" class="btn-action" style="background:#0891b2;" onclick="openExtra('LB')">LEG BYES</button>
+                    
+                    <button type="button" class="btn-action btn-col-2" style="background:var(--danger);" onclick="openWicket()">🚨 WICKET</button>
+                    <button type="button" class="btn-action" style="background: #ea580c;" onclick="openRetire()">🏃 RETIRE</button>
+                    <button type="button" class="btn-action" style="background: #d97706;" onclick="manualEndOver()">🛑 CALL OVER</button>
+                    
+                    <div class="section-label">Match Control</div>
+                    <button type="button" class="btn-action" style="font-size:0.85rem; background:#475569;" onclick="manualRotateUI()">Rotate 🔄</button>
+                    <button type="button" class="btn-action" style="font-size:0.85rem; background:#8b5cf6;" onclick="openRemarkModal()">📝 REMARK</button>
+                    <button type="button" class="btn-action" style="font-size:0.85rem; background:#b91c1c;" onclick="openPenalty()">⚠️ PENALTY</button>
+                    <button type="button" class="btn-action" style="font-size:0.85rem; background:#0f766e;" onclick="openChangeWK()">🧤 CHANGE WK</button>
+                    
+                    <button type="button" class="btn-action btn-col-2" style="background: #334155; padding:10px; font-size:1rem;" onclick="undoLastAction()">↩️ UNDO</button>
+                    <button type="button" id="fsBtn" class="btn-action" style="background: #334155; padding:10px;" onclick="toggleFullScreen()">🔲 FULL</button>
+                    <button type="button" class="btn-action" style="background: #2563eb; padding:10px;" onclick="showMatchGraphs()">📈 GRAPHS</button>
+                    
+                    <button type="button" class="btn-action btn-col-2" style="background: #ca8a04; padding:10px;" onclick="openPlayerSwap()">🔄 INJURY SUB</button>
+                    <button type="button" class="btn-action btn-col-2" style="background: #4f46e5; padding:10px;" onclick="openEditSquad()">🛠️ EDIT SQUAD</button>
+                    
+                    <div style="grid-column: span 4; display: flex; gap: 6px;">
+                        <button type="button" id="breakBtn" class="btn-action hidden" style="flex: 1; background: #fb923c; color:black; padding:12px; font-size:0.95rem;" onclick="openBreakModal()">⏱️ STUMPS / BREAK</button>
+                        <button type="button" class="btn-action" style="flex: 1; background: #38bdf8; color:black; padding:12px; font-size:0.95rem;" onclick="openInterruptionModal()">⛈️ DELAY</button>
+                    </div>
+                    <button type="button" class="btn-action" style="grid-column: span 4; font-size:1rem; background: #047857; padding:12px;" onclick="endInnings()">🏁 DECLARE / END INNINGS</button>
+                </div>
+            </div>
 
-        // SQUAD MAPPING MODAL LOGIC (Unchanged)
-        async function openPlayerSearchModal(teamKey, index) { currentTargetTeam = teamKey; currentTargetSlotIndex = index; document.getElementById('player-search-input').value = ""; document.getElementById('search-results-container').innerHTML = ""; document.getElementById('new-player-form').classList.add('hidden'); document.getElementById('playerSearchModal').style.display = "flex"; loadSuggestedPlayers(state.teams[teamKey].name); }
-        async function loadSuggestedPlayers(teamName) { const container = document.getElementById('team-roster-suggestions'); container.innerHTML = '<div style="color:#94a3b8; font-size:0.8rem;">Loading master squad...</div>'; const { data, error } = await supabaseClient.from('team_rosters').select(`player_id, players (full_name, dob, father_name)`).eq('team_name', teamName); if (error || !data || data.length === 0) { container.innerHTML = `<div style="color:#f59e0b; font-size:0.8rem;">No official Master Roster found for ${teamName}. You must search globally or register below.</div>`; return; } container.innerHTML = `<div style="color:#10b981; font-size:0.8rem; margin-bottom:5px; font-weight:bold;">Suggested from ${teamName} Master Roster:</div>` + data.map(row => { if(!row.players) return ''; return `<div class="search-result-item" onclick="assignExistingPlayer('${row.player_id}', '${row.players.full_name}')" style="border-color: #10b981;"><div><div style="font-weight:bold; color:white;">${row.players.full_name}</div><div class="player-meta">DOB: ${row.players.dob || 'N/A'}</div></div><div style="color:#10b981; font-weight:bold;">Select</div></div>`}).join(''); }
-        async function searchDatabasePlayers(query) { const container = document.getElementById('search-results-container'); if (query.trim().length < 2) { container.innerHTML = ""; return; } const { data } = await supabaseClient.from('players').select('*').ilike('full_name', `%${query}%`).limit(10); if (!data || data.length === 0) { container.innerHTML = '<div style="color:#ef4444; font-size:0.8rem;">No players found.</div>'; return; } container.innerHTML = data.map(p => `<div class="search-result-item" onclick="assignExistingPlayer('${p.player_id}', '${p.full_name}')"><div><div style="font-weight:bold; color:white;">${p.full_name}</div></div><div style="color:#3b82f6; font-weight:bold;">Select</div></div>`).join(''); }
-        function assignExistingPlayer(uuid, name) { state.teams[currentTargetTeam].players[currentTargetSlotIndex] = { player_id: uuid, name: name }; renderRosters(); document.getElementById('playerSearchModal').style.display = "none"; }
-        function toggleNewPlayerForm() { document.getElementById('new-player-form').classList.toggle('hidden'); }
-        async function registerAndSwapPlayer() { const name = document.getElementById('new-p-name').value.trim(); const father = document.getElementById('new-p-father').value.trim(); const dob = document.getElementById('new-p-dob').value; if(!name || !father || !dob) { alert("Please fill all required fields."); return; } const { data, error } = await supabaseClient.from('players').insert([{ full_name: name, father_name: father, dob: dob }]).select(); if (error) { alert("Database Error: " + error.message); return; } assignExistingPlayer(data[0].player_id, data[0].full_name); }
-    </script>
+            <div id="breakOverlayBox" class="hidden" style="background: rgba(245, 158, 11, 0.1); border: 2px dashed var(--accent); padding: 30px 15px; border-radius: 12px; text-align: center; margin-top: 15px;">
+                <h2 id="breakTitle" class="text-accent mt-0" style="text-transform: uppercase;">MATCH PAUSED</h2>
+                <div id="breakSubtitle" class="mb-20 font-bold" style="color:var(--text-muted); font-size:1.1rem;"></div>
+                <p class="text-muted mb-20">Scoring is temporarily locked during this interval.</p>
+                <button type="button" class="btn-action w-100" style="background: var(--success); font-size: 1.2rem; padding: 20px;" onclick="openResumeModal()">▶️ RESTART</button>
+            </div>
+        </main>
+        
+        <aside>
+            <h3 id="dispBowlTeamName" class="text-primary mt-0" style="text-transform: uppercase;">BOWLING TEAM</h3>
+            <div class="stat-card" style="border-color:var(--primary); background:rgba(59,130,246,0.1)">
+                <label class="text-primary">ACTIVE BOWLER</label>
+                <div id="activeBowlerNameRight" style="font-weight:bold; font-size:1.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">Select...</div>
+                <div id="activeBowlerProgress" class="bowler-progress"></div>
+                <button type="button" class="btn-action w-100 mt-10" style="background:var(--danger); font-size:0.85rem; padding:8px;" onclick="openSelector('bowler', '🚑 Mid-Over Swap')">🚑 Swap Bowler</button>
+            </div>
+            <div class="table-wrapper custom-scroll">
+                <table class="bowler-table" style="font-size: 0.75rem; margin-top:10px; white-space: nowrap; min-width: 100%;">
+                    <thead><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Ex</th><th>NB</th><th>WD</th></tr></thead>
+                    <tbody id="bowlStatsBody"></tbody>
+                </table>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<div id="dynamicModal" class="modal-overlay hidden"><div id="modalBoxElement" class="modal-box"><h3 id="modalHeading" class="text-primary mt-0">Modal</h3><div id="modalBody"></div><div class="flex-row gap-10 mt-15"><button type="button" id="modalCancelBtn" class="btn-action w-100" style="background:transparent; border:1px solid var(--border);" onclick="closeModal()">Cancel</button><button type="button" id="modalConfirmBtn" class="btn-action w-100" style="background:var(--success);">Confirm</button></div></div></div>
+
+<script src="scorer.js"></script>
 </body>
 </html>
