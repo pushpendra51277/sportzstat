@@ -44,7 +44,7 @@
         <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 25px;">Manage franchises, clubs, and global player registrations.</p>
 
         <div class="grid-layout">
-            <!-- LEFT COLUMN: TEAM SELECTION -->
+            <!-- LEFT COLUMN: TEAM SELECTION & FREE AGENTS -->
             <div class="card">
                 <h3>1. Select or Create Club</h3>
                 
@@ -62,6 +62,27 @@
                     <input type="text" id="new-team-input" placeholder="e.g. Gwalior Strikers">
                     <button class="btn-primary" style="margin-top: 10px;" onclick="createNewTeam()">Save New Club</button>
                 </div>
+
+                <hr style="border: 0; border-top: 1px solid #334155; margin: 25px 0;">
+
+                <!-- NEW: INDEPENDENT PLAYER REGISTRY -->
+                <div style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #10b981;">
+                    <label style="color: #10b981; font-weight: bold; margin-bottom: 5px; display: block;">Global Player Registry</label>
+                    <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 0;">Register free agents for local tournaments (no club required).</p>
+                    
+                    <button class="btn-outline" onclick="toggleIndependentForm()">+ Register Independent Player</button>
+                    
+                    <div id="independent-reg-form" class="hidden" style="margin-top: 15px; border-top: 1px dashed #475569; padding-top: 15px;">
+                        <div class="input-group"><label>Full Name *</label><input type="text" id="ind-name"></div>
+                        <div class="input-group"><label>Father's Name *</label><input type="text" id="ind-father"></div>
+                        <div class="input-group"><label>Date of Birth *</label><input type="date" id="ind-dob"></div>
+                        <div class="input-group"><label>Primary Role</label>
+                            <select id="ind-role"><option>Batter</option><option>Bowler</option><option>All-Rounder</option><option>Wicketkeeper</option></select>
+                        </div>
+                        <button class="btn-success" onclick="registerIndependentPlayer()">Save as Free Agent</button>
+                    </div>
+                </div>
+
             </div>
 
             <!-- RIGHT COLUMN: ROSTER MANAGEMENT -->
@@ -138,6 +159,46 @@
             loadTeamRoster(teamName);
         }
 
+        // ==========================================
+        // NEW: INDEPENDENT REGISTRATION LOGIC
+        // ==========================================
+        function toggleIndependentForm() {
+            document.getElementById('independent-reg-form').classList.toggle('hidden');
+        }
+
+        async function registerIndependentPlayer() {
+            const name = document.getElementById('ind-name').value.trim();
+            const father = document.getElementById('ind-father').value.trim();
+            const dob = document.getElementById('ind-dob').value;
+            const role = document.getElementById('ind-role').value;
+
+            if(!name || !father || !dob) { alert("Name, Father's Name, and DOB are strictly required."); return; }
+
+            // DUPLICATE CHECK
+            const { data: existing } = await db.from('players').select('player_id')
+                .ilike('full_name', name).eq('father_name', father).eq('dob', dob);
+
+            if (existing && existing.length > 0) {
+                alert(`Duplicate Blocked: ${name} is already registered in the Master Database as a Free Agent.`);
+                return;
+            }
+
+            // INSERT NEW PLAYER (Bypasses team_rosters)
+            const { data: newP, error } = await db.from('players').insert([{ 
+                full_name: name, father_name: father, dob: dob, playing_role: role 
+            }]).select();
+
+            if (error) { alert("Registration Error: " + error.message); return; }
+
+            alert(`✅ ${name} has been successfully registered as an Independent Free Agent! You can search for them during live scoring or tournament creation.`);
+            
+            // Clear inputs
+            document.getElementById('ind-name').value = "";
+            document.getElementById('ind-father').value = "";
+            document.getElementById('ind-dob').value = "";
+            toggleIndependentForm();
+        }
+
         // 2. LOAD ACTIVE ROSTER
         async function loadTeamRoster(teamName) {
             currentActiveTeam = teamName;
@@ -173,7 +234,10 @@
                 return;
             }
 
-            listArea.innerHTML = data.map((row, idx) => `
+            listArea.innerHTML = data.map((row, idx) => {
+                // Safety check for deleted global players
+                if(!row.players) return '';
+                return `
                 <div class="player-row">
                     <div class="player-info">
                         <span class="player-name">${idx + 1}. ${row.players.full_name} <span style="font-size:0.75rem; color:#f59e0b; font-weight:normal;">(${row.players.playing_role || 'Player'})</span></span>
@@ -181,7 +245,7 @@
                     </div>
                     <button class="btn-remove" onclick="removePlayerFromTeam('${row.id}')">Remove</button>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         // 3. SEARCH & ASSIGN EXISTING PLAYERS
