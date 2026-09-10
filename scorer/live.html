@@ -15,7 +15,7 @@
         
         /* Player Search Modal Styles */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-content { background: #1e293b; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; border: 1px solid #334155; }
+        .modal-content { background: #1e293b; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; border: 1px solid #334155; max-height: 90vh; overflow-y: auto; }
         .search-result-item { background: #0f172a; border: 1px solid #334155; padding: 10px; margin-bottom: 8px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .search-result-item:hover { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
         .player-meta { font-size: 0.75rem; color: #94a3b8; }
@@ -40,7 +40,7 @@
         <div id="sync-status" style="margin-top: 15px; text-align: center; font-size: 0.9rem;"></div>
     </div>
 
-    <!-- MAIN SCORING VIEW (Simplified Placeholder) -->
+    <!-- MAIN SCORING VIEW -->
     <div id="scoringView" class="hidden">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 15px; margin-bottom: 20px;">
             <h2 style="margin: 0; color: #38bdf8;" id="displayTournament">MATCH IN PROGRESS</h2>
@@ -65,7 +65,7 @@
         <div style="background: #0f172a; padding: 20px; border-radius: 8px; margin-top: 20px; border: 1px dashed #f59e0b; text-align: center;">
             <h3 style="color: #f59e0b; margin-top: 0;">Phase 4.2: Cloud Sync Test</h3>
             <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 15px;">Map at least one real player to Team A and Team B using the Set/Replace buttons above. Then, click this button to fire a live data packet directly to Supabase.</p>
-            <button id="test-sync-btn" onclick="testLogDelivery()" style="background: #10b981; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem;">🏏 Simulate: Log 4 Runs (Over 1.1)</button>
+            <button id="test-sync-btn" onclick="testLogDelivery()" style="background: #10b981; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem;">🏏 Simulate: Log 4 Runs</button>
         </div>
     </div>
 
@@ -73,13 +73,17 @@
     <div id="playerSearchModal" class="modal-overlay">
         <div class="modal-content">
             <h3 style="margin-top: 0; color: #f59e0b;" id="modal-title">Replace Player</h3>
-            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 15px;">Search the master database. If the player does not exist, you must register them.</p>
             
-            <input type="text" id="player-search-input" placeholder="Search by name..." style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; box-sizing: border-box; margin-bottom: 15px;" oninput="searchDatabasePlayers(this.value)">
+            <!-- NEW: Master Roster Suggestions -->
+            <div id="team-roster-suggestions" style="margin-bottom: 20px; border-bottom: 1px dashed #475569; padding-bottom: 15px;"></div>
+
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Not in the master squad? Search globally:</p>
             
-            <div id="search-results-container" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;"></div>
+            <input type="text" id="player-search-input" placeholder="Search global database..." style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; box-sizing: border-box; margin-bottom: 15px;" oninput="searchDatabasePlayers(this.value)">
             
-            <button onclick="toggleNewPlayerForm()" style="width: 100%; padding: 10px; background: transparent; border: 1px dashed #10b981; color: #10b981; border-radius: 6px; cursor: pointer; margin-bottom: 15px;">+ Register New Player</button>
+            <div id="search-results-container" style="max-height: 150px; overflow-y: auto; margin-bottom: 15px;"></div>
+            
+            <button onclick="toggleNewPlayerForm()" style="width: 100%; padding: 10px; background: transparent; border: 1px dashed #10b981; color: #10b981; border-radius: 6px; cursor: pointer; margin-bottom: 15px;">+ Register Brand New Player</button>
             
             <!-- Strict Registration Form -->
             <div id="new-player-form" class="hidden" style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 15px;">
@@ -118,16 +122,13 @@
                 statusEl.innerHTML = `<span style="color: #ef4444;">❌ Access Denied. Incorrect Match ID or PIN.</span>`; return;
             }
 
-            // Lockout Dual Scoring
             await supabaseClient.from('matches').update({ active_session: window.currentScorerSession }).eq('match_id', matchId);
 
-            // Populate Engine Data
             const matchData = matchRow.full_state || {};
             state.matchId = matchId;
             state.teams.A.name = matchData.team1 || "Team A";
             state.teams.B.name = matchData.team2 || "Team B";
 
-            // Initialize empty squad slots (11 slots for example) if not existing in state
             if(state.teams.A.players.length === 0) {
                 for(let i=0; i<11; i++) state.teams.A.players.push({ player_id: null, name: "Empty Slot", dob: "", father_name: "" });
                 for(let i=0; i<11; i++) state.teams.B.players.push({ player_id: null, name: "Empty Slot", dob: "", father_name: "" });
@@ -142,7 +143,7 @@
             renderRosters();
         }
 
-        // 2. RENDER ROSTERS IN UI
+        // 2. RENDER ROSTERS
         function renderRosters() {
             ['A', 'B'].forEach(teamKey => {
                 const container = document.getElementById(teamKey === 'A' ? 'rosterA' : 'rosterB');
@@ -156,14 +157,46 @@
             });
         }
 
-        // 3. SEARCH EXISTING PLAYERS
-        function openPlayerSearchModal(teamKey, index) {
+        // 3. MASTER ROSTER SUGGESTIONS & SEARCH
+        async function openPlayerSearchModal(teamKey, index) {
             currentTargetTeam = teamKey;
             currentTargetSlotIndex = index;
             document.getElementById('player-search-input').value = "";
             document.getElementById('search-results-container').innerHTML = "";
             document.getElementById('new-player-form').classList.add('hidden');
             document.getElementById('playerSearchModal').style.display = "flex";
+
+            // Trigger the master roster load
+            loadSuggestedPlayers(state.teams[teamKey].name);
+        }
+
+        async function loadSuggestedPlayers(teamName) {
+            const container = document.getElementById('team-roster-suggestions');
+            container.innerHTML = '<div style="color:#94a3b8; font-size:0.8rem;">Loading master squad for ' + teamName + '...</div>';
+
+            const { data, error } = await supabaseClient
+                .from('team_rosters')
+                .select(`player_id, players (full_name, dob, father_name)`)
+                .eq('team_name', teamName);
+
+            if (error || !data || data.length === 0) {
+                container.innerHTML = `<div style="color:#f59e0b; font-size:0.8rem;">No official Master Roster found for ${teamName}. You must search globally or register below.</div>`;
+                return;
+            }
+
+            container.innerHTML = `<div style="color:#10b981; font-size:0.8rem; margin-bottom:5px; font-weight:bold;">Suggested from ${teamName} Master Roster:</div>` +
+                data.map(row => {
+                    // Safety check in case a player was deleted globally but not from the roster bridge
+                    if(!row.players) return ''; 
+                    return `
+                    <div class="search-result-item" onclick="assignExistingPlayer('${row.player_id}', '${row.players.full_name}')" style="border-color: #10b981;">
+                        <div>
+                            <div style="font-weight:bold; color:white;">${row.players.full_name}</div>
+                            <div class="player-meta">DOB: ${row.players.dob || 'N/A'} | Father: ${row.players.father_name || 'N/A'}</div>
+                        </div>
+                        <div style="color:#10b981; font-weight:bold;">Select</div>
+                    </div>
+                `}).join('');
         }
 
         function closePlayerSearchModal() { document.getElementById('playerSearchModal').style.display = "none"; }
@@ -188,12 +221,12 @@
                         <div style="font-weight:bold; color:white;">${p.full_name}</div>
                         <div class="player-meta">DOB: ${p.dob || 'N/A'} | Father: ${p.father_name || 'N/A'}</div>
                     </div>
-                    <div style="color:#10b981; font-weight:bold;">Select</div>
+                    <div style="color:#3b82f6; font-weight:bold;">Select</div>
                 </div>
             `).join('');
         }
 
-        // 4. ASSIGN EXISTING UUID OR REGISTER NEW UUID
+        // 4. ASSIGN OR REGISTER
         function assignExistingPlayer(uuid, name) {
             state.teams[currentTargetTeam].players[currentTargetSlotIndex] = { player_id: uuid, name: name };
             renderRosters();
@@ -210,22 +243,13 @@
             const btn = document.querySelector('#new-player-form button');
             btn.innerText = "Registering in Cloud...";
 
-            const { data, error } = await supabaseClient.from('players').insert([{ 
-                full_name: name, 
-                father_name: father, 
-                dob: dob 
-            }]).select();
+            const { data, error } = await supabaseClient.from('players').insert([{ full_name: name, father_name: father, dob: dob }]).select();
 
-            if (error) {
-                alert("Database Error: " + error.message);
-                btn.innerText = "Save & Insert into Lineup";
-                return;
-            }
+            if (error) { alert("Database Error: " + error.message); btn.innerText = "Save & Insert into Lineup"; return; }
 
             const newPlayer = data[0];
             alert(`✅ ${newPlayer.full_name} successfully registered with Master ID: ${newPlayer.player_id}`);
             
-            // Assign new UUID directly to the squad slot
             assignExistingPlayer(newPlayer.player_id, newPlayer.full_name);
             btn.innerText = "Save & Insert into Lineup";
         }
@@ -234,7 +258,6 @@
         // PHASE 4.2: LIVE CLOUD SYNCING
         // ==========================================
         async function logDeliveryToCloud(deliveryData) {
-            // 1. Log the exact delivery to the statistical ledger
             const { error: ledgerError } = await supabaseClient
                 .from('ball_by_ball')
                 .insert([{
@@ -258,59 +281,45 @@
                 return false;
             }
 
-            // 2. Update the LIVE 'full_state' so the Fan Portal auto-refreshes instantly
             const { error: stateError } = await supabaseClient
                 .from('matches')
-                .update({ 
-                    full_state: state,
-                    match_state: 'live' 
-                })
+                .update({ full_state: state, match_state: 'live' })
                 .eq('match_id', state.matchId);
 
-            if (stateError) {
-                console.error("Match State Sync Failed:", stateError);
-                return false;
-            }
-
-            console.log(`✅ Cloud Sync Success: Over ${deliveryData.over}.${deliveryData.ball} logged.`);
+            if (stateError) { console.error("Match State Sync Failed:", stateError); return false; }
             return true;
         }
 
-        // Dummy function to test the Cloud Sync without needing the full scoring UI yet
         async function testLogDelivery() {
-            // Find a valid UUID from Team A and Team B for testing
             const striker = state.teams.A.players.find(p => p.player_id);
             const bowler = state.teams.B.players.find(p => p.player_id);
 
             if (!striker || !bowler) {
-                alert("⚠️ Please map at least one real player to Team A and Team B using the 'Set/Replace' buttons first. The database requires real UUIDs to log the delivery!");
+                alert("⚠️ Please map at least one real player to Team A and Team B using the 'Set/Replace' buttons first.");
                 return;
             }
 
-            // Simulate updating local state first
-            if (!state.current) {
-                state.current = { innings: 1, over: 1, ballsInOver: 0, runs: 0 };
-            }
+            if (!state.current) state.current = { innings: 1, over: 1, ballsInOver: 0, runs: 0 };
+            
             state.current.ballsInOver += 1;
-            state.current.runs += 4; // Mocking 4 runs
+            state.current.runs += 4;
 
             const btn = document.getElementById('test-sync-btn');
             const originalText = btn.innerText;
             btn.innerText = "Syncing to Supabase...";
             
-            // Fire packet to cloud
             const success = await logDeliveryToCloud({
                 innings: state.current.innings,
                 over: state.current.over,
                 ball: state.current.ballsInOver,
                 striker_id: striker.player_id,
-                non_striker_id: null, // Left null for dummy test
+                non_striker_id: null, 
                 bowler_id: bowler.player_id,
-                runs: 4 // The mock run value
+                runs: 4
             });
 
             if (success) {
-                alert(`✅ BOOM! 4 Runs logged successfully.\n\nOpen your Supabase 'ball_by_ball' table to see the row! Your engine is successfully wired to the cloud.`);
+                alert(`✅ BOOM! 4 Runs logged successfully.\n\nOpen your Supabase 'ball_by_ball' table to see the row!`);
             }
             
             btn.innerText = originalText;
