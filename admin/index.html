@@ -29,11 +29,21 @@
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        .player-pod { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #334155; position: relative; }
-        .pod-row-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px; }
-        .pod-row-2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-        .pod-input { background: #0f172a; color: #f8fafc; border: 1px solid #475569; padding: 8px; border-radius: 4px; width: 100%; font-size: 0.85rem; }
-        .remove-pod-btn { position: absolute; top: -10px; right: -10px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-weight: bold; line-height: 1; }
+        /* Step 2 Roster Slots */
+        .roster-slot { background: #1e293b; padding: 12px 15px; border: 1px solid #334155; margin-bottom: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .slot-name { font-size: 0.95rem; }
+        .btn-set { background: transparent; border: 1px solid #3b82f6; color: #3b82f6; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
+        .btn-set:hover { background: rgba(59, 130, 246, 0.1); }
+
+        /* Step 2 Player Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-content { background: #1e293b; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; border: 1px solid #334155; max-height: 90vh; overflow-y: auto; text-align: left;}
+        .search-result-item { background: #0f172a; border: 1px solid #334155; padding: 10px; margin-bottom: 8px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .search-result-item:hover { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+        .player-meta { font-size: 0.75rem; color: #94a3b8; }
+        .input-group label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; }
+        .input-group input, .input-group select { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; box-sizing: border-box; }
+        .hidden { display: none; }
 
         .sub-tab-nav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px; flex-wrap: wrap; }
         .sub-tab-btn { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
@@ -88,7 +98,7 @@
 
     <div class="wizard-nav" style="max-width: 1100px; margin: 0 auto 25px auto;">
         <div class="wizard-step active" onclick="switchStep('step1')">1. Setup & Teams</div>
-        <div class="wizard-step" onclick="switchStep('step2')">2. Add Players</div>
+        <div class="wizard-step" onclick="switchStep('step2')">2. Master Squads</div>
         <div class="wizard-step" onclick="switchStep('step3')">3. Fixture Builder</div>
         <div class="wizard-step" onclick="switchStep('step4')">4. Match Postings</div>
     </div>
@@ -111,26 +121,29 @@
                         <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #475569; width: 100%; margin-top: 10px; padding: 12px; color: #cbd5e1;" onclick="addTeamField()">+ Add Another Team</button>
                     </div>
 
-                    <button type="submit" class="btn-launch full-width mt-20" style="background: #3b82f6;">Save Tournament & Teams</button>
+                    <button type="submit" class="btn-launch full-width mt-20" style="background: #3b82f6; width: 100%; padding: 12px; font-weight: bold; border-radius: 6px; border: none; color: white;">Save Tournament & Teams</button>
                 </form>
             </div>
         </div>
 
-        <!-- STEP 2 -->
+        <!-- STEP 2: UPGRADED CLOUD ROSTER BUILDER -->
         <div id="step2" class="dashboard-section">
             <div class="admin-form">
-                <h3 style="margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px;">2. Build Detailed Squads</h3>
+                <h3 style="margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px;">2. Build Detailed Squads</h3>
+                <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 0; margin-bottom: 20px;">Use the Master Database to map real, verified players to your tournament rosters.</p>
+                
                 <div class="input-group full-width" style="margin-bottom: 20px;">
-                    <label>Select Team</label>
-                    <select id="squad-team-select" style="padding: 10px; background: #0f172a; color: white; border: 1px solid #3b82f6; width: 100%; border-radius: 4px; font-weight: bold;">
+                    <label>Select Team to Manage</label>
+                    <select id="squad-team-select" onchange="loadWizardSquad(this.value)" style="padding: 10px; background: #0f172a; color: white; border: 1px solid #3b82f6; width: 100%; border-radius: 4px; font-weight: bold;">
                         <option value="">Finish Step 1 to load teams...</option>
                     </select>
                 </div>
 
-                <div id="player-inputs-container"></div>
+                <div id="wizard-player-slots-container">
+                    <div style="text-align: center; color: #475569; padding: 20px; font-style: italic;">Select a team above to populate roster slots.</div>
+                </div>
                 
-                <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #475569; width: 100%; margin-top: 10px; padding: 12px; color: #cbd5e1;" onclick="addPlayerPod()">+ Add New Player</button>
-                <button type="button" class="btn-launch full-width mt-20" style="background: #10b981;" onclick="savePlayersToDB()">Save Squad to Master DB</button>
+                <button type="button" class="btn-launch full-width mt-20" style="background: #10b981; width: 100%; padding: 12px; font-weight: bold; border-radius: 6px; border: none; color: white; margin-top: 20px;" onclick="saveSquadToDB()">Save Squad to Cloud Database</button>
             </div>
         </div>
 
@@ -148,8 +161,8 @@
                 <div id="tab-canvas" class="sub-tab-pane active">
                     <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">Build matches sequentially with full control. Use dynamic placeholders (e.g. "Winner of M-1") for progression.</p>
                     <div id="canvas-container"></div>
-                    <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #10b981; width: 100%; padding: 12px; color: #10b981; font-weight: bold;" onclick="addManualMatch()">+ ADD MATCH TO CANVAS</button>
-                    <button type="button" class="btn-launch full-width mt-20" style="background: #f59e0b;" onclick="lockCanvasAndProceed()">Lock Canvas & Proceed to Postings</button>
+                    <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #10b981; width: 100%; padding: 12px; color: #10b981; font-weight: bold; cursor:pointer;" onclick="addManualMatch()">+ ADD MATCH TO CANVAS</button>
+                    <button type="button" class="btn-launch full-width mt-20" style="background: #f59e0b; width:100%; padding:12px; border:none; border-radius:6px; color:white; font-weight:bold; margin-top:15px; cursor:pointer;" onclick="lockCanvasAndProceed()">Lock Canvas & Proceed to Postings</button>
                 </div>
 
                 <div id="tab-pools" class="sub-tab-pane">
@@ -162,14 +175,14 @@
                         <div>
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                 <h4 style="color: #10b981; margin: 0; font-size: 0.95rem;">Active Tournament Pools</h4>
-                                <button type="button" class="btn-action" style="background: #3b82f6; padding: 6px 12px; font-size: 0.8rem;" onclick="addNewPool()">+ Add Pool</button>
+                                <button type="button" class="btn-action" style="background: #3b82f6; padding: 6px 12px; font-size: 0.8rem; cursor:pointer; color:white; border:none; border-radius:4px;" onclick="addNewPool()">+ Add Pool</button>
                             </div>
                             <div id="pools-container-grid" class="pools-container-grid"></div>
                         </div>
                     </div>
-                    <button type="button" class="btn-action w-100 mt-20" style="background: transparent; border: 1px dashed #3b82f6; padding: 12px; color: #3b82f6;" onclick="generatePoolMatches()">Generate Intra-Pool Round Robin Matches</button>
-                    <div id="pool-generated-results" class="mt-15" style="display:none;"></div>
-                    <button type="button" class="btn-launch full-width mt-20" style="background: #f59e0b;" onclick="lockPoolsAndProceed()">Lock Pools & Proceed to Postings</button>
+                    <button type="button" class="btn-action w-100 mt-20" style="background: transparent; border: 1px dashed #3b82f6; width:100%; margin-top:15px; padding: 12px; color: #3b82f6; cursor:pointer;" onclick="generatePoolMatches()">Generate Intra-Pool Round Robin Matches</button>
+                    <div id="pool-generated-results" class="mt-15" style="display:none; margin-top:15px;"></div>
+                    <button type="button" class="btn-launch full-width mt-20" style="background: #f59e0b; width:100%; padding:12px; border:none; border-radius:6px; color:white; font-weight:bold; margin-top:15px; cursor:pointer;" onclick="lockPoolsAndProceed()">Lock Pools & Proceed to Postings</button>
                 </div>
 
                 <div id="tab-knockouts" class="sub-tab-pane">
@@ -180,11 +193,11 @@
                             <option value="4">4 Teams (Semi-Finals to Final)</option>
                             <option value="8">8 Teams (Quarter-Finals to Final)</option>
                         </select>
-                        <button type="button" class="btn-action" style="background: #3b82f6; padding: 8px 15px; font-size: 0.85rem;" onclick="generateKnockoutBracket()">Build Structure</button>
+                        <button type="button" class="btn-action" style="background: #3b82f6; border:none; color:white; padding: 8px 15px; font-size: 0.85rem; cursor:pointer; border-radius:4px;" onclick="generateKnockoutBracket()">Build Structure</button>
                     </div>
                     <div id="knockout-mapping-container"></div>
-                    <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #10b981; width: 100%; padding: 12px; color: #10b981; font-weight: bold; margin-top: 10px;" onclick="addCustomKnockoutMatch()">+ Add Custom Knockout Stage</button>
-                    <button type="button" class="btn-launch full-width mt-20" style="background: #f59e0b;" onclick="lockKnockoutsAndProceed()">Lock Knockouts & Proceed to Postings</button>
+                    <button type="button" class="btn-action" style="background: transparent; border: 1px dashed #10b981; width: 100%; padding: 12px; color: #10b981; font-weight: bold; margin-top: 10px; cursor:pointer;" onclick="addCustomKnockoutMatch()">+ Add Custom Knockout Stage</button>
+                    <button type="button" class="btn-launch full-width mt-20" style="background: #f59e0b; width:100%; padding:12px; border:none; border-radius:6px; color:white; font-weight:bold; margin-top:15px; cursor:pointer;" onclick="lockKnockoutsAndProceed()">Lock Knockouts & Proceed to Postings</button>
                 </div>
 
                 <div id="tab-tree" class="sub-tab-pane">
@@ -209,10 +222,40 @@
                         <tr><td colspan="4" style="text-align: center; color: #94a3b8;">Build your fixtures in Step 3 to view postings.</td></tr>
                     </tbody>
                 </table>
-                <button type="button" class="btn-launch full-width mt-20" style="background: #3b82f6; font-size: 1.1rem; padding: 15px;" onclick="savePostings()">Lock All Postings & Deploy to Scorer</button>
+                <button type="button" class="btn-launch full-width mt-20" style="background: #3b82f6; font-size: 1.1rem; padding: 15px; width:100%; border:none; border-radius:6px; color:white; font-weight:bold; margin-top:20px; cursor:pointer;" onclick="savePostings()">Lock All Postings & Deploy to Scorer</button>
             </div>
         </div>
 
+    </div>
+
+    <!-- WIZARD PLAYER MODAL (For Step 2) -->
+    <div id="wizardPlayerModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin-top: 0; color: #3b82f6;" id="wizard-modal-title">Assign Player</h3>
+            
+            <div id="wizard-team-suggestions" style="margin-bottom: 15px; border-bottom: 1px dashed #475569; padding-bottom: 15px;"></div>
+
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Not listed? Search global database:</p>
+            <input type="text" id="wizard-search-input" placeholder="Search by name..." style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; box-sizing: border-box; margin-bottom: 15px;" oninput="searchWizardPlayers(this.value)">
+            
+            <div id="wizard-search-results" style="max-height: 150px; overflow-y: auto; margin-bottom: 15px;"></div>
+            
+            <button type="button" onclick="toggleWizardNewPlayer()" style="width: 100%; padding: 10px; background: transparent; border: 1px dashed #10b981; color: #10b981; border-radius: 6px; cursor: pointer; margin-bottom: 15px;">+ Register Brand New Player</button>
+            
+            <div id="wizard-new-player-form" class="hidden" style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 15px;">
+                <div class="input-group"><label>Full Name *</label><input type="text" id="w-p-name"></div>
+                <div class="input-group"><label>Father's Name *</label><input type="text" id="w-p-father"></div>
+                <div class="input-group"><label>Date of Birth *</label><input type="date" id="w-p-dob"></div>
+                <div class="input-group"><label>Role</label>
+                    <select id="w-p-role">
+                        <option>Batter</option><option>Bowler</option><option>All-Rounder</option><option>Wicketkeeper</option>
+                    </select>
+                </div>
+                <button type="button" onclick="registerWizardPlayer()" style="width: 100%; padding: 10px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Save & Assign</button>
+            </div>
+            
+            <button type="button" onclick="closeWizardModal()" style="width: 100%; padding: 10px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">Cancel</button>
+        </div>
     </div>
 
     <script>
@@ -225,12 +268,15 @@
         let finalLockedMatches = []; 
         let currentTournamentId = null;
 
+        // Step 2 State
+        let wizardSquads = {};
+        let wizardCurrentTeam = null;
+        let wizardCurrentSlot = null;
+
         document.addEventListener('DOMContentLoaded', async () => { 
             for(let i=1; i<=8; i++) addTeamField(i);
-            for(let i=0; i<3; i++) addPlayerPod();
             try { flatpickr("input[type='date']", { dateFormat: "Y-m-d", disableMobile: true }); } catch(e) {}
             
-            // Check auth
             const { data: { session } } = await db.auth.getSession();
             if (!session) {
                 alert("You must be logged in as an Admin to use this wizard.");
@@ -243,7 +289,7 @@
         // ==============================
         function generateUniqueMatchID(prefix) {
             const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
-            return `${prefix}-${rand}`; // e.g., M-9A3K7 or KO-X8B2P
+            return `${prefix}-${rand}`; 
         }
 
         function switchStep(stepId) {
@@ -268,6 +314,9 @@
             buildPostingsGrid();
         }
 
+        // ==============================
+        // STEP 1 LOGIC
+        // ==============================
         function addTeamField(forceCount = null) {
             const count = forceCount || document.querySelectorAll('.tourney-team-input').length + 1;
             const container = document.getElementById('team-inputs-container');
@@ -299,11 +348,9 @@
             if (hasDuplicateTeam) { alert("❌ Error: Duplicate team names are not allowed."); return; }
             btn.innerText = "Saving to Database...";
 
-            // Retrieve Logged-in Admin User
             const { data: { session } } = await db.auth.getSession();
             const adminId = session ? session.user.id : null;
 
-            // 1. Create Tournament
             const { data: tData, error: tError } = await db.from('tournaments').insert([{
                 name: document.getElementById('t-name').value,
                 format: document.getElementById('t-format').value,
@@ -316,14 +363,12 @@
             if (tError) { alert("Error saving tournament: " + tError.message); btn.innerText = "Save Tournament & Teams"; return; }
             currentTournamentId = tData[0].tournament_id;
 
-            // 2. Insert Teams (Use upsert if team exists globally, otherwise insert)
             if(teamPayload.length > 0) {
-                // Upsert to ensure team exists globally
                 await db.from('teams').upsert(teamPayload, { onConflict: 'name' });
             }
 
             const select = document.getElementById('squad-team-select');
-            select.innerHTML = '<option value="">Select a team to add players...</option>';
+            select.innerHTML = '<option value="">Select a team to build roster...</option>';
             activeTeams.forEach(team => { select.innerHTML += `<option value="${team}">${team}</option>`; });
             
             alert(`Success! Tournament Created and ${activeTeams.length} Teams registered.`);
@@ -331,55 +376,147 @@
             document.querySelectorAll('.wizard-step')[1].click();
         });
 
-        function addPlayerPod() {
-            const div = document.createElement('div');
-            div.className = 'player-pod';
-            div.innerHTML = `<button type="button" class="remove-pod-btn" onclick="this.parentElement.remove()">×</button><div class="pod-row-1"><div><label style="font-size: 0.7rem; color: #94a3b8;">Player Name *</label><input type="text" class="pod-input p-name" placeholder="Full Name"></div><div><label style="font-size: 0.7rem; color: #94a3b8;">Role</label><select class="pod-input p-role"><option value="Batter">Batter</option><option value="Bowler">Bowler</option><option value="All-Rounder">All-Rounder</option><option value="Wicketkeeper">WK</option></select></div></div><div class="pod-row-2"><div><label style="font-size: 0.7rem; color: #94a3b8;">Batting Style</label><select class="pod-input p-bat"><option value="Right-hand bat">Right-Hand Bat</option><option value="Left-hand bat">Left-Hand Bat</option></select></div><div><label style="font-size: 0.7rem; color: #94a3b8;">Bowling Arm</label><select class="pod-input p-arm"><option value="None">None</option><option value="Right-arm">Right-Arm</option><option value="Left-arm">Left-Arm</option></select></div><div><label style="font-size: 0.7rem; color: #94a3b8;">Bowling Pace/Type</label><select class="pod-input p-type"><option value="None">-</option><option value="Fast">Fast / Medium</option><option value="Off-spin">Off-spin</option><option value="Leg-spin">Leg-spin</option><option value="Orthodox">Orthodox</option></select></div></div>`;
-            document.getElementById('player-inputs-container').appendChild(div);
+        // ==============================
+        // STEP 2 LOGIC (NEW: CLOUD ROSTER)
+        // ==============================
+        async function loadWizardSquad(teamName) {
+            const container = document.getElementById('wizard-player-slots-container');
+            if(!teamName) {
+                container.innerHTML = '<div style="text-align: center; color: #475569; padding: 20px; font-style: italic;">Select a team above to populate roster slots.</div>';
+                return;
+            }
+            
+            wizardCurrentTeam = teamName;
+            container.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">Fetching Master Roster...</div>';
+
+            if(!wizardSquads[teamName]) {
+                const { data, error } = await db.from('team_rosters').select('player_id, players(full_name)').eq('team_name', teamName);
+                let slots = [];
+                for(let i=0; i<15; i++) { // Generate 15 slots for the squad
+                    if(data && data[i] && data[i].players) {
+                        slots.push({ id: data[i].player_id, name: data[i].players.full_name });
+                    } else {
+                        slots.push({ id: null, name: "Empty Slot" });
+                    }
+                }
+                wizardSquads[teamName] = slots;
+            }
+            renderWizardSquad();
         }
 
-        async function savePlayersToDB() {
-            const teamName = document.getElementById('squad-team-select').value;
-            if(!teamName || !currentTournamentId) { alert("Please select a team and ensure Tournament is saved."); return; }
-            const pods = document.querySelectorAll('.player-pod'); 
-            const payload = [];
-            const playerNamesSet = new Set(); let hasDuplicatePlayer = false;
+        function renderWizardSquad() {
+            const container = document.getElementById('wizard-player-slots-container');
+            let slots = wizardSquads[wizardCurrentTeam];
+            container.innerHTML = slots.map((p, i) => {
+                let pText = p.id ? `<span style="color:#10b981; font-weight:bold;">${p.name}</span>` : `<span style="color:#ef4444; font-style:italic;">${p.name}</span>`;
+                return `<div class="roster-slot">
+                    <div class="slot-name">${i+1}. ${pText}</div>
+                    <button type="button" class="btn-set" onclick="openWizardModal(${i})">Set/Replace</button>
+                </div>`;
+            }).join('');
+        }
 
-            pods.forEach(pod => {
-                const name = pod.querySelector('.p-name').value.trim();
-                if(name !== "") {
-                    let lowerName = name.toLowerCase().replace(/\s+/g, ' ');
-                    if(playerNamesSet.has(lowerName)) hasDuplicatePlayer = true;
-                    playerNamesSet.add(lowerName);
-                    
-                    const arm = pod.querySelector('.p-arm').value; 
-                    const type = pod.querySelector('.p-type').value;
-                    const role = pod.querySelector('.p-role').value;
-                    const bat = pod.querySelector('.p-bat').value;
-                    
-                    payload.push({ 
-                        full_name: name, 
-                        playing_role: role, 
-                        batting_style: bat, 
-                        bowling_arm: arm,
-                        bowling_type: type 
-                    });
-                }
-            });
-
-            if (hasDuplicatePlayer) { alert("❌ Error: Duplicate player names found within this squad."); return; }
-            if(payload.length === 0) return;
-
-            // Insert into global players
-            const { error: pErr } = await db.from('players').insert(payload);
+        async function openWizardModal(index) {
+            wizardCurrentSlot = index;
+            document.getElementById('wizard-search-input').value = "";
+            document.getElementById('wizard-search-results').innerHTML = "";
+            document.getElementById('wizard-new-player-form').classList.add('hidden');
             
-            if (pErr) {
-                alert("Error saving players: " + pErr.message);
+            // Fetch suggestions from team_rosters for this specific team
+            const suggContainer = document.getElementById('wizard-team-suggestions');
+            suggContainer.innerHTML = '<div style="color:#94a3b8; font-size:0.8rem;">Loading master squad...</div>';
+            
+            const { data } = await db.from('team_rosters').select('player_id, players(full_name, dob, father_name)').eq('team_name', wizardCurrentTeam);
+            
+            if (!data || data.length === 0) {
+                suggContainer.innerHTML = `<div style="color:#f59e0b; font-size:0.8rem;">No official Master Roster found. Use the global search below.</div>`;
             } else {
-                alert(`Saved ${payload.length} players to ${teamName}!`); 
-                document.getElementById('player-inputs-container').innerHTML = ''; 
-                for(let i=0; i<3; i++) { addPlayerPod(); } 
+                suggContainer.innerHTML = `<div style="color:#10b981; font-size:0.8rem; margin-bottom:5px; font-weight:bold;">Master Roster for ${wizardCurrentTeam}:</div>` +
+                    data.map(row => {
+                        if(!row.players) return '';
+                        return `
+                        <div class="search-result-item" style="border-color: #10b981;" onclick="assignWizardPlayer('${row.player_id}', '${row.players.full_name}')">
+                            <div>
+                                <div style="font-weight:bold; color:white;">${row.players.full_name}</div>
+                                <div class="player-meta">DOB: ${row.players.dob || 'N/A'} | Father: ${row.players.father_name || 'N/A'}</div>
+                            </div>
+                            <div style="color:#10b981; font-weight:bold; font-size:0.85rem;">Select</div>
+                        </div>`;
+                    }).join('');
             }
+            
+            document.getElementById('wizardPlayerModal').style.display = "flex";
+        }
+
+        function closeWizardModal() { document.getElementById('wizardPlayerModal').style.display = "none"; }
+        function toggleWizardNewPlayer() { document.getElementById('wizard-new-player-form').classList.toggle('hidden'); }
+
+        async function searchWizardPlayers(query) {
+            const container = document.getElementById('wizard-search-results');
+            if (query.trim().length < 2) { container.innerHTML = ""; return; }
+            container.innerHTML = '<div style="color:#94a3b8; font-size:0.8rem; text-align:center;">Searching...</div>';
+            
+            const { data, error } = await db.from('players').select('*').ilike('full_name', `%${query}%`).limit(10);
+            
+            if (error || !data || data.length === 0) {
+                container.innerHTML = '<div style="color:#ef4444; font-size:0.8rem; text-align:center;">No players found. Register them below.</div>';
+                return;
+            }
+
+            container.innerHTML = data.map(p => `
+                <div class="search-result-item" onclick="assignWizardPlayer('${p.player_id}', '${p.full_name}')">
+                    <div>
+                        <div style="font-weight:bold; color:white;">${p.full_name}</div>
+                        <div class="player-meta">DOB: ${p.dob || 'N/A'} | Father: ${p.father_name || 'N/A'}</div>
+                    </div>
+                    <div style="color:#3b82f6; font-weight:bold; font-size:0.85rem;">Select</div>
+                </div>
+            `).join('');
+        }
+
+        function assignWizardPlayer(uuid, name) {
+            wizardSquads[wizardCurrentTeam][wizardCurrentSlot] = { id: uuid, name: name };
+            renderWizardSquad();
+            closeWizardModal();
+        }
+
+        async function registerWizardPlayer() {
+            const name = document.getElementById('w-p-name').value.trim();
+            const father = document.getElementById('w-p-father').value.trim();
+            const dob = document.getElementById('w-p-dob').value;
+            const role = document.getElementById('w-p-role').value;
+            
+            if(!name || !father || !dob) { alert("Name, Father's Name, and DOB are strictly required."); return; }
+            
+            const { data, error } = await db.from('players').insert([{ 
+                full_name: name, father_name: father, dob: dob, playing_role: role 
+            }]).select();
+
+            if (error) { alert("Database Error: " + error.message); return; }
+            
+            alert(`✅ Registered! Automatically assigned to ${wizardCurrentTeam}.`);
+            assignWizardPlayer(data[0].player_id, data[0].full_name);
+        }
+
+        async function saveSquadToDB() {
+            if(!wizardCurrentTeam) { alert("Please select a team first."); return; }
+            let slots = wizardSquads[wizardCurrentTeam].filter(s => s.id !== null);
+            if(slots.length === 0) { alert("This squad has no verified players assigned."); return; }
+            
+            // Map these players to the Master Roster (team_rosters table)
+            let payload = slots.map(s => ({ team_name: wizardCurrentTeam, player_id: s.id }));
+            
+            const btn = document.querySelector('button[onclick="saveSquadToDB()"]');
+            const ogText = btn.innerText;
+            btn.innerText = "Syncing to Cloud...";
+            
+            // We use upsert to ignore players already mapped to this team
+            const { error } = await db.from('team_rosters').upsert(payload, { onConflict: 'team_name, player_id' });
+            
+            if (error) alert("Sync Error: " + error.message);
+            else alert(`✅ Squad for ${wizardCurrentTeam} is saved and ready for live scoring!`);
+            
+            btn.innerText = ogText;
         }
 
         // ==============================
@@ -534,7 +671,6 @@
             const btn = document.querySelector('button[onclick="savePostings()"]');
             btn.innerText = "⏳ Pushing to Cloud...";
             
-            // Generate standard random PINs
             let existingPins = [];
             let newMatches = [];
             let rows = document.querySelectorAll('#postings-body tr');
@@ -550,7 +686,6 @@
                     let matchPin = generateUniquePin(existingPins);
                     existingPins.push(matchPin);
 
-                    // Payload for Cloud DB
                     let fixturePayload = {
                         matchNum: mObj.matchNum, 
                         matchName: mObj.matchName,
@@ -564,7 +699,6 @@
                     
                     newMatches.push({ pin: matchPin, ...fixturePayload });
 
-                    // Push fixture to Supabase Cloud
                     await db.from('matches').upsert({
                         match_id: mObj.matchNum,
                         tournament_id: currentTournamentId,
@@ -575,7 +709,6 @@
                 }
             }
 
-            // Also save locally for quick retrieval in the global directory viewer without intense querying
             let existingMatches = JSON.parse(localStorage.getItem('cricket_matches') || '[]');
             let allMatches = [...existingMatches, ...newMatches];
             localStorage.setItem('cricket_matches', JSON.stringify(allMatches));
