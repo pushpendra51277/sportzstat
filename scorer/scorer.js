@@ -58,7 +58,6 @@ window.onload = function() {
                 el('setupView').classList.add('hidden'); el('scoringView').classList.remove('hidden'); el('displayTournament').innerText = state.matchSettings.tournament || "MATCH IN PROGRESS"; 
                 if (state.matchSettings.matchType === 'multiday') { el('breakBtn').classList.remove('hidden'); }
                 
-                // Re-hydrate missing legacy fields if resumed so updateUI works
                 if(!el('setupVenue').value) { el('setupVenue').value = "Official Ground"; }
                 
                 updateUI(); closeModal();
@@ -106,24 +105,23 @@ async function authenticateCloudMatch() {
     document.getElementById('gwTeamAName').innerText = state.teams.A.name;
     document.getElementById('gwTeamBName').innerText = state.teams.B.name;
     
-    // --- FIX: Safely auto-load Officials and Venue to prevent crashes ---
+    // Auto-fill and UNLOCK the Officials and Venue fields!
     el('setupTournament').value = state.matchSettings.tournament;
     el('setupMatchId').value = matchId;
     el('setupVenue').value = mData.venue || "Official Ground";
     el('setupDate').value = new Date().toISOString().split('T')[0];
 
     let umps = mData.umpires ? mData.umpires.split(',') : [];
-    el('u1').value = umps[0] ? umps[0].trim() : "N/A";
-    el('u2').value = umps[1] ? umps[1].trim() : "N/A";
-    el('tvUmpire').value = umps[2] ? umps[2].trim() : "N/A";
-    el('u4').value = umps[3] ? umps[3].trim() : "N/A";
+    el('u1').value = umps[0] ? umps[0].trim() : "";
+    el('u2').value = umps[1] ? umps[1].trim() : "";
+    el('tvUmpire').value = umps[2] ? umps[2].trim() : "";
+    el('u4').value = umps[3] ? umps[3].trim() : "";
 
     let scrs = mData.scorers ? mData.scorers.split(',') : [];
-    el('s1').value = scrs[0] ? scrs[0].trim() : "N/A";
-    el('s2').value = scrs[1] ? scrs[1].trim() : "N/A";
+    el('s1').value = scrs[0] ? scrs[0].trim() : "";
+    el('s2').value = scrs[1] ? scrs[1].trim() : "";
 
-    el('setupObsRef').value = mData.referees || "N/A";
-    // ------------------------------------------------------------------
+    el('setupObsRef').value = mData.referees || "";
 
     const tossSelect = document.getElementById('gwTossWinner');
     tossSelect.innerHTML = `<option value="A">${state.teams.A.name}</option><option value="B">${state.teams.B.name}</option>`;
@@ -197,7 +195,6 @@ function initializeCloudEngine() {
             }
         });
         
-        // Pad the array to 19 to preserve your offline engine loops without errors
         for(let i = state.teams[teamKey].players.length; i < 19; i++) {
              state.teams[teamKey].players.push({
                  regNo: "", name: "Empty Slot", skill: "", desig: "", r:0, b:0, f:0, s:0, out:false, outOnDuck:0, hasBatted: false, 
@@ -224,6 +221,8 @@ function initializeCloudEngine() {
     document.getElementById('scoringView').classList.remove('hidden'); 
     
     updateUI(); 
+    
+    // Explicitly call the bulletproof modal loader
     setTimeout(() => { openMatchStartModal(); }, 200);
 }
 
@@ -269,18 +268,6 @@ function openEditTarget() {
 
 function clearCustomTarget() { saveState(); state.matchSettings.customTarget = null; state.matchSettings.customTargetOvers = null; state.matchSettings.targetMethod = ""; state.matchSettings.maxOvers = state.matchSettings.originalMaxOvers; closeModal(); updateUI(); }
 function getTargetBalls() { let ov = state.matchSettings.maxOvers; let f = Math.floor(ov); let r = Math.round((ov - f) * 10); return f * 6 + r; }
-
-function openMatchStartModal() {
-    let bI = []; getBatTeam().players.forEach((p, i) => { if(p.isPlayingXI && p.name !== "Empty Slot") bI.push(i); });
-    
-    if (bI.length < 2) { alert("Please ensure at least 2 players are selected in the Playing XI."); return; }
-
-    let sO = getBatTeam().players.map((p, i) => (p.isPlayingXI && p.name !== "Empty Slot") ? `<option value="${i}" ${i===bI[0]?'selected':''}>${p.name}</option>` : '').join('');
-    let nsO = getBatTeam().players.map((p, i) => (p.isPlayingXI && p.name !== "Empty Slot") ? `<option value="${i}" ${i===bI[1]?'selected':''}>${p.name}</option>` : '').join('');
-    let bowlOpts = getBowlTeam().players.map((p, i) => (p.isPlayingXI && p.name !== "Empty Slot") ? `<option value="${i}">${p.name}</option>` : '').join('');
-    let html = `<div class="modal-grid-3 mt-10"><div class="modal-player-card"><label class="text-success mb-5">🏏 STRIKER</label><select id="sStr">${sO}</select></div><div class="modal-player-card"><label class="text-success mb-5">🏃 NON-STRIKER</label><select id="sNStr">${nsO}</select></div><div class="modal-player-card"><label class="text-danger mb-5">⚾ BOWLER</label><select id="sBwl">${bowlOpts}</select></div></div><div id="startError" class="text-danger font-bold text-center mt-15"></div>`;
-    showModal(`INNINGS ${state.inningsNum} SETUP`, html, () => { let s1 = parseInt(el('sStr').value), s2 = parseInt(el('sNStr').value), b1 = parseInt(el('sBwl').value); if (s1 === s2) { el('startError').innerText = "🚨 Striker and Non-Striker must be different players!"; return; } saveState(); state.current.sIdx = s1; state.current.nsIdx = s2; state.current.bIdx = b1; getBatTeam().players[s1].hasBatted = true; getBatTeam().players[s2].hasBatted = true; state.current.bowlersInCurrentOver.add(b1); state.current.currPartnership = { runs: 0, balls: 0 }; state.current.inningsStartTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); closeModal(); updateUI(); }, false, "750px", "Start Innings"); 
-}
 
 function openBreakModal() {
     let html = `<label class="text-primary">Select Interval Type</label><select id="brkType" class="modal-input w-100"><option value="Luncheon Break">Luncheon Break</option><option value="Tea Break">Tea Break</option><option value="Day End / Stumps">Day End / Stumps</option><option value="Innings Break">Innings Break</option><option value="Drinks Break">Drinks Break</option><option value="Other Scheduled Interval">Other Scheduled Interval</option></select><label class="text-primary mt-10">Start Time</label>${getTimeDropdownsHtml('brkStart')}`;
@@ -339,7 +326,6 @@ async function logBallEvent(batterObj, bowlerObj, runsBat, runsExtra, extraType,
         innings_no: state.inningsNum,
         over_no: Math.floor(state.current.balls / 6),
         ball_number: (state.current.balls % 6) + 1,
-        // The UUID is securely pulled from the RegNo field which we injected during setup!
         striker_id: batterObj && batterObj.regNo && batterObj.regNo.length > 15 ? batterObj.regNo : null,
         non_striker_id: null, 
         bowler_id: bowlerObj && bowlerObj.regNo && bowlerObj.regNo.length > 15 ? bowlerObj.regNo : null,
@@ -574,10 +560,8 @@ function updateUI() {
     if (state.matchSettings.matchType === 'multiday' && state.inningsNum > 1) { let tBat = getBatTeam().name, tBowl = getBowlTeam().name; let sBat = state.current.runs + state.inningsSummaries.filter(i=>i.batTeam===tBat).reduce((a,b)=>a+b.runs,0); let sBowl = state.inningsSummaries.filter(i=>i.batTeam===tBowl).reduce((a,b)=>a+b.runs,0); let diff = sBat - sBowl; let txt = diff > 0 ? `lead by ${diff}` : (diff < 0 ? `trail by ${Math.abs(diff)}` : `scores level`); leadBoxHtml = `<p class="text-accent font-bold mt-5 mb-0" style="font-size:0.85rem; text-transform:uppercase;">📊 ${tBat} ${txt}</p>`; }
     el('leadTrailBox').innerHTML = leadBoxHtml;
 
-    // --- FIX: Safely update Ground Name ---
     let venueEl = el('setupVenue');
     el('dispGroundName').innerText = venueEl && venueEl.value ? venueEl.value : "Official Ground";
-    // --------------------------------------
 
     el('livePartnership').innerText = `${cur.currPartnership.runs} (${cur.currPartnership.balls})`; 
     el('liveRuns').innerText = cur.runs; el('liveWkts').innerText = cur.wkts; el('liveWkts').style.color = "var(--danger)"; 
@@ -682,16 +666,78 @@ function generateReportHTML(isExcel) {
 
     html += `<table><tr><th colspan="11" class="main-header" style="font-size:11pt; background:#334155;">MATCH OFFICIALS & LOGS</th></tr>`;
     
-    // --- FIX: Add Officials cleanly to the PDF output without crashing ---
     let u1 = el('u1') ? el('u1').value : "N/A"; 
     let u2 = el('u2') ? el('u2').value : "N/A"; 
     let tvUmp = el('tvUmpire') ? el('tvUmpire').value : "N/A"; 
     let obsRef = el('setupObsRef') ? el('setupObsRef').value : "N/A";
     html += `<tr><td colspan="5" class="text-left"><b>Umpires:</b> ${u1}, ${u2}</td><td colspan="6" class="text-left"><b>TV / Ref:</b> ${tvUmp} / ${obsRef}</td></tr>`;
-    // -------------------------------------------------------------------
 
     if (state.matchBreaks.length > 0) { let brStr = state.matchBreaks.map(b => `Inn ${b.inn}: ${b.type} (${b.dur}m)`).join(', '); html += `<tr><td colspan="11" class="text-left"><b>Breaks:</b> ${brStr}</td></tr>`; }
     if (remarkLog.length > 0) { let remStr = remarkLog.map(r => `[Ov ${r.over}] ${r.remark}`).join(' | '); html += `<tr><td colspan="11" class="text-left" style="color:#4c1d95;"><b>Remarks:</b> ${remStr}</td></tr>`; }
     html += `</table></div></body></html>`;
     return html;
+}
+
+// ==========================================
+// BULLETPROOF START MODAL
+// ==========================================
+function openMatchStartModal() {
+    let bI = []; 
+    getBatTeam().players.forEach((p, i) => { if(p.isPlayingXI && p.name !== "Empty Slot") bI.push(i); });
+    
+    if (bI.length < 2) { 
+        alert("CRITICAL: You must have at least 2 batters checked in the Playing XI."); 
+        return; 
+    }
+
+    let sO = getBatTeam().players.map((p, i) => (p.isPlayingXI && p.name !== "Empty Slot") ? `<option value="${i}" ${i===bI[0]?'selected':''}>${p.name}</option>` : '').join('');
+    let nsO = getBatTeam().players.map((p, i) => (p.isPlayingXI && p.name !== "Empty Slot") ? `<option value="${i}" ${i===bI[1]?'selected':''}>${p.name}</option>` : '').join('');
+    let bowlOpts = getBowlTeam().players.map((p, i) => (p.isPlayingXI && p.name !== "Empty Slot") ? `<option value="${i}">${p.name}</option>` : '').join('');
+    
+    let html = `
+    <div style="display: flex; gap: 15px; margin-top: 15px;">
+        <div style="flex: 1; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
+            <label class="text-success mb-5" style="display:block; font-weight:bold;">🏏 STRIKER</label>
+            <select id="sStr" class="modal-input w-100">${sO}</select>
+        </div>
+        <div style="flex: 1; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
+            <label class="text-success mb-5" style="display:block; font-weight:bold;">🏃 NON-STRIKER</label>
+            <select id="sNStr" class="modal-input w-100">${nsO}</select>
+        </div>
+        <div style="flex: 1; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid #ef4444;">
+            <label class="text-danger mb-5" style="display:block; font-weight:bold;">⚾ BOWLER</label>
+            <select id="sBwl" class="modal-input w-100">${bowlOpts}</select>
+        </div>
+    </div>
+    <div id="startError" class="text-danger font-bold text-center mt-15"></div>`;
+    
+    showModal(`INNINGS ${state.inningsNum} SETUP`, html, () => { 
+        let s1 = parseInt(el('sStr').value), s2 = parseInt(el('sNStr').value), b1 = parseInt(el('sBwl').value); 
+        
+        if (isNaN(s1) || isNaN(s2) || isNaN(b1)) {
+            el('startError').innerText = "🚨 Error: Invalid player selection."; return;
+        }
+        if (s1 === s2) { 
+            el('startError').innerText = "🚨 Striker and Non-Striker must be different players!"; return; 
+        } 
+        
+        try {
+            saveState(); 
+            state.current.sIdx = s1; 
+            state.current.nsIdx = s2; 
+            state.current.bIdx = b1; 
+            
+            getBatTeam().players[s1].hasBatted = true; 
+            getBatTeam().players[s2].hasBatted = true; 
+            state.current.bowlersInCurrentOver.add(b1); 
+            state.current.currPartnership = { runs: 0, balls: 0 }; 
+            state.current.inningsStartTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); 
+            
+            closeModal(); 
+            updateUI(); 
+        } catch(e) {
+            console.error("Match Start Error:", e);
+            alert("Fatal Error starting match. Please check console.");
+        }
+    }, false, "800px", "Start Innings"); 
 }
