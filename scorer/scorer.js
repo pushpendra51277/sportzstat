@@ -57,6 +57,10 @@ window.onload = function() {
                 let parsedState = JSON.parse(savedMatch); parsedState.current.lastOverBowlers = new Set(parsedState.current.lastOverBowlers); parsedState.current.bowlersInCurrentOver = new Set(parsedState.current.bowlersInCurrentOver); state = parsedState;
                 el('setupView').classList.add('hidden'); el('scoringView').classList.remove('hidden'); el('displayTournament').innerText = state.matchSettings.tournament || "MATCH IN PROGRESS"; 
                 if (state.matchSettings.matchType === 'multiday') { el('breakBtn').classList.remove('hidden'); }
+                
+                // Re-hydrate missing legacy fields if resumed so updateUI works
+                if(!el('setupVenue').value) { el('setupVenue').value = "Official Ground"; }
+                
                 updateUI(); closeModal();
             } catch(e) { console.error("Corrupted local state.", e); hardResetSystem(); }
         }, false, "360px", "Resume");
@@ -102,6 +106,25 @@ async function authenticateCloudMatch() {
     document.getElementById('gwTeamAName').innerText = state.teams.A.name;
     document.getElementById('gwTeamBName').innerText = state.teams.B.name;
     
+    // --- FIX: Safely auto-load Officials and Venue to prevent crashes ---
+    el('setupTournament').value = state.matchSettings.tournament;
+    el('setupMatchId').value = matchId;
+    el('setupVenue').value = mData.venue || "Official Ground";
+    el('setupDate').value = new Date().toISOString().split('T')[0];
+
+    let umps = mData.umpires ? mData.umpires.split(',') : [];
+    el('u1').value = umps[0] ? umps[0].trim() : "N/A";
+    el('u2').value = umps[1] ? umps[1].trim() : "N/A";
+    el('tvUmpire').value = umps[2] ? umps[2].trim() : "N/A";
+    el('u4').value = umps[3] ? umps[3].trim() : "N/A";
+
+    let scrs = mData.scorers ? mData.scorers.split(',') : [];
+    el('s1').value = scrs[0] ? scrs[0].trim() : "N/A";
+    el('s2').value = scrs[1] ? scrs[1].trim() : "N/A";
+
+    el('setupObsRef').value = mData.referees || "N/A";
+    // ------------------------------------------------------------------
+
     const tossSelect = document.getElementById('gwTossWinner');
     tossSelect.innerHTML = `<option value="A">${state.teams.A.name}</option><option value="B">${state.teams.B.name}</option>`;
 
@@ -164,7 +187,7 @@ function initializeCloudEngine() {
             let pData = fullCloudRoster.find(p => p.id === uuid);
             if(pData) {
                 state.teams[teamKey].players.push({ 
-                    regNo: uuid, // Storing UUID here!
+                    regNo: uuid, // Storing UUID securely
                     name: pData.name, skill: pData.role || "",
                     desig: "", r:0, b:0, f:0, s:0, out:false, outOnDuck:0, hasBatted: false, 
                     dismissalInfo: "", o:0, rc:0, w:0, m:0, ex:0, wd:0, nb:0, byes:0, legbyes:0, 
@@ -551,6 +574,11 @@ function updateUI() {
     if (state.matchSettings.matchType === 'multiday' && state.inningsNum > 1) { let tBat = getBatTeam().name, tBowl = getBowlTeam().name; let sBat = state.current.runs + state.inningsSummaries.filter(i=>i.batTeam===tBat).reduce((a,b)=>a+b.runs,0); let sBowl = state.inningsSummaries.filter(i=>i.batTeam===tBowl).reduce((a,b)=>a+b.runs,0); let diff = sBat - sBowl; let txt = diff > 0 ? `lead by ${diff}` : (diff < 0 ? `trail by ${Math.abs(diff)}` : `scores level`); leadBoxHtml = `<p class="text-accent font-bold mt-5 mb-0" style="font-size:0.85rem; text-transform:uppercase;">📊 ${tBat} ${txt}</p>`; }
     el('leadTrailBox').innerHTML = leadBoxHtml;
 
+    // --- FIX: Safely update Ground Name ---
+    let venueEl = el('setupVenue');
+    el('dispGroundName').innerText = venueEl && venueEl.value ? venueEl.value : "Official Ground";
+    // --------------------------------------
+
     el('livePartnership').innerText = `${cur.currPartnership.runs} (${cur.currPartnership.balls})`; 
     el('liveRuns').innerText = cur.runs; el('liveWkts').innerText = cur.wkts; el('liveWkts').style.color = "var(--danger)"; 
     el('liveOvers').innerText = getTeamOversDisplay(); 
@@ -621,7 +649,7 @@ function generateReportHTML(isExcel) {
     if (isExcel) { html += `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>${css}</style></head><body><div align="center">`; } 
     else { html += `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Match Report PDF</title><style>${css}</style></head><body><div align="center">`; }
 
-    let res = state.matchResult || calculateResultText() || "Match in Progress"; let mId = state.matchId || "N/A"; let tourn = state.matchSettings.tournament || "Official Match"; let venue = "Official Ground"; let date = new Date().toLocaleDateString(); let toss = `${state.battingKey === 'A' ? state.teams.A.name : state.teams.B.name} chose to Bat`;
+    let res = state.matchResult || calculateResultText() || "Match in Progress"; let mId = state.matchId || "N/A"; let tourn = state.matchSettings.tournament || "Official Match"; let venue = el('setupVenue') ? el('setupVenue').value : "Official Ground"; let date = new Date().toLocaleDateString(); let toss = `${state.battingKey === 'A' ? state.teams.A.name : state.teams.B.name} chose to Bat`;
     
     html += `<table><tr><th colspan="11" class="main-header">SPORTZSTAT OFFICIAL MATCH REPORT</th></tr><tr><td colspan="5" class="sub-header">🏆 Tournament: ${tourn}</td><td colspan="6" class="sub-header text-right">Match ID: ${mId}</td></tr><tr><td colspan="5" class="sub-header">📍 Venue: ${venue}</td><td colspan="6" class="sub-header text-right">📅 Date: ${date}</td></tr><tr><td colspan="5" class="sub-header" style="color:#059669;">🪙 Toss: ${toss}</td><td colspan="6" class="sub-header text-right" style="color:#2563eb;">🏁 Result: ${res}</td></tr></table>`;
 
@@ -653,6 +681,15 @@ function generateReportHTML(isExcel) {
     });
 
     html += `<table><tr><th colspan="11" class="main-header" style="font-size:11pt; background:#334155;">MATCH OFFICIALS & LOGS</th></tr>`;
+    
+    // --- FIX: Add Officials cleanly to the PDF output without crashing ---
+    let u1 = el('u1') ? el('u1').value : "N/A"; 
+    let u2 = el('u2') ? el('u2').value : "N/A"; 
+    let tvUmp = el('tvUmpire') ? el('tvUmpire').value : "N/A"; 
+    let obsRef = el('setupObsRef') ? el('setupObsRef').value : "N/A";
+    html += `<tr><td colspan="5" class="text-left"><b>Umpires:</b> ${u1}, ${u2}</td><td colspan="6" class="text-left"><b>TV / Ref:</b> ${tvUmp} / ${obsRef}</td></tr>`;
+    // -------------------------------------------------------------------
+
     if (state.matchBreaks.length > 0) { let brStr = state.matchBreaks.map(b => `Inn ${b.inn}: ${b.type} (${b.dur}m)`).join(', '); html += `<tr><td colspan="11" class="text-left"><b>Breaks:</b> ${brStr}</td></tr>`; }
     if (remarkLog.length > 0) { let remStr = remarkLog.map(r => `[Ov ${r.over}] ${r.remark}`).join(' | '); html += `<tr><td colspan="11" class="text-left" style="color:#4c1d95;"><b>Remarks:</b> ${remStr}</td></tr>`; }
     html += `</table></div></body></html>`;
