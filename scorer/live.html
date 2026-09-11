@@ -35,21 +35,40 @@
 
         <!-- STEP 2: SQUAD SELECTION & TOSS (Hidden until Auth) -->
         <div id="gatewaySetupBox" class="hidden" style="margin-top: 30px;">
-            <div class="admin-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 20px;">
-                <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid #38bdf8; padding: 15px; border-radius: 8px;">
-                    <h3 style="margin: 0 0 10px 0; color: #38bdf8; font-size: 1rem;">Tournament Info</h3>
-                    <div id="gwTournamentName" style="color: white; font-weight: bold; font-size: 1.2rem;"></div>
-                    <div id="gwMatchId" style="color: #94a3b8; font-size: 0.85rem; margin-top: 5px;"></div>
+            
+            <!-- NEW: Match Metadata & Officials (Prevents JS Crash & Auto-loads) -->
+            <div style="background: #1e293b; border: 1px solid #334155; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 15px;">
+                    <h3 style="margin: 0; color: #38bdf8; font-size: 1.2rem;" id="gwTournamentName">Tournament Name</h3>
+                    <div id="gwMatchId" style="color: #94a3b8; font-size: 0.85rem; font-weight: bold;">ID: ---</div>
                 </div>
-                <div style="background: #1e293b; border: 1px solid #334155; padding: 15px; border-radius: 8px;">
-                    <h3 style="margin: 0 0 10px 0; color: #10b981; font-size: 1rem;">Match Settings</h3>
-                    <div class="input-group" style="margin-bottom: 0;">
-                        <select id="gwMatchType">
-                            <option value="t20">T-20 (20 Overs)</option>
-                            <option value="oneday">One Day (50 Overs)</option>
-                            <option value="practice">Practice Match (Custom Rules)</option>
-                        </select>
-                    </div>
+                
+                <h4 style="margin: 0 0 10px 0; color: #8b5cf6; font-size: 0.9rem; text-transform: uppercase;">Match Officials & Venue</h4>
+                <div class="admin-grid" style="grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                    <div class="input-group" style="margin-bottom:0;"><label>Venue</label><input type="text" id="setupVenue" readonly style="background:#0f172a; opacity:0.8; border-color:#475569; font-weight:bold; color:var(--primary);"></div>
+                    <div class="input-group" style="margin-bottom:0;"><label>Umpire 1</label><input type="text" id="u1" readonly style="background:#0f172a; opacity:0.8; border-color:#475569;"></div>
+                    <div class="input-group" style="margin-bottom:0;"><label>Umpire 2</label><input type="text" id="u2" readonly style="background:#0f172a; opacity:0.8; border-color:#475569;"></div>
+                    <div class="input-group" style="margin-bottom:0;"><label>TV Umpire</label><input type="text" id="tvUmpire" readonly style="background:#0f172a; opacity:0.8; border-color:#475569;"></div>
+                    <div class="input-group" style="margin-bottom:0;"><label>Referee</label><input type="text" id="setupObsRef" readonly style="background:#0f172a; opacity:0.8; border-color:#475569;"></div>
+                    <div class="input-group" style="margin-bottom:0;"><label>Scorer</label><input type="text" id="s1" readonly style="background:#0f172a; opacity:0.8; border-color:#475569;"></div>
+                    
+                    <!-- Hidden safety inputs to prevent legacy PDF/UI crashes -->
+                    <input type="hidden" id="setupDate" value="">
+                    <input type="hidden" id="s2" value="">
+                    <input type="hidden" id="u4" value="">
+                    <input type="hidden" id="setupTournament" value="">
+                    <input type="hidden" id="setupMatchId" value="">
+                </div>
+            </div>
+
+            <div style="background: #1e293b; border: 1px solid #334155; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 10px 0; color: #10b981; font-size: 1rem;">Match Format</h3>
+                <div class="input-group" style="margin-bottom: 0;">
+                    <select id="gwMatchType">
+                        <option value="t20">T-20 (20 Overs)</option>
+                        <option value="oneday">One Day (50 Overs)</option>
+                        <option value="practice">Practice Match (Custom Rules)</option>
+                    </select>
                 </div>
             </div>
 
@@ -80,7 +99,7 @@
                 </div>
             </div>
 
-            <button type="button" onclick="initializeCloudEngine()" class="btn-action w-100 mt-20" style="background: #10b981; color: white; font-size: 1.2rem; padding: 18px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">🚀 LOCK SQUADS & CALL 'PLAY'</button>
+            <button type="button" onclick="initializeCloudEngine()" class="btn-launch mt-20" style="background: #10b981; color: white; font-size: 1.2rem; padding: 18px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">🚀 LOCK SQUADS & CALL 'PLAY'</button>
             
             <div class="flex-row gap-10 mt-10">
                 <button type="button" onclick="hardResetSystem()" class="btn-action w-100" style="background:#b91c1c; padding:12px;">⚠️ Emergency Clear Match</button>
@@ -89,6 +108,7 @@
         </div>
     </div>
 
+    <!-- PRESERVED MANUAL ENTRY VIEW -->
     <div id="manualEntryView" class="setup-screen hidden">
         <h1 class="text-center text-primary mb-10">Manual Data Entry Sync</h1>
         <p class="text-center text-muted mb-20" style="font-size:0.85rem;">Use this portal to enter stats for historical matches not scored live on the app. Data will sync directly to your Google Sheet.</p>
@@ -127,6 +147,7 @@
         <div id="meNoGridsBtn" class="mt-20"><button type="button" class="btn-action" style="background:#334155; width:200px;" onclick="closeManualEntryView()">🔙 Back to Setup</button></div>
     </div>
     
+    <!-- PRESERVED LIVE SCORING ENGINE -->
     <div id="scoringView" class="scoring-screen hidden">
         <aside>
             <h3 id="dispBatTeamName" class="text-accent mt-0" style="text-transform: uppercase;">BATTING TEAM</h3>
