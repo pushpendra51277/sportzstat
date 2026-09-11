@@ -152,6 +152,9 @@ async function fetchCloudRosters(teamKey, teamName) {
     listEl.innerHTML = html;
 }
 
+// ==========================================
+// DYNAMIC OPENING PLAYERS POPULATOR
+// ==========================================
 function refreshOpeningDropdowns() {
     let win = document.getElementById('gwTossWinner').value || 'A';
     let dec = document.getElementById('gwTossDecision').value || 'bat';
@@ -191,6 +194,9 @@ function refreshOpeningDropdowns() {
     }
 }
 
+// ==========================================
+// INITIALIZE & CONFIRMATION MODAL
+// ==========================================
 function confirmStartMatch() {
     let sUUID = document.getElementById('gwStriker').value;
     let nsUUID = document.getElementById('gwNonStriker').value;
@@ -423,7 +429,8 @@ function openResumeModal() { let html = `<label class="text-primary">Interruptio
 
 function endInterruption() {
     let eT = parseTimeDropdowns('intEnd'), sT = state.current.activeBreakStartTime, dur = calculateDurationMins(sT, eT);
-    if(state.current.sIdx !== null) getBatTeam().players[state.current.sIdx].breakMins += dur; if(state.current.nsIdx !== null) getBatTeam().players[state.current.nsIdx].breakMins += dur;
+    if(state.current.sIdx !== null && getBatTeam().players[state.current.sIdx]) getBatTeam().players[state.current.sIdx].breakMins += dur; 
+    if(state.current.nsIdx !== null && getBatTeam().players[state.current.nsIdx]) getBatTeam().players[state.current.nsIdx].breakMins += dur;
     state.matchBreaks.push({ inn: state.inningsNum, type: state.current.activeBreak, start: sT, end: eT, dur: dur });
     let remarkStr = `${state.current.activeBreak}: ${sT} to ${eT} (Lost: ${dur}m)`; if(state.current.activeBreakInsp) remarkStr += ` [Insp: ${state.current.activeBreakInsp}]`;
     remarkLog.push({ over: formatOver(state.current.balls), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), batters: "-", bowler: "-", fielder: "-", remark: remarkStr });
@@ -765,55 +772,49 @@ function updateUI() {
             if(el('breakOverlayBox')) el('breakOverlayBox').classList.add('hidden'); 
         }
 
-        try {
-            let battedPlayers = bT.map((p, i) => ({p: p, i: i})).filter(item => item.p && item.p.hasBatted && item.p.name !== "Empty Slot");
-            battedPlayers.sort((a, b) => { let aActive = (a.i === cur.sIdx || a.i === cur.nsIdx) ? 1 : 0; let bActive = (b.i === cur.sIdx || b.i === cur.nsIdx) ? 1 : 0; if (aActive !== bActive) return bActive - aActive; return a.i - b.i; });
+        // --- RENDER BATTING TABLE ---
+        let battedPlayers = bT.map((p, i) => ({p: p, i: i})).filter(item => item.p && item.p.hasBatted && item.p.name !== "Empty Slot");
+        battedPlayers.sort((a, b) => { let aActive = (a.i === cur.sIdx || a.i === cur.nsIdx) ? 1 : 0; let bActive = (b.i === cur.sIdx || b.i === cur.nsIdx) ? 1 : 0; if (aActive !== bActive) return bActive - aActive; return a.i - b.i; });
 
-            let battersHtml = `<table class="bowler-table" style="font-size: 0.85rem; margin-top:0;"><thead><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>`;
-            battersHtml += battedPlayers.map(item => { 
-                let p = item.p, rI = item.i; let isActive = (rI === cur.sIdx || rI === cur.nsIdx); let isStriker = (rI === cur.sIdx); let sr = p.b > 0 ? ((p.r / p.b) * 100).toFixed(2) : "0.00"; 
-                let dName = p.name || "Unknown"; if(p.desig === 'C' || p.desig === 'C/WK') dName += ' (C)'; if(p.skill && String(p.skill).includes('WK')) dName += ' *'; if(isStriker) dName += ' <span style="font-size:0.8rem;" title="Striker">🏏</span>';
-                let rowStyle = isActive ? (isStriker ? 'background: rgba(16, 185, 129, 0.15); border-left: 3px solid var(--success);' : 'background: rgba(255,255,255,0.05); border-left: 3px solid transparent;') : 'opacity: 0.6; border-left: 3px solid transparent;';
-                let statusInfo = p.out ? `<div style="font-size:0.65rem; color:var(--danger); font-style:italic; margin-top:2px;">${p.dismissalInfo}</div>` : (isActive ? `<div style="font-size:0.65rem; color:var(--success); font-style:italic; margin-top:2px;">Not Out</div>` : '');
-                return `<tr style="${rowStyle}"><td style="padding:8px; max-width: 140px;"><div style="font-weight:bold; color:${isActive ? 'white' : 'var(--text-muted)'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.name}">${dName}</div>${statusInfo}</td><td style="font-weight:bold; font-size:1.1rem; color:var(--primary); padding:8px;">${p.r}</td><td style="padding:8px;">${p.b}</td><td style="color:var(--b4); padding:8px;">${p.f}</td><td style="color:var(--b6); padding:8px;">${p.s}</td><td style="color:var(--accent); font-weight:bold; padding:8px;">${sr}</td></tr>`; 
+        let battersHtml = `<table class="bowler-table" style="font-size: 0.85rem; margin-top:0;"><thead><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>`;
+        battersHtml += battedPlayers.map(item => { 
+            let p = item.p, rI = item.i; let isActive = (rI === cur.sIdx || rI === cur.nsIdx); let isStriker = (rI === cur.sIdx); let sr = p.b > 0 ? ((p.r / p.b) * 100).toFixed(2) : "0.00"; 
+            let dName = p.name || "Unknown"; if(p.desig === 'C' || p.desig === 'C/WK') dName += ' (C)'; if(p.skill && String(p.skill).includes('WK')) dName += ' *'; if(isStriker) dName += ' <span style="font-size:0.8rem;" title="Striker">🏏</span>';
+            let rowStyle = isActive ? (isStriker ? 'background: rgba(16, 185, 129, 0.15); border-left: 3px solid var(--success);' : 'background: rgba(255,255,255,0.05); border-left: 3px solid transparent;') : 'opacity: 0.6; border-left: 3px solid transparent;';
+            let statusInfo = p.out ? `<div style="font-size:0.65rem; color:var(--danger); font-style:italic; margin-top:2px;">${p.dismissalInfo}</div>` : (isActive ? `<div style="font-size:0.65rem; color:var(--success); font-style:italic; margin-top:2px;">Not Out</div>` : '');
+            return `<tr style="${rowStyle}"><td style="padding:8px; max-width: 140px;"><div style="font-weight:bold; color:${isActive ? 'white' : 'var(--text-muted)'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.name}">${dName}</div>${statusInfo}</td><td style="font-weight:bold; font-size:1.1rem; color:var(--primary); padding:8px;">${p.r}</td><td style="padding:8px;">${p.b}</td><td style="color:var(--b4); padding:8px;">${p.f}</td><td style="color:var(--b6); padding:8px;">${p.s}</td><td style="color:var(--accent); font-weight:bold; padding:8px;">${sr}</td></tr>`; 
+        }).join('');
+        battersHtml += `</tbody></table>`; 
+        if(el('battersContainer')) el('battersContainer').innerHTML = battersHtml;
+        
+        // --- RENDER MINI STATS ---
+        let miniBatHtml = "";
+        if (cur.sIdx !== null && bT[cur.sIdx]) { let p = bT[cur.sIdx]; miniBatHtml += `<div style="display: flex; align-items: center; width: 100%; margin-bottom: 2px;"><div style="color: white; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; text-align: left;" title="${p.name}">${p.name}</div><div style="flex: 0 0 auto; margin-left: 4px; white-space: nowrap;"><span style="font-size:0.6rem; margin-right: 2px;">🏏</span><span class="text-primary" style="font-weight:bold;">${p.r}</span><span style="color:var(--text-muted); font-weight:normal; font-size:0.7rem; margin-left:2px;">(${p.b})</span></div></div>`; }
+        if (cur.nsIdx !== null && bT[cur.nsIdx]) { let p = bT[cur.nsIdx]; miniBatHtml += `<div style="display: flex; align-items: center; width: 100%;"><div style="color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; text-align: left;" title="${p.name}">${p.name}</div><div style="flex: 0 0 auto; margin-left: 4px; white-space: nowrap;"><span class="text-primary" style="font-weight:bold;">${p.r}</span><span style="color:var(--text-muted); font-weight:normal; font-size:0.7rem; margin-left:2px;">(${p.b})</span></div></div>`; }
+        if(el('miniLiveBatters')) el('miniLiveBatters').innerHTML = miniBatHtml;
+        
+        if(cur.bIdx !== null && bwT[cur.bIdx]) { 
+            let actB = bwT[cur.bIdx]; let bName = actB.name || "Unknown"; if(actB.desig === 'C' || actB.desig === 'C/WK') bName += ' (C)'; if(actB.skill && String(actB.skill).includes('WK')) bName += ' *'; 
+            if(el('activeBowlerNameRight')) { el('activeBowlerNameRight').innerText = bName; el('activeBowlerNameRight').title = bName; }
+            if(el('activeBowlerProgress')) el('activeBowlerProgress').innerHTML = cur.currentOverLog.map(getBadgeHtml).join(''); 
+            let totalRuns = (actB.rc || 0) + (actB.byes || 0) + (actB.legbyes || 0); 
+            let miniBowlHtml = `<div style="display:flex; justify-content:flex-end; align-items:center; width:100%; margin-bottom:2px;"><div style="flex: 0 0 auto; margin-right:4px;">⚾</div><div style="color:white; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex: 0 1 auto; text-align:right;">${actB.name}</div></div>`; 
+            miniBowlHtml += `<div style="color:var(--text-muted); font-size:0.75rem; text-align:right; white-space:nowrap;">${formatOver(actB.o)}-${actB.m}-${totalRuns}-<span class="text-danger" style="font-weight:bold;">${actB.w}</span></div>`; 
+            if(el('miniLiveBowler')) el('miniLiveBowler').innerHTML = miniBowlHtml;
+        } else {
+            if(el('activeBowlerNameRight')) { el('activeBowlerNameRight').innerText = "Select..."; el('activeBowlerNameRight').title = ""; }
+            if(el('activeBowlerProgress')) el('activeBowlerProgress').innerHTML = ""; 
+            if(el('miniLiveBowler')) el('miniLiveBowler').innerHTML = `<div style="color: var(--text-muted); font-style:italic;">Select Bowler...</div>`;
+        }
+        
+        if(el('recentBallsData')) el('recentBallsData').innerHTML = cur.recentBalls.map(getBadgeHtml).join(''); 
+        if(el('bowlStatsBody')) {
+            el('bowlStatsBody').innerHTML = bwT.filter(p => p && (p.o > 0 || p.rc > 0) && p.name !== "Empty Slot").map(p => { 
+                let bName = p.name; if(p.desig === 'C' || p.desig === 'C/WK') bName += ' (C)'; if(p.skill && String(p.skill).includes('WK')) bName += ' *'; 
+                let totalRuns = p.rc || 0; let exStr = `${p.byes||0}b, ${p.legbyes||0}lb`; let noBalls = p.nb || 0; let wides = p.wd || 0;
+                return `<tr><td style="max-width: 85px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.name}">${bName}</td><td>${formatOver(p.o)}</td><td>${p.m}</td><td>${totalRuns}</td><td style="color:var(--danger); font-weight:bold;">${p.w}</td><td style="font-size:0.7rem; color:var(--text-muted);">${exStr}</td><td>${noBalls}</td><td>${wides}</td></tr>`; 
             }).join('');
-            battersHtml += `</tbody></table>`; 
-            if(el('battersContainer')) el('battersContainer').innerHTML = battersHtml;
-        } catch(e) { console.error("Batters Render Error:", e); }
-        
-        try {
-            let miniBatHtml = "";
-            if (cur.sIdx !== null && bT[cur.sIdx]) { let p = bT[cur.sIdx]; miniBatHtml += `<div style="display: flex; align-items: center; width: 100%; margin-bottom: 2px;"><div style="color: white; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; text-align: left;" title="${p.name}">${p.name}</div><div style="flex: 0 0 auto; margin-left: 4px; white-space: nowrap;"><span style="font-size:0.6rem; margin-right: 2px;">🏏</span><span class="text-primary" style="font-weight:bold;">${p.r}</span><span style="color:var(--text-muted); font-weight:normal; font-size:0.7rem; margin-left:2px;">(${p.b})</span></div></div>`; }
-            if (cur.nsIdx !== null && bT[cur.nsIdx]) { let p = bT[cur.nsIdx]; miniBatHtml += `<div style="display: flex; align-items: center; width: 100%;"><div style="color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; text-align: left;" title="${p.name}">${p.name}</div><div style="flex: 0 0 auto; margin-left: 4px; white-space: nowrap;"><span class="text-primary" style="font-weight:bold;">${p.r}</span><span style="color:var(--text-muted); font-weight:normal; font-size:0.7rem; margin-left:2px;">(${p.b})</span></div></div>`; }
-            if(el('miniLiveBatters')) el('miniLiveBatters').innerHTML = miniBatHtml;
-        } catch(e) { console.error("Mini Batters Error:", e); }
-        
-        try {
-            if(cur.bIdx !== null && bwT[cur.bIdx]) { 
-                let actB = bwT[cur.bIdx]; let bName = actB.name || "Unknown"; if(actB.desig === 'C' || actB.desig === 'C/WK') bName += ' (C)'; if(actB.skill && String(actB.skill).includes('WK')) bName += ' *'; 
-                if(el('activeBowlerNameRight')) { el('activeBowlerNameRight').innerText = bName; el('activeBowlerNameRight').title = bName; }
-                if(el('activeBowlerProgress')) el('activeBowlerProgress').innerHTML = cur.currentOverLog.map(getBadgeHtml).join(''); 
-                let totalRuns = (actB.rc || 0) + (actB.byes || 0) + (actB.legbyes || 0); 
-                let miniBowlHtml = `<div style="display:flex; justify-content:flex-end; align-items:center; width:100%; margin-bottom:2px;"><div style="flex: 0 0 auto; margin-right:4px;">⚾</div><div style="color:white; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex: 0 1 auto; text-align:right;">${actB.name}</div></div>`; 
-                miniBowlHtml += `<div style="color:var(--text-muted); font-size:0.75rem; text-align:right; white-space:nowrap;">${formatOver(actB.o)}-${actB.m}-${totalRuns}-<span class="text-danger" style="font-weight:bold;">${actB.w}</span></div>`; 
-                if(el('miniLiveBowler')) el('miniLiveBowler').innerHTML = miniBowlHtml;
-            } else {
-                if(el('activeBowlerNameRight')) { el('activeBowlerNameRight').innerText = "Select..."; el('activeBowlerNameRight').title = ""; }
-                if(el('activeBowlerProgress')) el('activeBowlerProgress').innerHTML = ""; 
-                if(el('miniLiveBowler')) el('miniLiveBowler').innerHTML = `<div style="color: var(--text-muted); font-style:italic;">Select Bowler...</div>`;
-            }
-        } catch(e) { console.error("Active Bowler Render Error:", e); }
-        
-        try {
-            if(el('recentBallsData')) el('recentBallsData').innerHTML = cur.recentBalls.map(getBadgeHtml).join(''); 
-            if(el('bowlStatsBody')) {
-                el('bowlStatsBody').innerHTML = bwT.filter(p => p && (p.o > 0 || p.rc > 0) && p.name !== "Empty Slot").map(p => { 
-                    let bName = p.name; if(p.desig === 'C' || p.desig === 'C/WK') bName += ' (C)'; if(p.skill && String(p.skill).includes('WK')) bName += ' *'; 
-                    let totalRuns = p.rc || 0; let exStr = `${p.byes||0}b, ${p.legbyes||0}lb`; let noBalls = p.nb || 0; let wides = p.wd || 0;
-                    return `<tr><td style="max-width: 85px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.name}">${bName}</td><td>${formatOver(p.o)}</td><td>${p.m}</td><td>${totalRuns}</td><td style="color:var(--danger); font-weight:bold;">${p.w}</td><td style="font-size:0.7rem; color:var(--text-muted);">${exStr}</td><td>${noBalls}</td><td>${wides}</td></tr>`; 
-                }).join('');
-            }
-        } catch(e) { console.error("Bowlers Render Error:", e); }
+        }
 
     } catch(mainError) {
         console.error("FATAL UI UPDATE ERROR:", mainError);
@@ -838,449 +839,147 @@ function calculateResultText() {
 
 function enableSummaryConfirm() { let cBtn = el('modalConfirmBtn'); if (cBtn.disabled) { cBtn.disabled = false; cBtn.style.opacity = '1'; cBtn.style.cursor = 'pointer'; cBtn.innerText = cBtn.dataset.origText || "Confirm"; } }
 
-function generateReportHTML(isExcel) {
-    let css = `@media print { @page { size: A4 landscape; margin: 0.5in; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } } body { font-family: 'Segoe UI', Calibri, Arial, sans-serif; background: #ffffff; padding: 20px; } table { border-collapse: collapse; width: 100%; font-size: 10pt; table-layout: auto; margin-bottom: 20px; page-break-inside: avoid; } tr { page-break-inside: avoid; page-break-after: auto; } th, td { border: 1px solid #d1d5db; padding: 6px; text-align: center; vertical-align: middle; color: #334155; } .main-header { background: #0f172a; color: #ffffff; font-size: 14pt; font-weight: bold; text-transform: uppercase; padding: 10px; } .sub-header { background: #f8fafc; color: #334155; font-size: 10pt; font-weight: bold; text-align: left; padding: 8px; } .inn-title { background: #1e293b; color: #fbbf24; font-size: 12pt; font-weight: bold; text-align: left; padding: 8px; } .bat-th, .bwl-th { background: #f1f5f9; color: #334155; font-weight: bold; } .text-left { text-align: left; padding-left: 10px; } .text-right { text-align: right; padding-right: 10px; } .bold { font-weight: bold; } .extra-row { background: #f1f5f9; font-weight: bold; color: #334155; border-top: 2px solid #94a3b8; } .fow-row { background: #fafafa; font-size: 9pt; color: #475569; text-align: left; padding: 10px; }`;
-    let html = ``;
-    if (isExcel) { html += `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>${css}</style></head><body><div align="center">`; } 
-    else { html += `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Match Report PDF</title><style>${css}</style></head><body><div align="center">`; }
-
-    let res = state.matchResult || calculateResultText() || "Match in Progress"; let mId = state.matchId || el('setupMatchId').value || "N/A"; let tourn = el('setupTournament').value || "Friendly Match"; let venue = el('setupVenue').value || "N/A"; let date = el('setupDate').value || new Date().toLocaleDateString(); let toss = `${state.battingKey === 'A' ? state.teams.A.name : state.teams.B.name} chose to ${el('tossDecision').value}`;
-    
-    html += `<table><tr><th colspan="11" class="main-header">SPORTZSTAT OFFICIAL MATCH REPORT</th></tr><tr><td colspan="5" class="sub-header">🏆 Tournament: ${tourn}</td><td colspan="6" class="sub-header text-right">Match ID: ${mId}</td></tr><tr><td colspan="5" class="sub-header">📍 Venue: ${venue}</td><td colspan="6" class="sub-header text-right">📅 Date: ${date}</td></tr><tr><td colspan="5" class="sub-header" style="color:#059669;">🪙 Toss: ${toss}</td><td colspan="6" class="sub-header text-right" style="color:#2563eb;">🏁 Result: ${res}</td></tr></table>`;
-
-    let allInn = [...state.inningsSummaries];
-    if ((state.current.balls > 0 || state.current.runs > 0) && state.inningsNum > state.inningsSummaries.length) { let fF = JSON.parse(JSON.stringify(state.current.fow || [])); if(state.current.sIdx !== null && state.current.nsIdx !== null && state.current.wkts < 10) { let sBName = getBatTeam().players[state.current.sIdx] ? getBatTeam().players[state.current.sIdx].name : "Unknown"; let nsBName = getBatTeam().players[state.current.nsIdx] ? getBatTeam().players[state.current.nsIdx].name : "Unknown"; fF.push({ wktNum: "Unbroken", runs: state.current.runs, overs: formatOver(state.current.balls), outBatter: "-", partner: sBName + " & " + nsBName, pRuns: state.current.currPartnership.runs, pBalls: state.current.currPartnership.balls }); } allInn.push({ innNum: state.inningsNum, batTeam: getBatTeam().name, bowlTeam: getBowlTeam().name, runs: state.current.runs, wkts: state.current.wkts, overs: formatOver(state.current.balls), penalties: state.current.penalties || 0, batters: getBatTeam().players, bowlers: getBowlTeam().players, fow: fF, extras: JSON.parse(JSON.stringify(state.current.extras)), isOngoing: true, allowances: state.current.allowances || 0 }); }
-
-    allInn.forEach(inn => {
-        html += `<table><tr><th colspan="11" class="inn-title">INNINGS ${inn.innNum}: ${inn.batTeam} - ${inn.runs}/${inn.wkts} (${inn.overs} Ov)</th></tr>`;
-        html += `<tr><th colspan="2" class="bat-th text-left" style="width:30%">Batter</th><th colspan="2" class="bat-th" style="width:22%">Status</th><th class="bat-th" style="width:8%">R</th><th class="bat-th" style="width:8%">B</th><th class="bat-th" style="width:8%">4s</th><th class="bat-th" style="width:8%">6s</th><th colspan="3" class="bat-th" style="width:16%">SR</th></tr>`;
-        inn.batters.filter(p => p.hasBatted && p.name !== "Empty Slot").forEach(p => { let sr = p.b > 0 ? ((p.r / p.b) * 100).toFixed(2) : "0.00"; let dName = p.name + (p.desig === 'C' || p.desig === 'C/WK' ? ' (C)' : '') + (p.skill && String(p.skill).includes('WK') ? ' *' : ''); let status = p.out ? p.dismissalInfo : "Not Out"; let statusColor = p.out ? "#991b1b" : "#065f46"; html += `<tr><td colspan="2" class="text-left bold">${dName}</td><td colspan="2" style="color:${statusColor}; font-size:9pt;">${status}</td><td class="bold">${p.r}</td><td>${p.b}</td><td>${p.f}</td><td>${p.s}</td><td colspan="3">${sr}</td></tr>`; });
-        let ex = inn.extras || {w:0, nb:0, b:0, lb:0}; let pen = inn.penalties || 0; let extrasTotal = ex.w + ex.nb + ex.b + ex.lb;
-        html += `<tr><td colspan="4" class="extra-row text-right">Extras</td><td colspan="7" class="extra-row text-left">${extrasTotal} <span style="font-weight:normal; font-size:8pt;">(W:${ex.w}, NB:${ex.nb}, B:${ex.b}, LB:${ex.lb})</span></td></tr>`;
-        if (pen > 0) { html += `<tr><td colspan="4" class="extra-row text-right" style="color:#991b1b;">Penalties</td><td colspan="7" class="extra-row text-left">${pen}</td></tr>`; }
-        html += `<tr><td colspan="4" class="extra-row text-right" style="color:#1d4ed8;">TOTAL</td><td colspan="7" class="extra-row text-left bold" style="color:#1d4ed8;">${inn.runs}/${inn.wkts} <span style="font-weight:normal; font-size:8pt;">(${inn.overs} Overs)</span></td></tr>`;
+function endInnings() { 
+    try {
+        saveState(); 
+        if (state.current && state.current.bIdx !== null) finalizeOver(true); 
         
-        html += `<tr><th colspan="3" class="bwl-th text-left">Bowler</th><th class="bwl-th">O</th><th class="bwl-th">M</th><th class="bwl-th">R</th><th class="bwl-th">W</th><th class="bwl-th">Econ</th><th class="bwl-th">Extras</th><th class="bwl-th">No Balls</th><th class="bwl-th">Wides</th></tr>`;
+        if (state.current) {
+            state.current.inningsEndTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); 
+        }
         
-        let sumBalls = 0, sumM = 0, sumR = 0, sumW = 0, sumB = 0, sumLB = 0, sumNB = 0, sumWD = 0, sumTotEx = 0;
-        inn.bowlers.filter(p => (p.o > 0 || p.rc > 0) && p.name !== "Empty Slot").forEach(p => { 
-            let totalRuns = p.rc || 0; let e = p.o > 0 ? ((totalRuns / p.o) * 6).toFixed(2) : "0.00"; let dName = p.name + (p.desig === 'C' || p.desig === 'C/WK' ? ' (C)' : '') + (p.skill && String(p.skill).includes('WK') ? ' *' : ''); let exStr = `${p.byes||0}b, ${p.legbyes||0}lb`; let noBalls = p.nb || 0; let wides = p.wd || 0; let totalExtras = (p.wd || 0) + (p.nb || 0) + (p.byes || 0) + (p.legbyes || 0); let po = parseFloat(p.o) || 0; let bBalls = Math.floor(po) * 6 + Math.round((po - Math.floor(po)) * 10); sumBalls += bBalls; sumM += p.m || 0; sumR += totalRuns; sumW += p.w || 0; sumB += p.byes || 0; sumLB += p.legbyes || 0; sumNB += noBalls; sumWD += wides; sumTotEx += totalExtras; 
-            html += `<tr><td colspan="3" class="text-left bold">${dName}</td><td>${formatOver(p.o)}</td><td>${p.m}</td><td>${totalRuns}</td><td class="bold" style="color:#991b1b;">${p.w}</td><td>${e}</td><td style="font-size:8pt;">${exStr}</td><td>${noBalls}</td><td>${wides}</td></tr>`; 
-        });
+        let fF = [];
+        if (state.current && state.current.fow) {
+            fF = JSON.parse(JSON.stringify(state.current.fow));
+        }
         
-        let sumOvers = Math.floor(sumBalls / 6) + "." + (sumBalls % 6); let sumEcon = sumBalls > 0 ? ((sumR / sumBalls) * 6).toFixed(2) : "0.00"; let totalRunsWithByes = sumR + sumB + sumLB; let sumExStr = `${sumB}b, ${sumLB}lb`;
-        html += `<tr class="extra-row"><td colspan="3" class="text-right">TOTAL</td><td>${sumOvers}</td><td>${sumM}</td><td>${totalRunsWithByes}</td><td style="color:#991b1b;">${sumW}</td><td>${sumEcon}</td><td style="font-size:8pt;">${sumExStr}</td><td>${sumNB}</td><td>${sumWD}</td></tr>`;
+        if(state.current && state.current.sIdx !== null && state.current.nsIdx !== null && state.current.wkts < 10) {
+            let sBName = (getBatTeam() && getBatTeam().players[state.current.sIdx]) ? getBatTeam().players[state.current.sIdx].name : "Unknown"; 
+            let nsBName = (getBatTeam() && getBatTeam().players[state.current.nsIdx]) ? getBatTeam().players[state.current.nsIdx].name : "Unknown"; 
+            let pRuns = (state.current.currPartnership) ? state.current.currPartnership.runs : 0; 
+            let pBalls = (state.current.currPartnership) ? state.current.currPartnership.balls : 0; 
+            fF.push({ wktNum: "Unbroken", runs: state.current.runs, overs: formatOver(state.current.balls), outBatter: "-", partner: sBName + " & " + nsBName, pRuns: pRuns, pBalls: pBalls }); 
+        }
         
-        if (inn.fow && inn.fow.length > 0) { let fowStr = inn.fow.map(f => `<b>${f.runs}/${f.wktNum==='Unbroken'?'*':f.wktNum}</b> (${f.outBatter}, ${f.overs} ov)`).join(' | '); html += `<tr><td colspan="11" class="fow-row"><b>Fall of Wickets:</b> ${fowStr}</td></tr>`; }
-        html += `</table>`;
-    });
-
-    html += `<table><tr><th colspan="11" class="main-header" style="font-size:11pt; background:#334155;">MATCH OFFICIALS & LOGS</th></tr>`;
-    
-    let u1 = el('u1') ? el('u1').value : "N/A"; 
-    let u2 = el('u2') ? el('u2').value : "N/A"; 
-    let tvUmp = el('tvUmpire') ? el('tvUmpire').value : "N/A"; 
-    let obsRef = el('setupObsRef') ? el('setupObsRef').value : "N/A";
-    html += `<tr><td colspan="5" class="text-left"><b>Umpires:</b> ${u1}, ${u2}</td><td colspan="6" class="text-left"><b>TV / Ref:</b> ${tvUmp} / ${obsRef}</td></tr>`;
-
-    if (state.matchBreaks.length > 0) { let brStr = state.matchBreaks.map(b => `Inn ${b.inn}: ${b.type} (${b.dur}m)`).join(', '); html += `<tr><td colspan="11" class="text-left"><b>Breaks:</b> ${brStr}</td></tr>`; }
-    if (remarkLog.length > 0) { let remStr = remarkLog.map(r => `[Ov ${r.over}] ${r.remark}`).join(' | '); html += `<tr><td colspan="11" class="text-left" style="color:#4c1d95;"><b>Remarks:</b> ${remStr}</td></tr>`; }
-    html += `</table></div></body></html>`;
-    return html;
-}
-
-function prepAllowancesForExport() {
-    if(el('inningAllowancesInput')) { let val = parseInt(el('inningAllowancesInput').value) || 0; state.current.allowances = val; if (state.inningsSummaries.length > 0 && state.inningsNum === state.inningsSummaries.length) { state.inningsSummaries[state.inningsSummaries.length - 1].allowances = val; } }
-}
-
-function downloadSummaryExcel() {
-    prepAllowancesForExport(); let html = generateReportHTML(true);
-    let blob = new Blob([html], { type: 'application/vnd.ms-excel' }); let url = URL.createObjectURL(blob); let a = document.createElement('a'); a.style.display = 'none'; a.href = url; a.download = `Sportzstat_Official_Report_${el('setupTournament').value || 'Match'}.xls`; document.body.appendChild(a); a.click(); setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 100);
-}
-
-function downloadSummaryPDF() {
-    prepAllowancesForExport(); let html = generateReportHTML(false);
-    let printWin = window.open('', '_blank'); printWin.document.write(html); printWin.document.close(); printWin.focus(); setTimeout(() => { printWin.print(); printWin.close(); }, 500);
-}
-
-function getTopPerformers() {
-    let batters = []; let bowlers = [];
-    let allInn = [...state.inningsSummaries]; 
-    if ((state.current.balls > 0 || state.current.runs > 0) && state.inningsNum > state.inningsSummaries.length) { allInn.push({ innNum: state.inningsNum, batTeam: getBatTeam().name, bowlTeam: getBowlTeam().name, runs: state.current.runs, wkts: state.current.wkts, batters: getBatTeam().players, bowlers: getBowlTeam().players }); }
-
-    allInn.forEach(inn => {
-        inn.batters.forEach(b => { if(b.hasBatted && b.r >= 10) batters.push({...b, team: inn.batTeam}); }); 
-        inn.bowlers.forEach(b => { if(b.w >= 1 || b.m >= 1) bowlers.push({...b, team: inn.bowlTeam}); }); 
-    });
-
-    batters.sort((a,b) => b.r - a.r || ((b.r/Math.max(1,b.b))*100) - ((a.r/Math.max(1,a.b))*100));
-    let topBatters = batters.filter((b, index) => index < 5 || b.r >= 50);
-
-    bowlers.sort((a,b) => b.w - a.w || ((a.rc/Math.max(1, a.o))*6) - ((b.rc/Math.max(1, b.o))*6));
-    let topBowlers = bowlers.slice(0, 3); 
-
-    return { batters: topBatters, bowlers: topBowlers };
-}
-
-function openCardStudio() {
-    let perfs = getTopPerformers();
-    let html = `<div style="max-height:60vh; overflow-y:auto; padding-right:10px;" class="custom-scroll">`;
-    
-    html += `<button type="button" class="btn-action w-100 mb-15" style="background: linear-gradient(90deg, #3b82f6, #0284c7); padding:15px; font-size:1.1rem; color:white; font-weight:900;" onclick="previewCombinedCard()">📊 GENERATE COMBINED MATCH CARD</button>`;
-
-    html += `<h3 class="text-accent mt-0" style="border-bottom:1px solid #334155; padding-bottom:5px;">Top Batters</h3><div style="display:flex; flex-direction:column; gap:8px; margin-bottom:20px;">`;
-    if(perfs.batters.length === 0) html += `<div class="text-muted">No qualified batters yet.</div>`;
-    perfs.batters.forEach((b, i) => {
-        let pStr = encodeURIComponent(JSON.stringify(b)).replace(/'/g, "%27");
-        html += `<button type="button" class="btn-action w-100" style="background:rgba(255,255,255,0.05); text-align:left; padding:12px; border-left:3px solid #38bdf8;" onclick="previewPlayerCard('${pStr}', true)">
-            <b>${b.name}</b> (${b.team}) - <span class="text-primary">${b.r} runs</span> off ${b.b} balls
-        </button>`;
-    });
-    
-    html += `</div><h3 class="text-accent" style="border-bottom:1px solid #334155; padding-bottom:5px;">Top Bowlers</h3><div style="display:flex; flex-direction:column; gap:8px;">`;
-    if(perfs.bowlers.length === 0) html += `<div class="text-muted">No qualified bowlers yet.</div>`;
-    perfs.bowlers.forEach((b, i) => {
-        let pStr = encodeURIComponent(JSON.stringify(b)).replace(/'/g, "%27");
-        html += `<button type="button" class="btn-action w-100" style="background:rgba(255,255,255,0.05); text-align:left; padding:12px; border-left:3px solid #ef4444;" onclick="previewPlayerCard('${pStr}', false)">
-            <b>${b.name}</b> (${b.team}) - <span class="text-danger">${b.w} Wkts</span> for ${b.rc} runs
-        </button>`;
-    });
-    html += `</div></div>`;
-    
-    showModal("🌟 PLAYER CARD STUDIO", html, () => {}, true, "400px");
-    el('modalConfirmBtn').style.display = 'none';
-    el('modalCancelBtn').style.display = ''; 
-    el('modalCancelBtn').innerText = "🔙 Back to Summary"; 
-    el('modalCancelBtn').onclick = () => { showMatchSummary(); };
-}
-
-function previewCombinedCard() {
-    let perfs = getTopPerformers();
-    let tournName = el('setupTournament').value || "OFFICIAL MATCH CARD";
-    
-    let allInn = [...state.inningsSummaries];
-    if ((state.current.balls > 0 || state.current.runs > 0) && state.inningsNum > state.inningsSummaries.length) {
-        allInn.push({ batTeam: getBatTeam().name, runs: state.current.runs, wkts: state.current.wkts, overs: getTeamOversDisplay() });
+        state.inningsSummaries.push({ 
+            innNum: state.inningsNum || 1, 
+            batTeam: getBatTeam() ? getBatTeam().name : "Team 1", 
+            bowlTeam: getBowlTeam() ? getBowlTeam().name : "Team 2", 
+            runs: state.current ? state.current.runs : 0, 
+            wkts: state.current ? state.current.wkts : 0, 
+            overs: formatOver(state.current ? state.current.balls : 0), 
+            penalties: (state.current ? state.current.penalties : 0) || 0, 
+            overHistory: state.current ? JSON.parse(JSON.stringify(state.current.overHistory || [])) : [], 
+            batters: getBatTeam() ? JSON.parse(JSON.stringify(getBatTeam().players || [])) : [], 
+            bowlers: getBowlTeam() ? JSON.parse(JSON.stringify(getBowlTeam().players || [])) : [], 
+            fow: fF, 
+            extras: state.current ? JSON.parse(JSON.stringify(state.current.extras || {})) : {w:0, nb:0, b:0, lb:0}, 
+            startTime: (state.current ? state.current.inningsStartTime : "-") || "-", 
+            endTime: (state.current ? state.current.inningsEndTime : "-") || "-", 
+            allowances: (state.current ? state.current.allowances : 0) || 0 
+        }); 
+        
+        showMatchSummary(); 
+    } catch(e) { 
+        console.error("End Innings Error:", e); 
+        alert("Error saving Innings Summary. Check console."); 
     }
-    
-    let scoreLine1 = allInn[0] ? `${allInn[0].batTeam}: ${allInn[0].runs}/${allInn[0].wkts} (${allInn[0].overs} ov)` : "";
-    let scoreLine2 = allInn[1] ? `${allInn[1].batTeam}: ${allInn[1].runs}/${allInn[1].wkts} (${allInn[1].overs} ov)` : "";
-    let res = state.matchResult || calculateResultText() || "Match in Progress";
-
-    let mvp = perfs.batters.length > 0 ? perfs.batters[0] : (perfs.bowlers.length > 0 ? perfs.bowlers[0] : null);
-    let mvpName = mvp ? mvp.name : "STAR PERFORMER";
-    let mvpStat = "";
-    if (mvp && mvp.r !== undefined) { mvpStat = `${mvp.r} (${mvp.b})`; } 
-    else if (mvp && mvp.w !== undefined) { mvpStat = `${mvp.w}/${mvp.rc} (${formatOver(mvp.o)})`; }
-
-    let battersHtml = perfs.batters.map(b => {
-        let sr = b.b > 0 ? ((b.r/b.b)*100).toFixed(1) : "0.0";
-        let nameStr = b.name + (b.out ? "" : "*");
-        return `<tr><td style="padding:12px; border-bottom:1px solid rgba(255,255,255,0.1); color:white; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">${nameStr}</td><td style="padding:12px; text-align:center; color:#38bdf8; font-weight:bold; border-bottom:1px solid rgba(255,255,255,0.1);">${b.r}</td><td style="padding:12px; text-align:center; color:white; border-bottom:1px solid rgba(255,255,255,0.1);">${b.b}</td><td style="padding:12px; text-align:center; color:#cbd5e1; border-bottom:1px solid rgba(255,255,255,0.1);">${sr}</td></tr>`;
-    }).join('');
-
-    let bowlersHtml = perfs.bowlers.map(b => {
-        return `<tr><td style="padding:12px; border-bottom:1px solid rgba(255,255,255,0.1); color:white; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">${b.name}</td><td style="padding:12px; text-align:center; color:#ef4444; font-weight:bold; border-bottom:1px solid rgba(255,255,255,0.1);">${b.w}</td><td style="padding:12px; text-align:center; color:white; border-bottom:1px solid rgba(255,255,255,0.1);">${b.rc}</td><td style="padding:12px; text-align:center; color:#cbd5e1; border-bottom:1px solid rgba(255,255,255,0.1);">${formatOver(b.o)}</td></tr>`;
-    }).join('');
-
-    let cardHtml = `
-    <input type="file" id="cardPhotoUploadCombined" accept="image/*" style="display: none;" onchange="updateCardPhotoCombined(event)">
-    <div style="width: 302px; height: 378px; position: relative; margin: 0 auto; overflow: hidden; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.8);">
-        <div id="exportCombinedCardElement" style="width: 1080px; height: 1350px; position: absolute; top: 0; left: 0; transform-origin: top left; transform: scale(0.2796); background: linear-gradient(135deg, #0b0f1a 0%, #1e293b 100%); font-family: 'Arial', sans-serif; color: white; overflow: hidden; box-sizing: border-box; border: 6px solid #38bdf8;">
-            
-            <div style="position: absolute; top: -100px; right: -100px; width: 400px; height: 400px; background: rgba(245, 158, 11, 0.15); filter: blur(80px); border-radius: 50%;"></div>
-            <div style="position: absolute; bottom: -100px; left: -100px; width: 500px; height: 500px; background: rgba(56, 189, 248, 0.15); filter: blur(100px); border-radius: 50%;"></div>
-
-            <div style="text-align: center; padding: 35px 20px 20px 20px; border-bottom: 2px solid rgba(255,255,255,0.1); position:relative; z-index:2;">
-                <h1 style="margin: 0; font-size: 3.8rem; font-weight: 900; text-transform: uppercase; color:#f59e0b; letter-spacing: 2px;">${tournName}</h1>
-                <div style="display:flex; justify-content:center; gap:40px; margin: 15px 0; font-size: 1.8rem; font-weight:bold; color:white;">
-                    <div>${scoreLine1}</div>
-                    ${scoreLine2 ? `<div style="color:rgba(255,255,255,0.4)">VS</div><div>${scoreLine2}</div>` : ''}
-                </div>
-                <p style="color: #5eead4; font-size: 1.7rem; font-weight:bold; margin: 0; text-transform:uppercase; letter-spacing:1px;">🏁 ${res}</p>
-            </div>
-
-            <div style="display: flex; align-items: center; justify-content: center; padding: 35px; background: rgba(0,0,0,0.3); margin: 35px 40px; border-radius: 20px; border: 1px solid rgba(56, 189, 248, 0.3); position:relative; z-index:2; backdrop-filter: blur(5px);">
-                <div style="flex: 0 0 230px; height: 230px; border-radius: 50%; border: 6px solid #f59e0b; overflow: hidden; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" onclick="document.getElementById('cardPhotoUploadCombined').click()" title="Click to add MVP photo">
-                    <img id="combinedCardPhotoImg" crossorigin="anonymous" src="https://ui-avatars.com/api/?name=${encodeURIComponent(mvpName)}&background=1e293b&color=f59e0b&size=230" style="width: 100%; height: 100%; object-fit: cover;">
-                </div>
-                <div style="margin-left: 50px; flex: 1;">
-                    <div style="color: #f59e0b; font-weight: bold; font-size: 1.6rem; letter-spacing: 2px;">STAR PERFORMER</div>
-                    <div style="font-size: 4rem; font-weight: 900; margin: 5px 0; line-height: 1; color:white;">${mvpName}</div>
-                    <div style="font-size: 2.2rem; color: #38bdf8; font-weight: bold;">${mvpStat}</div>
-                </div>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; padding: 0 40px; position:relative; z-index:2;">
-                <div style="width: 48%;">
-                    <div style="background: rgba(15, 23, 42, 0.8); padding: 15px; border-radius: 10px 10px 0 0; border-bottom: 3px solid #38bdf8;">
-                        <h2 style="margin: 0; color: #38bdf8; font-size: 1.8rem; text-align: center;">TOP BATTERS</h2>
-                    </div>
-                    <table style="width: 100%; border-collapse: collapse; background: rgba(0,0,0,0.4); font-size: 1.3rem; table-layout: fixed;">
-                        <thead style="background: rgba(255,255,255,0.05); color: #cbd5e1; font-size: 1.1rem;">
-                            <tr><th style="padding:15px; text-align:left; width:55%;">Batter</th><th style="padding:15px; text-align:center; width:15%;">R</th><th style="padding:15px; text-align:center; width:15%;">B</th><th style="padding:15px; text-align:center; width:15%;">SR</th></tr>
-                        </thead>
-                        <tbody>${battersHtml}</tbody>
-                    </table>
-                </div>
-
-                <div style="width: 48%;">
-                    <div style="background: rgba(15, 23, 42, 0.8); padding: 15px; border-radius: 10px 10px 0 0; border-bottom: 3px solid #ef4444;">
-                        <h2 style="margin: 0; color: #ef4444; font-size: 1.8rem; text-align: center;">TOP BOWLERS</h2>
-                    </div>
-                    <table style="width: 100%; border-collapse: collapse; background: rgba(0,0,0,0.4); font-size: 1.3rem; table-layout: fixed;">
-                        <thead style="background: rgba(255,255,255,0.05); color: #cbd5e1; font-size: 1.1rem;">
-                            <tr><th style="padding:15px; text-align:left; width:55%;">Bowler</th><th style="padding:15px; text-align:center; width:15%;">W</th><th style="padding:15px; text-align:center; width:15%;">R</th><th style="padding:15px; text-align:center; width:15%;">O</th></tr>
-                        </thead>
-                        <tbody>${bowlersHtml}</tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <div style="position: absolute; bottom: 30px; width: 100%; text-align: center; color: rgba(255,255,255,0.3); font-size: 1.4rem; font-weight: bold; letter-spacing: 3px; z-index:2;">
-                Sportzstat
-            </div>
-        </div>
-    </div>
-    <div style="text-align:center; color:#94a3b8; font-size:0.8rem; margin-top:10px;">💡 Click the circle avatar above to upload a real photo!</div>
-    <button type="button" class="btn-action w-100 mt-15" style="background:#10b981; padding:15px; font-size:1.1rem;" onclick="downloadElementAsImage('exportCombinedCardElement', 'Sportzstat_Match_Summary.png', this)">📸 DOWNLOAD MATCH CARD</button>
-    `;
-
-    showModal("📊 Combined Match Card", cardHtml, () => {}, true, "450px");
-    el('modalConfirmBtn').style.display = 'none';
-    el('modalCancelBtn').style.display = ''; el('modalCancelBtn').innerText = "🔙 Back to Studio"; el('modalCancelBtn').onclick = openCardStudio;
-}
-
-function updateCardPhotoCombined(event) {
-    let file = event.target.files[0];
-    if (file) { el('combinedCardPhotoImg').src = URL.createObjectURL(file); }
-}
-
-function previewPlayerCard(playerStr, isBatter) {
-    let p = JSON.parse(decodeURIComponent(playerStr));
-
-    let stat1Val, stat1Lab, stat2Val, stat2Lab, stat3Val, stat3Lab;
-    if (isBatter) {
-        let sr = p.b > 0 ? ((p.r/p.b)*100).toFixed(2) : "0.00";
-        stat1Val = p.r + (p.out ? "" : "*"); stat1Lab = "RUNS";
-        stat2Val = p.b; stat2Lab = "BALLS";
-        stat3Val = sr; stat3Lab = "STRIKE RATE";
-    } else {
-        let econ = p.o > 0 ? ((p.rc/p.o)*6).toFixed(2) : "0.00";
-        stat1Val = p.w; stat1Lab = "WICKETS";
-        stat2Val = formatOver(p.o); stat2Lab = "OVERS";
-        stat3Val = econ; stat3Lab = "ECONOMY"; 
-    }
-
-    let d = new Date(); let dStr = ("0"+(d.getMonth()+1)).slice(-2) + "." + ("0"+d.getDate()).slice(-2) + "." + d.getFullYear().toString().slice(-2);
-
-    let cardHtml = `
-    <input type="file" id="cardPhotoUpload" accept="image/*" style="display: none;" onchange="updateCardPhoto(event)">
-    <div style="width: 302px; height: 378px; position: relative; margin: 0 auto; overflow: hidden; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.8);">
-        <div id="exportCardElement" style="width: 1080px; height: 1350px; position: absolute; top: 0; left: 0; transform-origin: top left; transform: scale(0.2796); background-color: #111; font-family: 'Helvetica Neue', Arial, sans-serif; box-sizing: border-box; display: flex; flex-direction: column; padding: 40px; overflow: hidden;">
-            
-            <div style="position: absolute; top: -5%; left: -5%; width: 110%; height: 110%; background-image: url('https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1080&q=80'); background-size: cover; background-position: center; filter: blur(12px); z-index: 0;"></div>
-            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 15, 30, 0.75); z-index: 1;"></div>
-
-            <div style="position:relative; z-index:2; display:flex; flex-direction:column; height:100%;">
-                
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; width: 100%; margin-bottom: 20px;">
-                    <div style="font-weight: 900; font-size: 2rem; color: #ffffff; text-transform: uppercase; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">PLAYER CONTRIBUTION</div>
-                    <div style="font-weight: 900; font-size: 2.5rem; color: #ffffff; text-transform: uppercase; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">${p.team}</div>
-                </div>
-
-                <div style="display: flex; width: 100%; height: 100%; gap: 40px;">
-                    <div style="width: 55%; display: flex; flex-direction: column; align-items: center;">
-                        <div style="width: 100%; height: 950px; border-radius: 40px; border: 4px solid #FFCC00; overflow: hidden; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" onclick="document.getElementById('cardPhotoUpload').click()" title="Click to upload a real photo!">
-                            <img id="cardPhotoImg" crossorigin="anonymous" src="https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=1e293b&color=FFCC00&size=800" style="width:100%; height:100%; object-fit:cover;">
-                        </div>
-                        <div style="margin-top: 25px; text-align: center; width: 100%;">
-                            <h2 style="font-family: 'Impact', 'Arial Black', sans-serif; font-size: 6.5rem; line-height: 1; margin: 0; color: #ffffff; text-transform: uppercase; letter-spacing: 1px; transform: scaleY(1.2); text-shadow: 4px 4px 10px rgba(0,0,0,0.8);">${p.name}</h2>
-                            <h4 style="font-size: 2rem; color: #FFCC00; margin: 30px 0 5px 0; font-weight: 900; letter-spacing: 2px; text-shadow: 2px 2px 5px rgba(0,0,0,0.8);">TOP PERFORMER</h4>
-                            <div style="font-size: 1.5rem; color: #cbd5e1; font-weight: bold; letter-spacing: 2px;">${dStr}</div>
-                        </div>
-                    </div>
-
-                    <div style="width: 45%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 70px; padding-bottom: 80px;">
-                        <div style="display: flex; flex-direction: column; align-items: center;">
-                            <div style="font-family: 'Impact', 'Arial Black', sans-serif; font-size: 12rem; color: #ffffff; line-height: 1; transform: scaleY(1.2); letter-spacing: -2px; text-shadow: 5px 5px 15px rgba(0,0,0,0.8);">${stat1Val}</div>
-                            <div style="color: #FFCC00; font-size: 2.2rem; font-weight: 900; text-transform: uppercase; margin-top: 25px; letter-spacing: 4px; text-shadow: 2px 2px 5px rgba(0,0,0,0.9);">${stat1Lab}</div>
-                        </div>
-                        <div style="display: flex; flex-direction: column; align-items: center;">
-                            <div style="font-family: 'Impact', 'Arial Black', sans-serif; font-size: 12rem; color: #ffffff; line-height: 1; transform: scaleY(1.2); letter-spacing: -2px; text-shadow: 5px 5px 15px rgba(0,0,0,0.8);">${stat2Val}</div>
-                            <div style="color: #FFCC00; font-size: 2.2rem; font-weight: 900; text-transform: uppercase; margin-top: 25px; letter-spacing: 4px; text-shadow: 2px 2px 5px rgba(0,0,0,0.9);">${stat2Lab}</div>
-                        </div>
-                        <div style="display: flex; flex-direction: column; align-items: center;">
-                            <div style="font-family: 'Impact', 'Arial Black', sans-serif; font-size: 11rem; color: #ffffff; line-height: 1; transform: scaleY(1.2); letter-spacing: -2px; text-shadow: 5px 5px 15px rgba(0,0,0,0.8);">${stat3Val}</div>
-                            <div style="color: #FFCC00; font-size: 2.2rem; font-weight: 900; text-transform: uppercase; margin-top: 25px; letter-spacing: 4px; text-shadow: 2px 2px 5px rgba(0,0,0,0.9);">${stat3Lab}</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div style="position: absolute; bottom: 10px; right: 20px; color: #FF007F; font-size: 2.5rem; font-weight: 900; letter-spacing: 3px; font-style: italic; text-shadow: 2px 2px 0px #000, -1px -1px 0px rgba(255,255,255,0.3);">Sportzstat</div>
-            </div>
-        </div>
-    </div>
-    
-    <div style="text-align:center; color:#94a3b8; font-size:0.8rem; margin-top:10px;">💡 Click the tall photo area above to upload a vertical action shot!</div>
-    <button type="button" class="btn-action w-100 mt-15" style="background:#10b981; padding:15px; font-size:1.1rem;" onclick="downloadElementAsImage('exportCardElement', 'Sportzstat_Player_${p.name.replace(/[^a-zA-Z0-9]/g, '_')}.png', this)">📸 DOWNLOAD IMAGE</button>
-    `;
-    
-    showModal("🎨 Edit Player Card", cardHtml, () => {}, true, "450px");
-    el('modalConfirmBtn').style.display = 'none';
-    el('modalCancelBtn').style.display = ''; el('modalCancelBtn').innerText = "🔙 Back to Studio"; el('modalCancelBtn').onclick = openCardStudio;
-}
-
-function updateCardPhoto(event) {
-    let file = event.target.files[0];
-    if (file) { el('cardPhotoImg').src = URL.createObjectURL(file); }
-}
-
-function downloadElementAsImage(elementId, fileName, btn) {
-    if(typeof html2canvas === 'undefined') { alert("Error: html2canvas library is not loaded. Please ensure you added it to your index.html file."); return; }
-    let origText = btn.innerText;
-    btn.innerText = "⏳ Generating..."; btn.disabled = true;
-
-    let cardEl = el(elementId);
-    
-    let overlay = document.createElement('div');
-    overlay.style.position = 'fixed';
-    overlay.style.top = '0'; overlay.style.left = '0';
-    overlay.style.width = '100vw'; overlay.style.height = '100vh';
-    overlay.style.background = 'rgba(0,0,0,0.85)';
-    overlay.style.zIndex = '99999';
-    overlay.style.display = 'flex';
-    overlay.style.alignItems = 'center';
-    overlay.style.justifyContent = 'center';
-    overlay.innerHTML = '<div style="color:white; font-size:2rem; font-weight:bold;">📸 Capturing High-Res Image...</div>';
-    document.body.appendChild(overlay);
-
-    let clone = cardEl.cloneNode(true);
-    clone.style.transform = "none";
-    clone.style.position = "fixed";
-    clone.style.left = "0";
-    clone.style.top = "0";
-    clone.style.zIndex = "99998"; 
-    
-    let origImg = cardEl.querySelector('img');
-    let cloneImg = clone.querySelector('img');
-    if(origImg && cloneImg) { cloneImg.crossOrigin = "anonymous"; cloneImg.src = origImg.src; }
-
-    document.body.appendChild(clone);
-
-    setTimeout(() => {
-        html2canvas(clone, { scale: 1, backgroundColor: "#111", useCORS: true, allowTaint: true }).then(canvas => {
-            let link = document.createElement('a');
-            link.download = fileName;
-            link.href = canvas.toDataURL("image/png");
-            link.click();
-            
-            document.body.removeChild(clone);
-            document.body.removeChild(overlay);
-            btn.innerText = origText; btn.disabled = false;
-        }).catch(err => {
-            console.error(err); alert("Error generating image.");
-            document.body.removeChild(clone);
-            document.body.removeChild(overlay);
-            btn.innerText = origText; btn.disabled = false;
-        });
-    }, 150);
-}
-
-function showModal(title, html, cb, hideCancel = false, customWidth = "360px", confirmBtnText = "Confirm", requiresDownload = false) { 
-    el('modalHeading').innerText = title; 
-    el('modalBody').innerHTML = html; 
-    
-    let cBtn = el('modalConfirmBtn'); 
-    cBtn.style.display = ''; 
-    cBtn.onclick = cb; 
-    
-    el('modalBoxElement').style.maxWidth = customWidth; 
-    
-    let cancelBtn = el('modalCancelBtn'); 
-    cancelBtn.innerText = "Cancel"; 
-    cancelBtn.onclick = closeModal;
-    
-    if (requiresDownload) { 
-        cBtn.disabled = true; cBtn.style.opacity = '0.5'; cBtn.style.cursor = 'not-allowed'; 
-        cBtn.dataset.origText = confirmBtnText; cBtn.innerText = "🔒 Download Report First"; 
-        cancelBtn.style.display = ''; cancelBtn.innerText = "🔙 Go Back & Edit"; 
-    } else { 
-        cBtn.disabled = false; cBtn.style.opacity = '1'; cBtn.style.cursor = 'pointer'; 
-        cBtn.innerText = confirmBtnText; cancelBtn.style.display = hideCancel ? 'none' : ''; 
-    } 
-    el('dynamicModal').classList.remove('hidden'); 
-    el('dynamicModal').style.display = 'flex';
-}
-
-function closeModal() { 
-    el('dynamicModal').classList.add('hidden'); 
-    el('dynamicModal').style.display = 'none';
-    let scoringBox = el('scoringEventsBox'); 
-    if (scoringBox) { scoringBox.style.pointerEvents = 'auto'; scoringBox.style.opacity = '1'; }
 }
 
 function showMatchSummary() {
-    let autoRes = calculateResultText();
-    let isGameOver = (state.inningsNum >= state.matchSettings.maxInnings || state.matchResult !== "" || autoRes !== "");
-    let isTransition = (!isGameOver && state.inningsSummaries.length === state.inningsNum);
-    
-    let confirmBtnText = "Confirm"; let hideCancel = false; let requiresDownload = false;
-    if (isGameOver) { confirmBtnText = "🏁 End Match & Reset"; requiresDownload = true; } else if (isTransition) { confirmBtnText = "▶️ Start Next Innings"; requiresDownload = true; } else { confirmBtnText = "🔙 Continue Scoring"; hideCancel = true; }
+    try {
+        let autoRes = calculateResultText();
+        let isGameOver = (state.inningsNum >= state.matchSettings.maxInnings || state.matchResult !== "" || autoRes !== "");
+        let isTransition = (!isGameOver && state.inningsSummaries.length === state.inningsNum);
+        
+        let confirmBtnText = "Confirm"; let hideCancel = false; let requiresDownload = false;
+        if (isGameOver) { confirmBtnText = "🏁 End Match & Reset"; requiresDownload = true; } else if (isTransition) { confirmBtnText = "▶️ Start Next Innings"; requiresDownload = true; } else { confirmBtnText = "🔙 Continue Scoring"; hideCancel = true; }
 
-    let html = `<div class="custom-scroll" style="max-height: 45vh; overflow-y: auto; padding-right:10px; margin-bottom:10px;">`;
-    if (state.inningsSummaries.length === 0 && state.current.balls === 0) {
-        html += `<p class="text-center text-muted">No data available yet.</p>`;
-    } else {
-        let displayInnings = [...state.inningsSummaries];
-        if (!isGameOver && !isTransition && (state.current.balls > 0 || state.current.runs > 0)) {
-            let fF = JSON.parse(JSON.stringify(state.current.fow || [])); 
-            if(state.current.sIdx !== null && state.current.nsIdx !== null && state.current.wkts < 10) { let sBName = getBatTeam().players[state.current.sIdx] ? getBatTeam().players[state.current.sIdx].name : "Unknown"; let nsBName = getBatTeam().players[state.current.nsIdx] ? getBatTeam().players[state.current.nsIdx].name : "Unknown"; fF.push({ wktNum: "Unbroken", runs: state.current.runs, overs: formatOver(state.current.balls), outBatter: "-", partner: sBName + " & " + nsBName, pRuns: state.current.currPartnership.runs, pBalls: state.current.currPartnership.balls }); }
-            displayInnings.push({ innNum: state.inningsNum, batTeam: getBatTeam().name, bowlTeam: getBowlTeam().name, runs: state.current.runs, wkts: state.current.wkts, overs: formatOver(state.current.balls), penalties: state.current.penalties || 0, batters: getBatTeam().players, bowlers: getBowlTeam().players, fow: fF, extras: JSON.parse(JSON.stringify(state.current.extras)), isOngoing: true, allowances: state.current.allowances || 0 });
-        }
+        let html = `<div class="custom-scroll" style="max-height: 45vh; overflow-y: auto; padding-right:10px; margin-bottom:10px;">`;
+        if (state.inningsSummaries.length === 0 && (!state.current || state.current.balls === 0)) {
+            html += `<p class="text-center text-muted">No data available yet.</p>`;
+        } else {
+            let displayInnings = [...state.inningsSummaries];
+            if (!isGameOver && !isTransition && state.current && (state.current.balls > 0 || state.current.runs > 0)) {
+                let fF = JSON.parse(JSON.stringify(state.current.fow || [])); 
+                if(state.current.sIdx !== null && state.current.nsIdx !== null && state.current.wkts < 10) { 
+                    let sBName = getBatTeam().players[state.current.sIdx] ? getBatTeam().players[state.current.sIdx].name : "Unknown"; 
+                    let nsBName = getBatTeam().players[state.current.nsIdx] ? getBatTeam().players[state.current.nsIdx].name : "Unknown"; 
+                    fF.push({ wktNum: "Unbroken", runs: state.current.runs, overs: formatOver(state.current.balls), outBatter: "-", partner: sBName + " & " + nsBName, pRuns: state.current.currPartnership.runs, pBalls: state.current.currPartnership.balls }); 
+                }
+                displayInnings.push({ innNum: state.inningsNum, batTeam: getBatTeam().name, bowlTeam: getBowlTeam().name, runs: state.current.runs, wkts: state.current.wkts, overs: formatOver(state.current.balls), penalties: state.current.penalties || 0, batters: getBatTeam().players, bowlers: getBowlTeam().players, fow: fF, extras: JSON.parse(JSON.stringify(state.current.extras)), isOngoing: true, allowances: state.current.allowances || 0 });
+            }
 
-        displayInnings.reverse().forEach(inn => {
-            html += `<div style="background:rgba(0,0,0,0.3); padding:15px; margin-bottom:15px; border-top:4px solid ${inn.isOngoing ? 'var(--danger)' : 'var(--primary)'}; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3);"><div class="flex-row" style="justify-content:space-between; margin-bottom:12px;"><div><div class="${inn.isOngoing ? 'text-danger' : 'text-primary'} font-bold" style="font-size:0.75rem; letter-spacing:1px;">INNINGS ${inn.innNum} ${inn.isOngoing ? '(ONGOING)' : ''}</div><div class="font-bold" style="font-size:1.3rem; color:white;">${inn.batTeam}</div></div><div class="text-right"><div class="text-success font-bold" style="font-size:1.6rem;">${inn.runs}<span style="color:#94a3b8; font-size:1.2rem;">/${inn.wkts}</span></div><div class="text-muted" style="font-size:0.85rem;">(${inn.overs} Overs)</div></div></div>`;
-            
-            html += `<table class="scorecard-table"><thead class="bat-hdr" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border-bottom: 1px solid #64748b;"><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>`;
-            inn.batters.forEach(b => { 
-                if(b.hasBatted && b.name !== "Empty Slot") { 
-                    let isOut = b.out ? `<span style="color:#ef4444; font-size:0.65rem; display:block; margin-top:2px;">${b.dismissalInfo}</span>` : `<span style="color:#10b981; font-size:0.65rem; display:block; margin-top:2px;">Not Out</span>`; 
-                    let sr = b.b > 0 ? ((b.r/b.b)*100).toFixed(2) : "0.00"; 
-                    let nameStr = `<div style="max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${b.name}"><b style="font-size:0.85rem; color:white;">${b.name}</b>` + (b.desig==='C' || b.desig==='C/WK' ? ' <span style="color:var(--accent);">(C)</span>' : '') + (b.skill && String(b.skill).includes('WK') ? ' 🧤' : '') + `</div>`; 
-                    html += `<tr><td>${nameStr}${isOut}</td><td style="font-weight:bold; font-size:1rem; color:white;">${b.r}</td><td style="color:white;">${b.b}</td><td style="color:white;">${b.f}</td><td style="color:white;">${b.s}</td><td style="color:var(--accent);">${sr}</td></tr>`; 
-                } 
+            displayInnings.reverse().forEach(inn => {
+                html += `<div style="background:rgba(0,0,0,0.3); padding:15px; margin-bottom:15px; border-top:4px solid ${inn.isOngoing ? 'var(--danger)' : 'var(--primary)'}; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3);"><div class="flex-row" style="justify-content:space-between; margin-bottom:12px;"><div><div class="${inn.isOngoing ? 'text-danger' : 'text-primary'} font-bold" style="font-size:0.75rem; letter-spacing:1px;">INNINGS ${inn.innNum} ${inn.isOngoing ? '(ONGOING)' : ''}</div><div class="font-bold" style="font-size:1.3rem; color:white;">${inn.batTeam}</div></div><div class="text-right"><div class="text-success font-bold" style="font-size:1.6rem;">${inn.runs}<span style="color:#94a3b8; font-size:1.2rem;">/${inn.wkts}</span></div><div class="text-muted" style="font-size:0.85rem;">(${inn.overs} Overs)</div></div></div>`;
+                
+                html += `<table class="scorecard-table"><thead class="bat-hdr" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border-bottom: 1px solid #64748b;"><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>`;
+                
+                if(inn.batters) {
+                    inn.batters.forEach(b => { 
+                        if(b && b.hasBatted && b.name !== "Empty Slot") { 
+                            let isOut = b.out ? `<span style="color:#ef4444; font-size:0.65rem; display:block; margin-top:2px;">${b.dismissalInfo || 'Out'}</span>` : `<span style="color:#10b981; font-size:0.65rem; display:block; margin-top:2px;">Not Out</span>`; 
+                            let sr = (b.b && b.b > 0) ? ((b.r/b.b)*100).toFixed(2) : "0.00"; 
+                            let nameStr = `<div style="max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${b.name || ''}"><b style="font-size:0.85rem; color:white;">${b.name || 'Unknown'}</b>` + (b.desig==='C' || b.desig==='C/WK' ? ' <span style="color:var(--accent);">(C)</span>' : '') + (b.skill && String(b.skill).includes('WK') ? ' 🧤' : '') + `</div>`; 
+                            html += `<tr><td>${nameStr}${isOut}</td><td style="font-weight:bold; font-size:1rem; color:white;">${b.r || 0}</td><td style="color:white;">${b.b || 0}</td><td style="color:white;">${b.f || 0}</td><td style="color:white;">${b.s || 0}</td><td style="color:var(--accent);">${sr}</td></tr>`; 
+                        } 
+                    });
+                }
+                
+                let ex = inn.extras || {w:0, nb:0, b:0, lb:0}; let extrasTotal = (ex.w||0) + (ex.nb||0) + (ex.b||0) + (ex.lb||0); let pen = inn.penalties || 0;
+                html += `<tr style="background:rgba(255,255,255,0.05); font-weight:bold;"><td style="color:var(--accent); text-transform:uppercase;">Extras</td><td colspan="5" style="text-align:right; color:white;">${extrasTotal} <span style="font-weight:normal; font-size:0.7rem; color:white;">(W:${ex.w||0}, NB:${ex.nb||0}, B:${ex.b||0}, LB:${ex.lb||0})</span></td></tr>`;
+                if (pen > 0) html += `<tr style="background:rgba(255,255,255,0.05); font-weight:bold;"><td style="color:var(--danger); text-transform:uppercase;">Penalties</td><td colspan="5" style="text-align:right; color:white;">${pen}</td></tr>`;
+                html += `</tbody></table><table class="scorecard-table">`;
+                
+                html += `<thead class="bwl-hdr" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border-bottom: 1px solid #64748b;"><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Econ</th><th>Extras</th><th>NB</th><th>WD</th></tr></thead><tbody>`;
+                
+                if(inn.bowlers) {
+                    inn.bowlers.forEach(b => { 
+                        if(b && (b.o > 0 || b.rc > 0) && b.name !== "Empty Slot") { 
+                            let totalRuns = b.rc || 0; 
+                            let econ = (b.o && b.o > 0) ? ((totalRuns/b.o)*6).toFixed(2) : "0.00"; 
+                            let nameStr = `<div style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${b.name || ''}"><b style="color:white;">${b.name || 'Unknown'}</b></div>`; 
+                            let exStr = `${b.byes||0}b, ${b.legbyes||0}lb`; 
+                            let nb = b.nb || 0; let wd = b.wd || 0; 
+                            html += `<tr><td>${nameStr}</td><td style="color:white;">${formatOver(b.o||0)}</td><td style="color:white;">${b.m||0}</td><td style="color:white;">${totalRuns}</td><td style="font-weight:bold; font-size:1rem; color:var(--danger);">${b.w||0}</td><td style="color:var(--accent);">${econ}</td><td style="font-size:0.75rem; color:white;">${exStr}</td><td style="color:white;">${nb}</td><td style="color:white;">${wd}</td></tr>`; 
+                        } 
+                    });
+                }
+                
+                html += `</tbody></table>`;
+                if(inn.fow && inn.fow.length > 0) { 
+                    let fowStr = inn.fow.map(f => `<b style="color:white;">${f.runs || 0}/${f.wktNum==='Unbroken'?'*':f.wktNum}</b> <span style="font-size:0.65rem; color:white;">(${f.outBatter || ''}, ${f.overs || '0.0'} ov)</span>`).join(', '); 
+                    html += `<div style="font-size:0.75rem; color:#94a3b8; background:rgba(0,0,0,0.3); padding:8px; border-radius:6px; border-left:3px solid var(--accent);"><b style="color:white;">Fall of Wickets:</b><br><div style="margin-top:4px; line-height:1.4;">${fowStr}</div></div>`; 
+                }
+                html += `</div>`;
             });
-            let ex = inn.extras || {w:0, nb:0, b:0, lb:0}; let extrasTotal = ex.w + ex.nb + ex.b + ex.lb; let pen = inn.penalties || 0;
-            html += `<tr style="background:rgba(255,255,255,0.05); font-weight:bold;"><td style="color:var(--accent); text-transform:uppercase;">Extras</td><td colspan="5" style="text-align:right; color:white;">${extrasTotal} <span style="font-weight:normal; font-size:0.7rem; color:white;">(W:${ex.w}, NB:${ex.nb}, B:${ex.b}, LB:${ex.lb})</span></td></tr>`;
-            if (pen > 0) html += `<tr style="background:rgba(255,255,255,0.05); font-weight:bold;"><td style="color:var(--danger); text-transform:uppercase;">Penalties</td><td colspan="5" style="text-align:right; color:white;">${pen}</td></tr>`;
-            html += `</tbody></table><table class="scorecard-table">`;
-            
-            html += `<thead class="bwl-hdr" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border-bottom: 1px solid #64748b;"><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Econ</th><th>Extras</th><th>NB</th><th>WD</th></tr></thead><tbody>`;
-            
-            inn.bowlers.forEach(b => { if(b.o > 0 || b.rc > 0) { let totalRuns = b.rc || 0; let econ = b.o > 0 ? ((totalRuns/b.o)*6).toFixed(2) : "0.00"; let nameStr = `<div style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${b.name}"><b style="color:white;">${b.name}</b></div>`; let exStr = `${b.byes||0}b, ${b.legbyes||0}lb`; let nb = b.nb || 0; let wd = b.wd || 0; html += `<tr><td>${nameStr}</td><td style="color:white;">${formatOver(b.o)}</td><td style="color:white;">${b.m}</td><td style="color:white;">${totalRuns}</td><td style="font-weight:bold; font-size:1rem; color:var(--danger);">${b.w}</td><td style="color:var(--accent);">${econ}</td><td style="font-size:0.75rem; color:white;">${exStr}</td><td style="color:white;">${nb}</td><td style="color:white;">${wd}</td></tr>`; } });
-            html += `</tbody></table>`;
-            if(inn.fow && inn.fow.length > 0) { let fowStr = inn.fow.map(f => `<b style="color:white;">${f.runs}/${f.wktNum==='Unbroken'?'*':f.wktNum}</b> <span style="font-size:0.65rem; color:white;">(${f.outBatter}, ${f.overs} ov)</span>`).join(', '); html += `<div style="font-size:0.75rem; color:#94a3b8; background:rgba(0,0,0,0.3); padding:8px; border-radius:6px; border-left:3px solid var(--accent);"><b style="color:white;">Fall of Wickets:</b><br><div style="margin-top:4px; line-height:1.4;">${fowStr}</div></div>`; }
-            html += `</div>`;
-        });
+        }
+        
+        let currentAllowances = (state.current && state.current.allowances) ? state.current.allowances : 0; 
+        if (state.inningsSummaries.length > 0 && state.inningsNum === state.inningsSummaries.length) { 
+            currentAllowances = state.inningsSummaries[state.inningsSummaries.length - 1].allowances || 0; 
+        }
+        html += `</div><div style="border-top:1px solid var(--border); padding-top:10px;"><label class="text-accent">Official Match Result / Status</label><input type="text" id="finalMatchResult" class="modal-input w-100" value="${state.matchResult || autoRes}" placeholder="e.g., Match Awarded, Follow-on, etc."><label class="text-accent mt-5">Allowances for Inning (Mins)</label><input type="number" id="inningAllowancesInput" class="modal-input w-100" placeholder="e.g. 15" value="${currentAllowances}">`;
+        
+        html += `<div class="flex-row gap-10 mt-10 mb-10">
+                    <button type="button" onclick="downloadSummaryExcel(); enableSummaryConfirm();" class="btn-action w-100" style="background:#0284c7; padding:12px; font-size:1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">📥 EXCEL</button>
+                    <button type="button" onclick="downloadSummaryPDF(); enableSummaryConfirm();" class="btn-action w-100" style="background:#be123c; padding:12px; font-size:1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">🖨️ PDF / PRINT</button>
+                 </div>
+                 </div>`;
+                 
+        showModal(isGameOver ? "🏁 MATCH COMPLETE" : (isTransition ? `🛑 END OF INNINGS ${state.inningsNum}` : "📋 DETAILED MATCH SCORECARD"), html, () => { 
+            state.matchResult = el('finalMatchResult') ? el('finalMatchResult').value : autoRes; 
+            if(el('inningAllowancesInput')) { let val = parseInt(el('inningAllowancesInput').value) || 0; state.current.allowances = val; if (state.inningsSummaries.length > 0 && state.inningsNum === state.inningsSummaries.length) { state.inningsSummaries[state.inningsSummaries.length - 1].allowances = val; } }
+            closeModal(); 
+            setTimeout(() => { if (isGameOver) { logCareerStats(); setTimeout(() => { resetMatch(); }, 1000); } else if (isTransition) { openTransitionManager(); } }, 300);
+        }, hideCancel, "700px", confirmBtnText, requiresDownload);
+        
+        if (el('modalCancelBtn')) el('modalCancelBtn').innerText = "🔙 Go Back & Edit";
+
+    } catch(err) {
+        console.error("Show Match Summary Error:", err);
+        alert("A critical error occurred while generating the scorecard. Please check the developer console (F12).");
     }
-    
-    let currentAllowances = state.current.allowances || 0; if (state.inningsSummaries.length > 0 && state.inningsNum === state.inningsSummaries.length) { currentAllowances = state.inningsSummaries[state.inningsSummaries.length - 1].allowances || 0; }
-    html += `</div><div style="border-top:1px solid var(--border); padding-top:10px;"><label class="text-accent">Official Match Result / Status</label><input type="text" id="finalMatchResult" class="modal-input w-100" value="${state.matchResult || autoRes}" placeholder="e.g., Match Awarded, Follow-on, etc."><label class="text-accent mt-5">Allowances for Inning (Mins)</label><input type="number" id="inningAllowancesInput" class="modal-input w-100" placeholder="e.g. 15" value="${currentAllowances}">`;
-    
-    html += `<div class="flex-row gap-10 mt-10 mb-10">
-                <button type="button" onclick="downloadSummaryExcel(); enableSummaryConfirm();" class="btn-action w-100" style="background:#0284c7; padding:12px; font-size:1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">📥 EXCEL</button>
-                <button type="button" onclick="downloadSummaryPDF(); enableSummaryConfirm();" class="btn-action w-100" style="background:#be123c; padding:12px; font-size:1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">🖨️ PDF / PRINT</button>
-             </div>
-             </div>`;
-             
-    showModal(isGameOver ? "🏁 MATCH COMPLETE" : (isTransition ? `🛑 END OF INNINGS ${state.inningsNum}` : "📋 DETAILED MATCH SCORECARD"), html, () => { 
-        state.matchResult = el('finalMatchResult') ? el('finalMatchResult').value : autoRes; 
-        if(el('inningAllowancesInput')) { let val = parseInt(el('inningAllowancesInput').value) || 0; state.current.allowances = val; if (state.inningsSummaries.length > 0 && state.inningsNum === state.inningsSummaries.length) { state.inningsSummaries[state.inningsSummaries.length - 1].allowances = val; } }
-        closeModal(); 
-        setTimeout(() => { if (isGameOver) { logCareerStats(); setTimeout(() => { resetMatch(); }, 1000); } else if (isTransition) { openTransitionManager(); } }, 300);
-    }, hideCancel, "700px", confirmBtnText, requiresDownload);
-    el('modalCancelBtn').innerText = "🔙 Go Back & Edit";
 }
 
 function openTransitionManager() {
