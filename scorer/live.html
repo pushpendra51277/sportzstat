@@ -13,7 +13,8 @@
 <datalist id="savedTeamsList"></datalist>
 
 <div class="container">
-    <!-- CLOUD GATEWAY: Session 1 -->
+    
+    <!-- CLOUD GATEWAY: Session 1 (Replaces Offline Setup) -->
     <div id="setupView" class="setup-screen">
         <h1 class="text-center text-primary mb-10">Match Day Gateway</h1>
         <p class="text-center text-muted mb-30" style="font-size:0.9rem;">Authenticate to load official tournament data from the Master Database.</p>
@@ -22,14 +23,14 @@
         <div id="gatewayAuthBox" style="max-width: 500px; margin: 0 auto; background: #1e293b; padding: 25px; border-radius: 12px; border: 1px solid #334155;">
             <div class="input-group">
                 <label>Match ID</label>
-                <input type="text" id="syncMatchId" placeholder="e.g. M-XYZ" style="font-weight: bold; letter-spacing: 1px;">
+                <input type="text" id="cloudMatchId" placeholder="e.g. M-XYZ" style="font-weight: bold; letter-spacing: 1px;">
             </div>
             <div class="input-group">
                 <label>Scorer PIN</label>
-                <input type="password" id="syncScorerPin" placeholder="4-Digit PIN" style="font-weight: bold; letter-spacing: 2px;">
+                <input type="password" id="cloudMatchPin" placeholder="4-Digit PIN" style="font-weight: bold; letter-spacing: 2px;">
             </div>
-            <button type="button" onclick="authenticateCloudMatch()" class="btn-action w-100" style="background: #10b981; padding: 15px; font-size: 1.1rem;">Secure Login & Sync</button>
-            <div id="authStatus" style="margin-top: 15px; text-align: center; font-size: 0.9rem; font-weight: bold;"></div>
+            <button type="button" onclick="authenticateCloudMatch()" class="btn-action w-100" style="background: #10b981; padding: 15px; font-size: 1.1rem; color: white;">Secure Login & Sync</button>
+            <div id="cloudSyncStatus" style="margin-top: 15px; text-align: center; font-size: 0.9rem; font-weight: bold;"></div>
         </div>
 
         <!-- STEP 2: SQUAD SELECTION & TOSS (Hidden until Auth) -->
@@ -79,11 +80,15 @@
                 </div>
             </div>
 
-            <button type="button" onclick="initializeCloudEngine()" class="btn-launch mt-20" style="font-size: 1.2rem; padding: 18px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">🚀 LOCK SQUADS & CALL 'PLAY'</button>
+            <button type="button" onclick="initializeCloudEngine()" class="btn-action w-100 mt-20" style="background: #10b981; color: white; font-size: 1.2rem; padding: 18px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">🚀 LOCK SQUADS & CALL 'PLAY'</button>
+            
+            <div class="flex-row gap-10 mt-10">
+                <button type="button" onclick="hardResetSystem()" class="btn-action w-100" style="background:#b91c1c; padding:12px;">⚠️ Emergency Clear Match</button>
+                <button type="button" onclick="openManualEntryView()" class="btn-action w-100" style="background:#4f46e5; padding:12px;">📝 LOG PAST MATCH (MANUAL DATA ENTRY)</button>
+            </div>
         </div>
     </div>
 
-    <!-- PRESERVED MANUAL ENTRY VIEW -->
     <div id="manualEntryView" class="setup-screen hidden">
         <h1 class="text-center text-primary mb-10">Manual Data Entry Sync</h1>
         <p class="text-center text-muted mb-20" style="font-size:0.85rem;">Use this portal to enter stats for historical matches not scored live on the app. Data will sync directly to your Google Sheet.</p>
@@ -122,7 +127,6 @@
         <div id="meNoGridsBtn" class="mt-20"><button type="button" class="btn-action" style="background:#334155; width:200px;" onclick="closeManualEntryView()">🔙 Back to Setup</button></div>
     </div>
     
-    <!-- PRESERVED LIVE SCORING ENGINE -->
     <div id="scoringView" class="scoring-screen hidden">
         <aside>
             <h3 id="dispBatTeamName" class="text-accent mt-0" style="text-transform: uppercase;">BATTING TEAM</h3>
