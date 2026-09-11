@@ -36,7 +36,7 @@
         <!-- STEP 2: SQUAD SELECTION & TOSS (Hidden until Auth) -->
         <div id="gatewaySetupBox" class="hidden" style="margin-top: 30px;">
             
-            <!-- NEW: Match Metadata & Officials (Prevents JS Crash & Auto-loads) -->
+            <!-- UNLOCKED: Match Metadata & Officials (Editable by Scorer) -->
             <div style="background: #1e293b; border: 1px solid #334155; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 15px;">
                     <h3 style="margin: 0; color: #38bdf8; font-size: 1.2rem;" id="gwTournamentName">Tournament Name</h3>
@@ -45,14 +45,14 @@
                 
                 <h4 style="margin: 0 0 10px 0; color: #8b5cf6; font-size: 0.9rem; text-transform: uppercase;">Match Officials & Venue</h4>
                 <div class="admin-grid" style="grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                    <div class="input-group" style="margin-bottom:0;"><label>Venue</label><input type="text" id="setupVenue" readonly style="background:#0f172a; opacity:0.8; border-color:#475569; font-weight:bold; color:var(--primary);"></div>
-                    <div class="input-group" style="margin-bottom:0;"><label>Umpire 1</label><input type="text" id="u1" readonly style="background:#0f172a; opacity:0.8; border-color:#475569;"></div>
-                    <div class="input-group" style="margin-bottom:0;"><label>Umpire 2</label><input type="text" id="u2" readonly style="background:#0f172a; opacity:0.8; border-color:#475569;"></div>
-                    <div class="input-group" style="margin-bottom:0;"><label>TV Umpire</label><input type="text" id="tvUmpire" readonly style="background:#0f172a; opacity:0.8; border-color:#475569;"></div>
-                    <div class="input-group" style="margin-bottom:0;"><label>Referee</label><input type="text" id="setupObsRef" readonly style="background:#0f172a; opacity:0.8; border-color:#475569;"></div>
-                    <div class="input-group" style="margin-bottom:0;"><label>Scorer</label><input type="text" id="s1" readonly style="background:#0f172a; opacity:0.8; border-color:#475569;"></div>
+                    <div class="input-group" style="margin-bottom:0;"><label>Venue</label><input type="text" id="setupVenue" style="background:#0f172a; border-color:#475569; font-weight:bold; color:var(--primary);"></div>
+                    <div class="input-group" style="margin-bottom:0;"><label>Umpire 1</label><input type="text" id="u1" style="background:#0f172a; border-color:#475569;"></div>
+                    <div class="input-group" style="margin-bottom:0;"><label>Umpire 2</label><input type="text" id="u2" style="background:#0f172a; border-color:#475569;"></div>
+                    <div class="input-group" style="margin-bottom:0;"><label>TV Umpire</label><input type="text" id="tvUmpire" style="background:#0f172a; border-color:#475569;"></div>
+                    <div class="input-group" style="margin-bottom:0;"><label>Referee</label><input type="text" id="setupObsRef" style="background:#0f172a; border-color:#475569;"></div>
+                    <div class="input-group" style="margin-bottom:0;"><label>Scorer</label><input type="text" id="s1" style="background:#0f172a; border-color:#475569;"></div>
                     
-                    <!-- Hidden safety inputs to prevent legacy PDF/UI crashes -->
+                    <!-- Hidden safety inputs -->
                     <input type="hidden" id="setupDate" value="">
                     <input type="hidden" id="s2" value="">
                     <input type="hidden" id="u4" value="">
