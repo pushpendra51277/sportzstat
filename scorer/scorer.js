@@ -57,9 +57,7 @@ window.onload = function() {
                 let parsedState = JSON.parse(savedMatch); parsedState.current.lastOverBowlers = new Set(parsedState.current.lastOverBowlers); parsedState.current.bowlersInCurrentOver = new Set(parsedState.current.bowlersInCurrentOver); state = parsedState;
                 el('setupView').classList.add('hidden'); el('scoringView').classList.remove('hidden'); el('displayTournament').innerText = state.matchSettings.tournament || "MATCH IN PROGRESS"; 
                 if (state.matchSettings.matchType === 'multiday') { el('breakBtn').classList.remove('hidden'); }
-                
                 if(!el('setupVenue').value) { el('setupVenue').value = "Official Ground"; }
-                
                 updateUI(); closeModal();
             } catch(e) { console.error("Corrupted local state.", e); hardResetSystem(); }
         }, false, "360px", "Resume");
@@ -105,7 +103,7 @@ async function authenticateCloudMatch() {
     document.getElementById('gwTeamAName').innerText = state.teams.A.name;
     document.getElementById('gwTeamBName').innerText = state.teams.B.name;
     
-    // Auto-fill and UNLOCK the Officials and Venue fields!
+    // Auto-fill UNLOCKED Officials & Venue
     el('setupTournament').value = state.matchSettings.tournament;
     el('setupMatchId').value = matchId;
     el('setupVenue').value = mData.venue || "Official Ground";
@@ -130,6 +128,9 @@ async function authenticateCloudMatch() {
     await fetchCloudRosters('A', state.teams.A.name);
     await fetchCloudRosters('B', state.teams.B.name);
 
+    // Populate Opening Dropdowns
+    refreshOpeningDropdowns();
+
     document.getElementById('gatewayAuthBox').classList.add('hidden');
     document.getElementById('gatewaySetupBox').classList.remove('hidden');
 }
@@ -152,7 +153,7 @@ async function fetchCloudRosters(teamKey, teamName) {
             let isChecked = idx < 11 ? "checked" : "";
             html += `
             <label style="display: flex; align-items: center; background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155; cursor: pointer;">
-                <input type="checkbox" class="roster-chk-${teamKey}" value="${row.player_id}" ${isChecked} style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer;">
+                <input type="checkbox" class="roster-chk-${teamKey}" value="${row.player_id}" ${isChecked} onchange="refreshOpeningDropdowns()" style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer;">
                 <div>
                     <div style="color: white; font-weight: bold;">${row.players.full_name}</div>
                     <div style="color: #94a3b8; font-size: 0.7rem;">${row.players.playing_role || 'Player'}</div>
@@ -163,6 +164,51 @@ async function fetchCloudRosters(teamKey, teamName) {
     listEl.innerHTML = html;
 }
 
+// ==========================================
+// DYNAMIC OPENING PLAYERS POPULATOR
+// ==========================================
+function refreshOpeningDropdowns() {
+    let win = document.getElementById('gwTossWinner').value || 'A';
+    let dec = document.getElementById('gwTossDecision').value || 'bat';
+    let batKey = ((win === 'A' && dec === 'bat') || (win === 'B' && dec === 'bowl')) ? 'A' : 'B';
+    let bowlKey = (batKey === 'A') ? 'B' : 'A';
+
+    let batChecked = Array.from(document.querySelectorAll(`.roster-chk-${batKey}:checked`)).map(cb => {
+        let p = cloudRosters[batKey].find(item => item.id === cb.value);
+        return p ? { id: p.id, name: p.name } : null;
+    }).filter(Boolean);
+
+    let bowlChecked = Array.from(document.querySelectorAll(`.roster-chk-${bowlKey}:checked`)).map(cb => {
+        let p = cloudRosters[bowlKey].find(item => item.id === cb.value);
+        return p ? { id: p.id, name: p.name } : null;
+    }).filter(Boolean);
+
+    const sEl = document.getElementById('gwStriker');
+    const nsEl = document.getElementById('gwNonStriker');
+    const bEl = document.getElementById('gwBowler');
+
+    let curS = sEl.value;
+    let curNS = nsEl.value;
+    let curB = bEl.value;
+
+    if (batChecked.length > 0) {
+        sEl.innerHTML = batChecked.map((p, idx) => `<option value="${p.id}" ${p.id === curS || (!curS && idx===0)?'selected':''}>${p.name}</option>`).join('');
+        nsEl.innerHTML = batChecked.map((p, idx) => `<option value="${p.id}" ${p.id === curNS || (!curNS && idx===1)?'selected':''}>${p.name}</option>`).join('');
+    } else {
+        sEl.innerHTML = '<option value="">No Batters Selected</option>';
+        nsEl.innerHTML = '<option value="">No Batters Selected</option>';
+    }
+
+    if (bowlChecked.length > 0) {
+        bEl.innerHTML = bowlChecked.map((p, idx) => `<option value="${p.id}" ${p.id === curB || (!curB && idx===0)?'selected':''}>${p.name}</option>`).join('');
+    } else {
+        bEl.innerHTML = '<option value="">No Bowlers Selected</option>';
+    }
+}
+
+// ==========================================
+// INITIALIZE & LAUNCH ENGINE
+// ==========================================
 function initializeCloudEngine() {
     const matchType = document.getElementById('gwMatchType').value;
     
@@ -175,6 +221,19 @@ function initializeCloudEngine() {
         alert("CRITICAL ERROR: Select at least 2 players per team."); return;
     }
 
+    let sUUID = document.getElementById('gwStriker').value;
+    let nsUUID = document.getElementById('gwNonStriker').value;
+    let bUUID = document.getElementById('gwBowler').value;
+
+    if(!sUUID || !nsUUID || !bUUID) {
+        alert("Please select the Opening Striker, Non-Striker, and Bowler from the dropdowns.");
+        return;
+    }
+    if(sUUID === nsUUID) {
+        alert("Striker and Non-Striker must be different players!");
+        return;
+    }
+
     ['A', 'B'].forEach(teamKey => {
         let selectedUUIDs = teamKey === 'A' ? selectedA : selectedB;
         let fullCloudRoster = cloudRosters[teamKey];
@@ -185,8 +244,9 @@ function initializeCloudEngine() {
             let pData = fullCloudRoster.find(p => p.id === uuid);
             if(pData) {
                 state.teams[teamKey].players.push({ 
-                    regNo: uuid, // Storing UUID securely
-                    name: pData.name, skill: pData.role || "",
+                    regNo: uuid,
+                    name: pData.name, 
+                    skill: pData.role || "",
                     desig: "", r:0, b:0, f:0, s:0, out:false, outOnDuck:0, hasBatted: false, 
                     dismissalInfo: "", o:0, rc:0, w:0, m:0, ex:0, wd:0, nb:0, byes:0, legbyes:0, 
                     cw:0, catches:0, stumpings:0, runouts:0, quotaOvers: 0, inTime: null, outTime: null, 
@@ -208,6 +268,30 @@ function initializeCloudEngine() {
     state.battingKey = ((win === 'A' && dec === 'bat') || (win === 'B' && dec === 'bowl')) ? 'A' : 'B'; 
     state.bowlingKey = state.battingKey === 'A' ? 'B' : 'A';
 
+    // Link Opener Indexes
+    let sIdx = state.teams[state.battingKey].players.findIndex(p => p.regNo === sUUID);
+    let nsIdx = state.teams[state.battingKey].players.findIndex(p => p.regNo === nsUUID);
+    let bIdx = state.teams[state.bowlingKey].players.findIndex(p => p.regNo === bUUID);
+
+    if(sIdx === -1 || nsIdx === -1 || bIdx === -1) {
+        alert("Error mapping opening players. Verify they are checked in the Playing XI.");
+        return;
+    }
+
+    saveState();
+    state.current.sIdx = sIdx;
+    state.current.nsIdx = nsIdx;
+    state.current.bIdx = bIdx;
+
+    let nowTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    state.teams[state.battingKey].players[sIdx].hasBatted = true;
+    state.teams[state.battingKey].players[sIdx].inTime = nowTime;
+    state.teams[state.battingKey].players[nsIdx].hasBatted = true;
+    state.teams[state.battingKey].players[nsIdx].inTime = nowTime;
+    state.current.bowlersInCurrentOver.add(bIdx);
+    state.current.currPartnership = { runs: 0, balls: 0 };
+    state.current.inningsStartTime = nowTime;
+
     state.matchSettings.matchType = matchType;
     if(matchType === 't20') { state.matchSettings.maxOvers = 20; state.matchSettings.bowlerQuota = 4; state.matchSettings.maxInnings = 2; } 
     else if(matchType === 'oneday') { state.matchSettings.maxOvers = 50; state.matchSettings.bowlerQuota = 10; state.matchSettings.maxInnings = 2; } 
@@ -221,9 +305,6 @@ function initializeCloudEngine() {
     document.getElementById('scoringView').classList.remove('hidden'); 
     
     updateUI(); 
-    
-    // Explicitly call the bulletproof modal loader
-    setTimeout(() => { openMatchStartModal(); }, 200);
 }
 
 
@@ -679,65 +760,40 @@ function generateReportHTML(isExcel) {
 }
 
 // ==========================================
-// BULLETPROOF START MODAL
+// MODALS AND UI LOCKS
 // ==========================================
-function openMatchStartModal() {
-    let bI = []; 
-    getBatTeam().players.forEach((p, i) => { if(p.isPlayingXI && p.name !== "Empty Slot") bI.push(i); });
+function showModal(title, html, cb, hideCancel = false, customWidth = "360px", confirmBtnText = "Confirm", requiresDownload = false) { 
+    el('modalHeading').innerText = title; 
+    el('modalBody').innerHTML = html; 
     
-    if (bI.length < 2) { 
-        alert("CRITICAL: You must have at least 2 batters checked in the Playing XI."); 
-        return; 
-    }
-
-    let sO = getBatTeam().players.map((p, i) => (p.isPlayingXI && p.name !== "Empty Slot") ? `<option value="${i}" ${i===bI[0]?'selected':''}>${p.name}</option>` : '').join('');
-    let nsO = getBatTeam().players.map((p, i) => (p.isPlayingXI && p.name !== "Empty Slot") ? `<option value="${i}" ${i===bI[1]?'selected':''}>${p.name}</option>` : '').join('');
-    let bowlOpts = getBowlTeam().players.map((p, i) => (p.isPlayingXI && p.name !== "Empty Slot") ? `<option value="${i}">${p.name}</option>` : '').join('');
+    let cBtn = el('modalConfirmBtn'); 
+    cBtn.style.display = ''; 
+    cBtn.onclick = cb; 
     
-    let html = `
-    <div style="display: flex; gap: 15px; margin-top: 15px;">
-        <div style="flex: 1; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
-            <label class="text-success mb-5" style="display:block; font-weight:bold;">🏏 STRIKER</label>
-            <select id="sStr" class="modal-input w-100">${sO}</select>
-        </div>
-        <div style="flex: 1; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
-            <label class="text-success mb-5" style="display:block; font-weight:bold;">🏃 NON-STRIKER</label>
-            <select id="sNStr" class="modal-input w-100">${nsO}</select>
-        </div>
-        <div style="flex: 1; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid #ef4444;">
-            <label class="text-danger mb-5" style="display:block; font-weight:bold;">⚾ BOWLER</label>
-            <select id="sBwl" class="modal-input w-100">${bowlOpts}</select>
-        </div>
-    </div>
-    <div id="startError" class="text-danger font-bold text-center mt-15"></div>`;
+    el('modalBoxElement').style.maxWidth = customWidth; 
     
-    showModal(`INNINGS ${state.inningsNum} SETUP`, html, () => { 
-        let s1 = parseInt(el('sStr').value), s2 = parseInt(el('sNStr').value), b1 = parseInt(el('sBwl').value); 
-        
-        if (isNaN(s1) || isNaN(s2) || isNaN(b1)) {
-            el('startError').innerText = "🚨 Error: Invalid player selection."; return;
-        }
-        if (s1 === s2) { 
-            el('startError').innerText = "🚨 Striker and Non-Striker must be different players!"; return; 
-        } 
-        
-        try {
-            saveState(); 
-            state.current.sIdx = s1; 
-            state.current.nsIdx = s2; 
-            state.current.bIdx = b1; 
-            
-            getBatTeam().players[s1].hasBatted = true; 
-            getBatTeam().players[s2].hasBatted = true; 
-            state.current.bowlersInCurrentOver.add(b1); 
-            state.current.currPartnership = { runs: 0, balls: 0 }; 
-            state.current.inningsStartTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); 
-            
-            closeModal(); 
-            updateUI(); 
-        } catch(e) {
-            console.error("Match Start Error:", e);
-            alert("Fatal Error starting match. Please check console.");
-        }
-    }, false, "800px", "Start Innings"); 
+    let cancelBtn = el('modalCancelBtn'); 
+    cancelBtn.innerText = "Cancel"; 
+    cancelBtn.onclick = closeModal; 
+    
+    if (requiresDownload) { 
+        cBtn.disabled = true; cBtn.style.opacity = '0.5'; cBtn.style.cursor = 'not-allowed'; 
+        cBtn.dataset.origText = confirmBtnText; cBtn.innerText = "🔒 Download Report First"; 
+        cancelBtn.style.display = ''; cancelBtn.innerText = "🔙 Go Back & Edit"; 
+    } else { 
+        cBtn.disabled = false; cBtn.style.opacity = '1'; cBtn.style.cursor = 'pointer'; 
+        cBtn.innerText = confirmBtnText; cancelBtn.style.display = hideCancel ? 'none' : ''; 
+    } 
+    el('dynamicModal').classList.remove('hidden'); 
+    el('dynamicModal').style.display = 'flex';
 }
+
+function closeModal() { 
+    el('dynamicModal').classList.add('hidden'); 
+    el('dynamicModal').style.display = 'none';
+    let scoringBox = el('scoringEventsBox'); 
+    if (scoringBox) { scoringBox.style.pointerEvents = 'auto'; scoringBox.style.opacity = '1'; }
+}
+
+function manualRotateUI() { saveState(); manualRotate(); }
+function manualRotate() { [state.current.sIdx, state.current.nsIdx] = [state.current.nsIdx, state.current.sIdx]; updateUI(); }
