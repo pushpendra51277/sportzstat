@@ -14,7 +14,7 @@
 
 <div class="container">
     
-    <!-- CLOUD GATEWAY: Replaces Offline Setup -->
+    <!-- CLOUD GATEWAY -->
     <div id="setupView" class="setup-screen">
         <h1 class="text-center text-primary mb-10">Match Day Gateway</h1>
         <p class="text-center text-muted mb-30" style="font-size:0.9rem;">Authenticate to load official tournament data from the Master Database.</p>
@@ -43,7 +43,7 @@
                     <div id="gwMatchId" style="color: #94a3b8; font-size: 0.85rem; font-weight: bold;">ID: ---</div>
                 </div>
                 
-                <h4 style="margin: 0 0 10px 0; color: #8b5cf6; font-size: 0.9rem; text-transform: uppercase;">Match Officials & Venue</h4>
+                <h4 style="margin: 0 0 10px 0; color: #8b5cf6; font-size: 0.9rem; text-transform: uppercase;">Match Officials & Venue (Editable)</h4>
                 <div class="admin-grid" style="grid-template-columns: repeat(3, 1fr); gap: 10px;">
                     <div class="input-group" style="margin-bottom:0;"><label>Venue / Ground</label><input type="text" id="setupVenue" style="background:#0f172a; border-color:#475569; font-weight:bold; color:var(--primary);"></div>
                     <div class="input-group" style="margin-bottom:0;"><label>Umpire 1</label><input type="text" id="u1" style="background:#0f172a; border-color:#475569;"></div>
@@ -107,7 +107,7 @@
                 <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 0;">Select who takes strike, non-striker, and who bowls the first over.</p>
                 <div class="admin-grid" style="grid-template-columns: repeat(3, 1fr); gap: 15px;">
                     <div class="input-group" style="margin-bottom:0;">
-                        <label style="color:#10b981; font-weight:bold;">🏏 Opening Striker</label>
+                        <label style="color:#10b981; font-weight:bold;">🏏 Opening Striker (Batting)</label>
                         <select id="gwStriker" style="width:100%; padding:10px; background:#0f172a; color:white; border:1px solid #475569; border-radius:6px; font-weight:bold;"></select>
                     </div>
                     <div class="input-group" style="margin-bottom:0;">
@@ -115,7 +115,7 @@
                         <select id="gwNonStriker" style="width:100%; padding:10px; background:#0f172a; color:white; border:1px solid #475569; border-radius:6px; font-weight:bold;"></select>
                     </div>
                     <div class="input-group" style="margin-bottom:0;">
-                        <label style="color:#ef4444; font-weight:bold;">⚾ Opening Bowler</label>
+                        <label style="color:#ef4444; font-weight:bold;">⚾ Opening Bowler (Bowling)</label>
                         <select id="gwBowler" style="width:100%; padding:10px; background:#0f172a; color:white; border:1px solid #ef4444; border-radius:6px; font-weight:bold;"></select>
                     </div>
                 </div>
@@ -125,12 +125,12 @@
             
             <div class="flex-row gap-10 mt-10">
                 <button type="button" onclick="hardResetSystem()" class="btn-action w-100" style="background:#b91c1c; padding:12px;">⚠️ Emergency Clear Match</button>
-                <button type="button" onclick="openManualEntryView()" class="btn-action w-100" style="background:#4f46e5; padding:12px;">📝 LOG PAST MATCH</button>
+                <button type="button" onclick="openManualEntryView()" class="btn-action w-100" style="background:#4f46e5; padding:12px;">📝 LOG PAST MATCH (MANUAL DATA ENTRY)</button>
             </div>
         </div>
     </div>
 
-    <!-- MANUAL ENTRY VIEW -->
+    <!-- PRESERVED MANUAL ENTRY VIEW -->
     <div id="manualEntryView" class="setup-screen hidden">
         <h1 class="text-center text-primary mb-10">Manual Data Entry Sync</h1>
         <p class="text-center text-muted mb-20" style="font-size:0.85rem;">Use this portal to enter stats for historical matches not scored live on the app. Data will sync directly to your Google Sheet.</p>
@@ -169,7 +169,7 @@
         <div id="meNoGridsBtn" class="mt-20"><button type="button" class="btn-action" style="background:#334155; width:200px;" onclick="closeManualEntryView()">🔙 Back to Setup</button></div>
     </div>
     
-    <!-- LIVE SCORING ENGINE -->
+    <!-- PRESERVED LIVE SCORING ENGINE -->
     <div id="scoringView" class="scoring-screen hidden">
         <aside>
             <h3 id="dispBatTeamName" class="text-accent mt-0" style="text-transform: uppercase;">BATTING TEAM</h3>
