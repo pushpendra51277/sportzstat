@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sportzstat - Admin Panel</title>
     <link rel="stylesheet" href="../style.css">
+    <!-- Supabase Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         .admin-section { background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 25px; }
@@ -25,14 +26,13 @@
 <div style="max-width: 1000px; margin: 0 auto;">
     <h1 style="text-align: center; color: white; letter-spacing: 2px; margin-bottom: 5px;">SPORTZSTAT <span style="color: #38bdf8;">CLOUD ADMIN</span></h1>
     
-    <!-- LIVE STATUS BOARD (Replaces all popups) -->
+    <!-- LIVE STATUS BOARD -->
     <div id="sysLog" style="background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; border: 2px solid #3b82f6; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
         ⏳ Booting System...
     </div>
 
     <!-- DATABASE CREATION TOOLS -->
     <div class="grid-2">
-        <!-- Create Tournament -->
         <div class="admin-section">
             <h3 class="admin-header">🏆 Create New Tournament</h3>
             <label>Tournament Name</label>
@@ -46,7 +46,6 @@
             <button type="button" class="btn-orange" onclick="createTournament()">Save Tournament</button>
         </div>
 
-        <!-- Create Team -->
         <div class="admin-section">
             <h3 class="admin-header" style="color: #10b981;">🛡️ Create New Team</h3>
             <label>Team Name</label>
@@ -60,7 +59,6 @@
     <div class="admin-section">
         <h2 class="admin-header" style="color: #f8fafc; font-size: 1.5rem; text-align: center;">🏏 Generate Match & Lock Squads</h2>
         
-        <!-- STEP 1: Select Event -->
         <div style="background: #1e293b; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #475569;">
             <h3 style="margin-top: 0; color: #38bdf8;">1. Select Event & Teams</h3>
             <div class="grid-3">
@@ -80,11 +78,9 @@
             <button type="button" class="btn-blue" style="margin-top: 20px;" onclick="loadRosters()">Fetch Master Rosters</button>
         </div>
 
-        <!-- STEP 2: Map Squads -->
         <div id="rosterSelectionBox" class="hidden" style="background: #1e293b; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #475569;">
             <h3 style="margin-top: 0; color: #f59e0b;">2. Map Tournament Squads</h3>
             <p style="font-size: 0.85rem; color: #94a3b8; margin-top:0; margin-bottom: 20px;">Select the players who are physically playing in this specific match.</p>
-            
             <div class="grid-2">
                 <div class="roster-card">
                     <h4 id="labelTeamA" style="margin-top: 0; color: #cbd5e1; border-bottom: 1px solid #334155; padding-bottom: 10px;">Team A</h4>
@@ -97,7 +93,6 @@
             </div>
         </div>
 
-        <!-- STEP 3: Create Match -->
         <div id="matchCreationBox" class="hidden" style="background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #10b981;">
             <h3 style="margin-top: 0; color: #10b981;">3. Secure & Generate Match</h3>
             <div class="grid-2" style="margin-bottom: 20px;">
@@ -107,7 +102,7 @@
                 </div>
                 <div>
                     <label>Venue / Ground</label>
-                    <input type="text" id="matchVenue" placeholder="e.g. Captain Roop Singh Stadium" class="input-dark">
+                    <input type="text" id="matchVenue" placeholder="e.g. Captain Roop Stadium" class="input-dark">
                 </div>
             </div>
             <button type="button" class="btn-green" style="padding: 15px; font-size: 1.2rem;" onclick="createMatch()">✅ Create Match & Inject to Database</button>
@@ -116,8 +111,12 @@
 </div>
 
 <script>
+    const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co";   
+    const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
+    let db = null;
+
     // ==========================================
-    // STATUS LOGGER (Replaces Popups)
+    // STATUS LOGGER
     // ==========================================
     function logStatus(message, type = 'info') {
         const sysLog = document.getElementById('sysLog');
@@ -138,53 +137,50 @@
     }
 
     // ==========================================
-    // SUPABASE INITIALIZATION
-    // ==========================================
-    if (typeof window.supabase === 'undefined') {
-        logStatus("❌ CRITICAL ERROR: Supabase library failed to load. Check your internet connection.", 'error');
-    }
-
-    const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co";   
-    const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
-    let supabase = null;
-    
-    if (typeof window.supabase !== 'undefined') {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    }
-
-    // ==========================================
-    // BOOT & LOAD DATA
+    // INITIALIZATION ON LOAD
     // ==========================================
     window.onload = async function() {
-        if(!supabase) return;
+        logStatus("⏳ Checking Supabase Connection...");
+        
+        if (typeof window.supabase === 'undefined') {
+            logStatus("❌ ERROR: Supabase Library failed to load. Disable ad-blockers and check internet.", 'error');
+            return;
+        }
+
+        db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         await fetchDropdownData();
     };
 
     async function fetchDropdownData() {
         try {
-            logStatus("⏳ Fetching Tournaments and Teams from Cloud...");
+            logStatus("⏳ Fetching Tournaments and Teams...");
             
-            const { data: tData, error: tErr } = await supabase.from('tournaments').select('*');
-            if (tErr) throw new Error("Tournaments Error: " + tErr.message);
+            // 1. Fetch Tournaments
+            const { data: tData, error: tErr } = await db.from('tournaments').select('*');
+            if (tErr) throw new Error("Tournaments Table Error: " + tErr.message);
             
+            const selT = document.getElementById('selTournament');
             if (tData && tData.length > 0) {
-                const selT = document.getElementById('selTournament');
                 selT.innerHTML = tData.map(t => `<option value="${t.tournament_id}">${t.name}</option>`).join('');
             } else {
-                document.getElementById('selTournament').innerHTML = '<option value="">No Tournaments Found</option>';
+                selT.innerHTML = '<option value="">No Tournaments Found</option>';
             }
 
-            const { data: teamData, error: teamErr } = await supabase.from('teams').select('*');
-            if (teamErr) throw new Error("Teams Error: " + teamErr.message);
+            // 2. Fetch Teams
+            const { data: teamData, error: teamErr } = await db.from('teams').select('*');
+            if (teamErr) throw new Error("Teams Table Error: " + teamErr.message);
 
+            const selTeamA = document.getElementById('selTeamA');
+            const selTeamB = document.getElementById('selTeamB');
+            
             if (teamData && teamData.length > 0) {
                 const opts = teamData.map(t => `<option value="${t.team_id}" data-name="${t.name}">${t.name}</option>`).join('');
-                document.getElementById('selTeamA').innerHTML = opts;
-                document.getElementById('selTeamB').innerHTML = opts;
-                if(teamData.length > 1) document.getElementById('selTeamB').selectedIndex = 1;
+                selTeamA.innerHTML = opts;
+                selTeamB.innerHTML = opts;
+                if(teamData.length > 1) selTeamB.selectedIndex = 1;
             } else {
-                document.getElementById('selTeamA').innerHTML = '<option value="">No Teams Found</option>';
-                document.getElementById('selTeamB').innerHTML = '<option value="">No Teams Found</option>';
+                selTeamA.innerHTML = '<option value="">No Teams Found</option>';
+                selTeamB.innerHTML = '<option value="">No Teams Found</option>';
             }
 
             logStatus("✅ Database Connected. Ready for input.", 'success');
@@ -195,17 +191,18 @@
     }
 
     // ==========================================
-    // CREATION FUNCTIONS
+    // ACTIONS
     // ==========================================
     async function createTournament() {
-        if(!supabase) return;
+        if(!db) { logStatus("❌ Action Blocked: Database not connected.", 'error'); return; }
+        
         const name = document.getElementById('newTournName').value.trim();
         const format = document.getElementById('newTournFormat').value;
         
-        if(!name) { logStatus("❌ Action Failed: Please enter a tournament name.", 'error'); return; }
+        if(!name) { logStatus("❌ Error: Please enter a tournament name.", 'error'); return; }
 
         logStatus("⏳ Saving Tournament...", 'info');
-        const { error } = await supabase.from('tournaments').insert([{ 
+        const { error } = await db.from('tournaments').insert([{ 
             name: name, 
             format: format, 
             start_date: new Date().toISOString().split('T')[0] 
@@ -221,13 +218,13 @@
     }
 
     async function createTeam() {
-        if(!supabase) return;
-        const name = document.getElementById('newTeamName').value.trim();
+        if(!db) { logStatus("❌ Action Blocked: Database not connected.", 'error'); return; }
         
-        if(!name) { logStatus("❌ Action Failed: Please enter a team name.", 'error'); return; }
+        const name = document.getElementById('newTeamName').value.trim();
+        if(!name) { logStatus("❌ Error: Please enter a team name.", 'error'); return; }
 
         logStatus("⏳ Saving Team...", 'info');
-        const { error } = await supabase.from('teams').insert([{ name: name }]);
+        const { error } = await db.from('teams').insert([{ name: name }]);
         
         if (error) {
             logStatus("❌ Save Failed: " + error.message, 'error');
@@ -239,17 +236,19 @@
     }
 
     // ==========================================
-    // SQUAD MAPPING & MATCH CREATION
+    // ROSTER MAPPING
     // ==========================================
     async function loadRosters() {
+        if(!db) return;
+        
         const teamA = document.getElementById('selTeamA');
         const teamB = document.getElementById('selTeamB');
         
         if (!teamA.value || !teamB.value) {
-            logStatus("❌ Cannot fetch: Teams missing.", 'error'); return;
+            logStatus("❌ Error: You must select Team A and Team B.", 'error'); return;
         }
         if (teamA.value === teamB.value) {
-            logStatus("❌ Action Failed: Team A and Team B must be different!", 'error'); return;
+            logStatus("❌ Error: Team A and Team B must be different!", 'error'); return;
         }
 
         const tAName = teamA.options[teamA.selectedIndex].dataset.name;
@@ -258,27 +257,27 @@
         document.getElementById('labelTeamA').innerText = tAName;
         document.getElementById('labelTeamB').innerText = tBName;
 
-        logStatus(`⏳ Fetching Master Rosters for ${tAName} and ${tBName}...`, 'info');
+        logStatus(`⏳ Fetching Master Rosters...`, 'info');
         
         await populateRosterList('A', tAName);
         await populateRosterList('B', tBName);
 
         document.getElementById('rosterSelectionBox').classList.remove('hidden');
         document.getElementById('matchCreationBox').classList.remove('hidden');
-        logStatus("✅ Master Rosters Loaded. Please map the playing squad below.", 'success');
+        logStatus("✅ Master Rosters Loaded. Select playing squads.", 'success');
     }
 
     async function populateRosterList(teamKey, teamName) {
         const targetEl = document.getElementById(`listTeam${teamKey}`);
         targetEl.innerHTML = `<div style="color: #94a3b8;">Loading roster for ${teamName}...</div>`;
         
-        const { data, error } = await supabase
+        const { data, error } = await db
             .from('team_rosters')
             .select('player_id, players(full_name)')
             .eq('team_name', teamName);
 
         if (error) {
-            targetEl.innerHTML = `<div style="color: #fca5a5; padding: 10px; border: 1px dashed #ef4444; border-radius: 6px;">Error: ${error.message}</div>`;
+            targetEl.innerHTML = `<div style="color: #fca5a5; padding: 10px; border: 1px dashed #ef4444;">Error: ${error.message}</div>`;
             return;
         }
 
@@ -300,8 +299,12 @@
         targetEl.innerHTML = html;
     }
 
+    // ==========================================
+    // FINALIZE MATCH
+    // ==========================================
     async function createMatch() {
-        logStatus("⏳ Processing Database Injection...", 'info');
+        if(!db) return;
+        logStatus("⏳ Injecting Match and Squads to Cloud...", 'info');
 
         const tournId = document.getElementById('selTournament').value;
         const teamAId = document.getElementById('selTeamA').value;
@@ -320,7 +323,7 @@
         const selectedB = Array.from(document.querySelectorAll('.chk-squad-B:checked')).map(cb => cb.value);
 
         if(selectedA.length === 0 || selectedB.length === 0) {
-            logStatus("❌ Error: Select at least 1 player per team to form the squad.", 'error');
+            logStatus("❌ Error: Select at least 1 player per team.", 'error');
             return;
         }
 
@@ -328,14 +331,12 @@
         selectedA.forEach(pid => squadsPayload.push({ tournament_id: tournId, team_id: teamAId, player_id: pid }));
         selectedB.forEach(pid => squadsPayload.push({ tournament_id: tournId, team_id: teamBId, player_id: pid }));
 
-        // Inject Squads
-        const { error: squadErr } = await supabase.from('tournament_squads').insert(squadsPayload);
+        const { error: squadErr } = await db.from('tournament_squads').insert(squadsPayload);
         if(squadErr) {
-            logStatus("❌ Error injecting squads: " + squadErr.message, 'error');
+            logStatus("❌ Squad Injection Error: " + squadErr.message, 'error');
             return;
         }
 
-        // Prepare matches Payload
         const matchPayload = {
             match_id: matchId,
             tournament_id: tournId,
@@ -345,16 +346,14 @@
             full_state: { tournament: tournName, team1: teamAName, team2: teamBName, venue: venue }
         };
 
-        // Inject Match
-        const { error: matchErr } = await supabase.from('matches').insert([matchPayload]);
+        const { error: matchErr } = await db.from('matches').insert([matchPayload]);
         if(matchErr) {
-            logStatus("❌ Error injecting match: " + matchErr.message, 'error');
+            logStatus("❌ Match Injection Error: " + matchErr.message, 'error');
             return;
         }
 
         logStatus(`✅ SUCCESS! Match Generated. ID: <b>${matchId}</b> | PIN: <b>${pin}</b>`, 'success');
         
-        // Hide the creation box to prevent duplicate clicking
         document.getElementById('rosterSelectionBox').classList.add('hidden');
         document.getElementById('matchCreationBox').classList.add('hidden');
     }
