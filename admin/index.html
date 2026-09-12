@@ -73,7 +73,6 @@
             <div class="admin-form">
                 <h3 style="margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px;">1. Tournament Details & Team Selection</h3>
                 
-                <!-- Tournament Mode Selector (Create New vs Edit Existing) -->
                 <div style="background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #334155; display: flex; gap: 15px; align-items: center;">
                     <div style="flex: 1;">
                         <label style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; font-weight: bold; display:block;">Mode Selection</label>
@@ -98,7 +97,6 @@
                     <div class="full-width" style="margin-top: 15px;">
                         <h3 style="margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px;">Select Participating Teams from Database</h3>
                         
-                        <!-- TEAM SEARCH ENGINE -->
                         <div style="margin-bottom: 12px;">
                             <input type="text" id="team-search-input" placeholder="🔍 Search teams by name..." oninput="filterTeamCheckboxes(this.value)" style="width: 100%; padding: 10px; background: #020617; border: 1px solid #475569; color: white; border-radius: 6px; box-sizing: border-box;">
                         </div>
@@ -143,12 +141,19 @@
             <div class="admin-form">
                 <h3 style="margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">3. Multi-Mode Fixture Builder</h3>
                 <div class="sub-tab-nav">
-                    <button type="button" class="sub-tab-btn active" onclick="switchSubTab('tab-pools', this)">Visual Pool Builder</button>
-                    <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-canvas', this)">Manual Draw Canvas</button>
+                    <button type="button" class="sub-tab-btn active" onclick="switchSubTab('tab-canvas', this)">Manual Draw Canvas (Edit Mode)</button>
+                    <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-pools', this)">Visual Pool Builder</button>
                     <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-knockouts', this)">Knockout Mapping</button>
                 </div>
 
-                <div id="tab-pools" class="sub-tab-pane active">
+                <div id="tab-canvas" class="sub-tab-pane active">
+                    <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">All existing and newly added matches will appear here for editing.</p>
+                    <div id="canvas-container"></div>
+                    <button type="button" style="background: transparent; border: 1px dashed #10b981; width: 100%; padding: 12px; color: #10b981; font-weight: bold; cursor:pointer;" onclick="addManualMatch()">+ ADD NEW MATCH</button>
+                    <button type="button" style="background: #f59e0b; width:100%; padding:12px; border:none; border-radius:6px; color:black; font-weight:bold; margin-top:15px; cursor:pointer;" onclick="lockCanvasAndProceed()">Lock Canvas & Proceed</button>
+                </div>
+
+                <div id="tab-pools" class="sub-tab-pane">
                     <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">Organize your teams into custom groups to generate round-robin matches.</p>
                     <div class="pools-workspace">
                         <div class="staging-sidebar">
@@ -166,12 +171,6 @@
                     <button type="button" style="background: transparent; border: 1px dashed #3b82f6; width:100%; margin-top:15px; padding: 12px; color: #3b82f6; cursor:pointer;" onclick="generatePoolMatches()">Generate Intra-Pool Matches</button>
                     <div id="pool-generated-results" style="display:none; margin-top:15px;"></div>
                     <button type="button" style="background: #f59e0b; width:100%; padding:12px; border:none; border-radius:6px; color:black; font-weight:bold; margin-top:15px; cursor:pointer;" onclick="lockPoolsAndProceed()">Lock Pools & Proceed</button>
-                </div>
-
-                <div id="tab-canvas" class="sub-tab-pane">
-                    <div id="canvas-container"></div>
-                    <button type="button" style="background: transparent; border: 1px dashed #10b981; width: 100%; padding: 12px; color: #10b981; font-weight: bold; cursor:pointer;" onclick="addManualMatch()">+ ADD MATCH</button>
-                    <button type="button" style="background: #f59e0b; width:100%; padding:12px; border:none; border-radius:6px; color:black; font-weight:bold; margin-top:15px; cursor:pointer;" onclick="lockCanvasAndProceed()">Lock Canvas & Proceed</button>
                 </div>
 
                 <div id="tab-knockouts" class="sub-tab-pane">
@@ -193,10 +192,10 @@
         <div id="step4" class="dashboard-section">
             <div class="admin-form" style="overflow-x: auto;">
                 <h3 style="border-bottom: 1px solid #334155; padding-bottom: 10px;">4. Official Postings & Deployment</h3>
-                <p style="color:#94a3b8; font-size:0.8rem; margin-bottom: 15px;">Review your generated fixtures. Once locked, they are pushed to Supabase and Scorer PINs are generated.</p>
+                <p style="color:#94a3b8; font-size:0.8rem; margin-bottom: 15px;">Review your generated fixtures. Existing matches will retain their original PINs.</p>
                 <table class="postings-grid">
                     <thead>
-                        <tr><th style="width: 40%;">Match Details</th><th style="width: 60%;">Action</th></tr>
+                        <tr><th style="width: 40%;">Match Details</th><th style="width: 60%;">Cloud Status</th></tr>
                     </thead>
                     <tbody id="postings-body">
                         <tr><td colspan="2" style="text-align: center; color: #94a3b8;">Build your fixtures in Step 3 to view postings.</td></tr>
@@ -256,7 +255,6 @@
             container.innerHTML = html;
         }
 
-        // Search engine filter for teams
         function filterTeamCheckboxes(query) {
             const q = query.toLowerCase().trim();
             const items = document.querySelectorAll('.team-checkbox-item');
@@ -287,11 +285,14 @@
                 wrapper.style.display = 'block';
                 document.getElementById('form-step1').reset();
                 currentTournamentId = null;
+                document.getElementById('tournament-mode-select').value = 'edit';
             } else {
                 wrapper.style.display = 'none';
                 document.getElementById('form-step1').reset();
                 currentTournamentId = null;
                 document.querySelectorAll('.tourney-team-chk').forEach(c => c.checked = false);
+                manualMatches = [];
+                renderCanvas();
             }
         }
 
@@ -299,7 +300,6 @@
             if (!tournId) return;
             currentTournamentId = tournId;
 
-            // Fetch tournament details
             const { data: tData, error: tErr } = await db.from('tournaments').select('*').eq('tournament_id', tournId).single();
             if (tErr || !tData) { alert("Error loading tournament details."); return; }
 
@@ -307,39 +307,55 @@
             document.getElementById('t-format').value = tData.format || 'T20';
             document.getElementById('t-date').value = tData.start_date ? tData.start_date.split('T')[0] : '';
 
-            // Fetch linked teams from tournament_squads or matches for this tournament
-            const { data: squadData } = await db.from('tournament_squads').select('team_id').eq('tournament_id', tournId);
-            const linkedTeamIds = [...new Set((squadData || []).map(s => s.team_id))];
+            const { data: mData } = await db.from('matches').select('*').eq('tournament_id', tournId);
+            
+            let linkedTeamNames = new Set();
+            manualMatches = []; 
+            poolGeneratedMatches = [];
+            koGeneratedMatches = [];
+            
+            if (mData && mData.length > 0) {
+                mData.forEach(m => {
+                    let fs = m.full_state || {};
+                    if(fs.team1) linkedTeamNames.add(fs.team1);
+                    if(fs.team2) linkedTeamNames.add(fs.team2);
+                    
+                    manualMatches.push({
+                        id: m.match_id,
+                        name: fs.matchName || m.match_id,
+                        t1: fs.team1 || '',
+                        t2: fs.team2 || '',
+                        pin: m.scorer_pin 
+                    });
+                });
+            }
 
-            // Checkboxes matching these team IDs
+            const { data: squadData } = await db.from('tournament_squads').select('team_id').eq('tournament_id', tournId);
+            if (squadData) {
+                squadData.forEach(s => {
+                    let tName = Object.keys(activeTeamMap).find(name => activeTeamMap[name] === s.team_id);
+                    if (tName) linkedTeamNames.add(tName);
+                });
+            }
+
             document.querySelectorAll('.tourney-team-chk').forEach(chk => {
-                const tName = chk.value;
-                const tId = activeTeamMap[tName];
-                if (linkedTeamIds.includes(tId)) {
-                    chk.checked = true;
-                } else {
-                    chk.checked = false;
-                }
+                chk.checked = linkedTeamNames.has(chk.value);
             });
 
-            // Update activeTeams array for wizard progression
-            activeTeams = [];
-            document.querySelectorAll('.tourney-team-chk:checked').forEach(chk => activeTeams.push(chk.value));
+            activeTeams = Array.from(linkedTeamNames);
 
             const select = document.getElementById('squad-team-select');
             select.innerHTML = '<option value="">Select a team to verify squad...</option>';
             activeTeams.forEach(team => { select.innerHTML += `<option value="${team}">${team}</option>`; });
+
+            renderCanvas();
+            updateFinalLockedMatches();
             
-            alert(`Loaded tournament "${tData.name}" successfully!`);
+            alert(`✅ Loaded tournament "${tData.name}". \n\n${activeTeams.length} Teams and ${manualMatches.length} Matches were pulled from the cloud!`);
         }
 
-        function generateUniqueMatchID(prefix) {
-            return `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`; 
-        }
-
-        function generateUniquePin() { 
-            return Math.floor(1000 + Math.random() * 9000).toString(); 
-        }
+        function generateUniqueMatchID(prefix) { return `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`; }
+        function generateUniquePin() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
         function switchStep(stepId) {
             document.querySelectorAll('.wizard-step').forEach(btn => btn.classList.remove('active'));
@@ -361,10 +377,7 @@
             const btn = e.target.querySelector('button');
             activeTeams = []; 
 
-            const checkedBoxes = document.querySelectorAll('.tourney-team-chk:checked');
-            checkedBoxes.forEach(chk => {
-                activeTeams.push(chk.value);
-            });
+            document.querySelectorAll('.tourney-team-chk:checked').forEach(chk => { activeTeams.push(chk.value); });
 
             if (activeTeams.length < 2) { alert("Please select at least 2 teams for the tournament."); return; }
             btn.innerText = "Saving Tournament to Cloud...";
@@ -373,7 +386,6 @@
             let tError = null;
 
             if (mode === 'edit' && currentTournamentId) {
-                // Update existing tournament
                 const { error } = await db.from('tournaments').update({
                     name: document.getElementById('t-name').value,
                     format: document.getElementById('t-format').value,
@@ -381,7 +393,6 @@
                 }).eq('tournament_id', currentTournamentId);
                 tError = error;
             } else {
-                // Insert new tournament
                 const { data: tData, error } = await db.from('tournaments').insert([{
                     name: document.getElementById('t-name').value,
                     format: document.getElementById('t-format').value,
@@ -402,6 +413,9 @@
             document.querySelectorAll('.wizard-step')[1].click();
         });
 
+        // ==============================
+        // VERIFY & SYNC SQUADS
+        // ==============================
         async function loadWizardSquad(teamName) {
             const container = document.getElementById('wizard-player-slots-container');
             if(!teamName) { container.innerHTML = ''; return; }
@@ -422,10 +436,69 @@
             data.forEach(row => {
                 if(row.players) html += `<div style="background:#1e293b; padding:10px; border-radius:6px; display:flex; justify-content:space-between;"><span style="color:white; font-weight:bold;">${row.players.full_name}</span><span style="color:#10b981;">✔</span></div>`;
             });
-            html += `</div><button style="background:#10b981; width:100%; padding:12px; margin-top:20px; border:none; border-radius:6px; color:white; font-weight:bold; cursor:pointer;" onclick="document.querySelectorAll('.wizard-step')[2].click()">Squad Verified. Go to Fixtures ➡️</button>`;
+            html += `</div>`;
+
+            // SYNC NEW PLAYERS BUTTON 
+            if (currentTournamentId) {
+                html += `<button type="button" style="background:#f59e0b; width:100%; padding:12px; margin-top:20px; border:none; border-radius:6px; color:black; font-weight:bold; cursor:pointer;" onclick="syncSquadToTournament(event, '${teamName}')">🔄 Sync Latest Roster to Live Tournament</button>`;
+            }
+
+            html += `<button type="button" style="background:#10b981; width:100%; padding:12px; margin-top:10px; border:none; border-radius:6px; color:white; font-weight:bold; cursor:pointer;" onclick="document.querySelectorAll('.wizard-step')[2].click()">Squad Verified. Go to Fixtures ➡️</button>`;
             
             container.innerHTML = html;
         }
+
+        async function syncSquadToTournament(event, teamName) {
+            if(!currentTournamentId) { alert("Tournament not saved yet."); return; }
+            let teamUUID = activeTeamMap[teamName];
+            let playerIds = tournamentSquadsCache[teamName];
+            
+            if(!teamUUID || !playerIds || playerIds.length === 0) { alert("No players found to sync."); return; }
+            
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "⏳ Syncing...";
+
+            let payload = playerIds.map(pid => ({ tournament_id: currentTournamentId, team_id: teamUUID, player_id: pid }));
+            
+            const { error } = await db.from('tournament_squads').upsert(payload, {onConflict: 'tournament_id, team_id, player_id'});
+            
+            if(error) {
+                alert("Error syncing squad: " + error.message);
+                btn.innerText = originalText;
+            } else {
+                alert(`✅ Successfully synced ${playerIds.length} players to the live tournament!`);
+                btn.innerText = "✅ Synced Successfully!";
+                setTimeout(() => btn.innerText = originalText, 3000);
+            }
+        }
+
+        // ==============================
+        // CANVAS FIXTURE BUILDER
+        // ==============================
+        function addManualMatch() { manualMatches.push({ id: generateUniqueMatchID("M"), name: `Match ${manualMatches.length + 1}`, t1: "", t2: "" }); renderCanvas(); }
+        
+        function renderCanvas() {
+            let opts = `<option value="">Select Team...</option>` + activeTeams.map(t => `<option value="${t}">${t}</option>`).join('');
+            document.getElementById('canvas-container').innerHTML = manualMatches.map((m, i) => `
+                <div class="canvas-row">
+                    <div class="canvas-header">
+                        <b style="color:#f59e0b">${m.id}</b>
+                        ${m.pin ? `<span style="background:#10b981; color:white; padding:2px 8px; border-radius:4px; font-size:0.7rem;">LIVE</span>` : ''}
+                        <input class="canvas-name-input" value="${m.name}" oninput="manualMatches[${i}].name=this.value">
+                        <button type="button" class="btn-delete" onclick="deleteCanvasMatch(${i})">X</button>
+                    </div>
+                    <div class="canvas-teams">
+                        <select class="postings-select" onchange="manualMatches[${i}].t1=this.value">${opts.replace(`value="${m.t1}"`, `value="${m.t1}" selected`)}</select> 
+                        VS 
+                        <select class="postings-select" onchange="manualMatches[${i}].t2=this.value">${opts.replace(`value="${m.t2}"`, `value="${m.t2}" selected`)}</select>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function deleteCanvasMatch(index) { manualMatches.splice(index, 1); renderCanvas(); }
+        function lockCanvasAndProceed() { updateFinalLockedMatches(); document.querySelectorAll('.wizard-step')[3].click(); }
 
         function initPoolsWorkspace() { if(Object.keys(poolsData).length === 0) poolsData = { "Pool A": [], "Pool B": [] }; renderPoolsWorkspace(); }
         function addNewPool() { let pNames = Object.keys(poolsData); poolsData["Pool " + String.fromCharCode(65 + pNames.length)] = []; renderPoolsWorkspace(); }
@@ -452,13 +525,6 @@
         }
         function lockPoolsAndProceed() { if(poolGeneratedMatches.length===0) generatePoolMatches(); updateFinalLockedMatches(); document.querySelectorAll('.wizard-step')[3].click(); }
 
-        function addManualMatch() { manualMatches.push({ id: generateUniqueMatchID("M"), name: `Match ${manualMatches.length + 1}`, t1: "", t2: "" }); renderCanvas(); }
-        function renderCanvas() {
-            let opts = `<option value="">Select Team...</option>` + activeTeams.map(t => `<option value="${t}">${t}</option>`).join('');
-            document.getElementById('canvas-container').innerHTML = manualMatches.map((m, i) => `<div class="canvas-row"><div class="canvas-header"><b style="color:#f59e0b">${m.id}</b><input class="canvas-name-input" value="${m.name}" oninput="manualMatches[${i}].name=this.value"></div><div class="canvas-teams"><select class="postings-select" onchange="manualMatches[${i}].t1=this.value">${opts.replace(`value="${m.t1}"`, `value="${m.t1}" selected`)}</select> VS <select class="postings-select" onchange="manualMatches[${i}].t2=this.value">${opts.replace(`value="${m.t2}"`, `value="${m.t2}" selected`)}</select></div></div>`).join('');
-        }
-        function lockCanvasAndProceed() { updateFinalLockedMatches(); document.querySelectorAll('.wizard-step')[3].click(); }
-
         function generateKnockoutBracket() {
             let size = parseInt(document.getElementById('ko-size-select').value); koGeneratedMatches = [];
             if (size === 4) { 
@@ -475,7 +541,16 @@
 
         function updateFinalLockedMatches() {
             finalLockedMatches = [...manualMatches, ...poolGeneratedMatches, ...koGeneratedMatches];
-            document.getElementById('postings-body').innerHTML = finalLockedMatches.map((m, i) => `<tr><td style="font-weight: bold; color: #38bdf8; font-size: 1.1rem;">${m.name}<div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">${m.t1 || 'TBD'} vs ${m.t2 || 'TBD'}</div></td><td><div style="color:#10b981; font-weight:bold;">Ready for Cloud Injection</div><div style="font-size:0.75rem; color:#94a3b8;">Scorer PIN will be generated automatically.</div></td></tr>`).join('');
+            document.getElementById('postings-body').innerHTML = finalLockedMatches.map((m, i) => `
+                <tr>
+                    <td style="font-weight: bold; color: #38bdf8; font-size: 1.1rem;">
+                        ${m.name}<div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">${m.t1 || 'TBD'} vs ${m.t2 || 'TBD'}</div>
+                    </td>
+                    <td>
+                        <div style="color:#10b981; font-weight:bold;">${m.pin ? 'Live on Cloud (PIN: ' + m.pin + ')' : 'Ready for Cloud Injection'}</div>
+                        <div style="font-size:0.75rem; color:#94a3b8;">${m.pin ? 'Edits will update the live match.' : 'Scorer PIN will be generated automatically.'}</div>
+                    </td>
+                </tr>`).join('');
         }
 
         async function saveMatchesToCloud() {
@@ -487,7 +562,7 @@
             let generatedOutput = [];
 
             for (let m of finalLockedMatches) {
-                let pin = generateUniquePin();
+                let pin = m.pin || generateUniquePin();
                 let team1UUID = activeTeamMap[m.t1] || null;
                 let team2UUID = activeTeamMap[m.t2] || null;
                 let tName = document.getElementById('t-name').value;
