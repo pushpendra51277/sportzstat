@@ -11,24 +11,28 @@ window.onload = async function() {
 async function fetchDropdownData() {
     try {
         // Fetch Tournaments
-        const { data: tData, error: tErr } = await supabase.from('tournaments').select('tournament_id, name');
-        if (tErr) console.error("Error fetching tournaments:", tErr);
-        if (tData) {
+        const { data: tData, error: tErr } = await supabase.from('tournaments').select('*');
+        if (tErr) {
+            alert("Error loading Tournaments from Supabase: " + tErr.message);
+            console.error(tErr);
+        } else if (tData) {
             const selT = document.getElementById('selTournament');
             selT.innerHTML = tData.map(t => `<option value="${t.tournament_id}">${t.name}</option>`).join('');
         }
 
         // Fetch Teams
-        const { data: teamData, error: teamErr } = await supabase.from('teams').select('team_id, name');
-        if (teamErr) console.error("Error fetching teams:", teamErr);
-        if (teamData) {
+        const { data: teamData, error: teamErr } = await supabase.from('teams').select('*');
+        if (teamErr) {
+            alert("Error loading Teams from Supabase: " + teamErr.message);
+            console.error(teamErr);
+        } else if (teamData) {
             const opts = teamData.map(t => `<option value="${t.team_id}" data-name="${t.name}">${t.name}</option>`).join('');
             document.getElementById('selTeamA').innerHTML = opts;
             document.getElementById('selTeamB').innerHTML = opts;
             if(teamData.length > 1) document.getElementById('selTeamB').selectedIndex = 1;
         }
     } catch(e) {
-        console.error("Fetch Data failed:", e);
+        alert("Unexpected Critical Error loading data: " + e.message);
     }
 }
 
@@ -49,11 +53,11 @@ async function createTournament() {
     }]);
     
     if (error) {
-        alert("Failed to create tournament. Check console."); console.error(error);
+        alert("Database Error while saving Tournament: " + error.message); 
     } else {
         alert(`Tournament "${name}" created successfully!`);
         document.getElementById('newTournName').value = "";
-        fetchDropdownData(); 
+        await fetchDropdownData(); 
     }
 }
 
@@ -65,11 +69,11 @@ async function createTeam() {
     const { error } = await supabase.from('teams').insert([{ name: name }]);
     
     if (error) {
-        alert("Failed to create team. Check console."); console.error(error);
+        alert("Database Error while saving Team: " + error.message); 
     } else {
         alert(`Team "${name}" created successfully!`);
         document.getElementById('newTeamName').value = "";
-        fetchDropdownData(); 
+        await fetchDropdownData(); 
     }
 }
 
@@ -113,7 +117,13 @@ async function populateRosterList(teamKey, teamName) {
         .select('player_id, players(full_name)')
         .eq('team_name', teamName);
 
-    if (error || !data || data.length === 0) {
+    if (error) {
+        alert("Error fetching roster: " + error.message);
+        targetEl.innerHTML = `<div style="color: #ef4444;">Failed to load.</div>`;
+        return;
+    }
+
+    if (!data || data.length === 0) {
         targetEl.innerHTML = `<div style="color: #ef4444; font-size: 0.9rem; padding: 10px; border: 1px dashed #ef4444; border-radius: 6px;">No players found for ${teamName}. Please use the Master Roster tool to assign players to this team first.</div>`;
         return;
     }
@@ -145,7 +155,6 @@ async function createMatch() {
     const teamAName = document.getElementById('selTeamA').options[document.getElementById('selTeamA').selectedIndex].dataset.name;
     const teamBName = document.getElementById('selTeamB').options[document.getElementById('selTeamB').selectedIndex].dataset.name;
 
-    // Generate unique Match ID (e.g. M-8YF2A)
     const matchId = "M-" + Math.random().toString(36).substring(2, 7).toUpperCase();
 
     const selectedA = Array.from(document.querySelectorAll('.chk-squad-A:checked')).map(cb => cb.value);
@@ -156,20 +165,17 @@ async function createMatch() {
         return;
     }
 
-    // Prepare tournament_squads Payload
     const squadsPayload = [];
     selectedA.forEach(pid => squadsPayload.push({ tournament_id: tournId, team_id: teamAId, player_id: pid }));
     selectedB.forEach(pid => squadsPayload.push({ tournament_id: tournId, team_id: teamBId, player_id: pid }));
 
-    // Inject Squads
     const { error: squadErr } = await supabase.from('tournament_squads').insert(squadsPayload);
     if(squadErr) {
-        console.error(squadErr);
-        statusEl.innerHTML = '<span style="color:#ef4444;">❌ Error injecting squads. Check console.</span>';
+        alert("Error injecting squads: " + squadErr.message);
+        statusEl.innerHTML = '<span style="color:#ef4444;">❌ Database Error. Check alert box.</span>';
         return;
     }
 
-    // Prepare matches Payload
     const matchPayload = {
         match_id: matchId,
         tournament_id: tournId,
@@ -179,11 +185,10 @@ async function createMatch() {
         full_state: { tournament: tournName, team1: teamAName, team2: teamBName, venue: venue }
     };
 
-    // Inject Match
     const { error: matchErr } = await supabase.from('matches').insert([matchPayload]);
     if(matchErr) {
-        console.error(matchErr);
-        statusEl.innerHTML = '<span style="color:#ef4444;">❌ Error creating match. Check console.</span>';
+        alert("Error injecting match: " + matchErr.message);
+        statusEl.innerHTML = '<span style="color:#ef4444;">❌ Database Error. Check alert box.</span>';
         return;
     }
 
