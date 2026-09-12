@@ -3,71 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sportzstat - Match Creator</title>
+    <title>Sportzstat - Admin Panel</title>
     <link rel="stylesheet" href="../style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .admin-section { background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 25px; }
+        .admin-header { color: #38bdf8; margin-top: 0; border-bottom: 1px solid #1e293b; padding-bottom: 10px; margin-bottom: 20px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+        .input-dark { width: 100%; padding: 12px; background: #020617; color: white; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box; }
+        .btn-green { background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1.05rem; }
+        .btn-blue { background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1.05rem; }
+        .btn-orange { background: #f59e0b; color: #000; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1.05rem; }
+        .roster-card { background: #020617; padding: 15px; border-radius: 8px; border: 1px solid #334155; max-height: 350px; overflow-y: auto; }
+        .player-row { display: flex; align-items: center; background: #1e293b; padding: 10px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #475569; }
+        label { display: block; color: #94a3b8; font-size: 0.85rem; margin-bottom: 5px; font-weight: bold; }
+    </style>
 </head>
-<body style="background-color: #020617; color: white; font-family: sans-serif; padding: 20px;">
+<body style="background-color: #020617; color: white; font-family: sans-serif; padding: 30px;">
 
-<div style="max-width: 900px; margin: 0 auto; background: #0f172a; padding: 30px; border-radius: 12px; border: 1px solid #334155;">
-    <h1 style="color: #38bdf8; text-align: center; margin-top: 0;">🛠️ Admin Match & Squad Creator</h1>
-    <p style="text-align: center; color: #94a3b8;">Link Teams, map Tournament Squads, and generate an Official Match ID.</p>
+<div style="max-width: 1000px; margin: 0 auto;">
+    <h1 style="text-align: center; color: white; letter-spacing: 2px;">SPORTZSTAT <span style="color: #38bdf8;">CLOUD ADMIN</span></h1>
+    <p style="text-align: center; color: #94a3b8; margin-bottom: 40px;">Bypass local storage. Inject matches directly into the Master Database.</p>
 
-    <!-- STEP 1: Select Event -->
-    <div style="background: #1e293b; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #475569;">
-        <h3 style="margin-top: 0; color: #10b981;">1. Select Event</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
-            <div>
-                <label style="display:block; color:#94a3b8; font-size:0.85rem; margin-bottom:5px;">Tournament</label>
-                <select id="selTournament" style="width:100%; padding:10px; background:#020617; color:white; border:1px solid #334155; border-radius:4px;"></select>
-            </div>
-            <div>
-                <label style="display:block; color:#94a3b8; font-size:0.85rem; margin-bottom:5px;">Team A</label>
-                <select id="selTeamA" style="width:100%; padding:10px; background:#020617; color:white; border:1px solid #334155; border-radius:4px;"></select>
-            </div>
-            <div>
-                <label style="display:block; color:#94a3b8; font-size:0.85rem; margin-bottom:5px;">Team B</label>
-                <select id="selTeamB" style="width:100%; padding:10px; background:#020617; color:white; border:1px solid #334155; border-radius:4px;"></select>
-            </div>
+    <!-- DATABASE CREATION TOOLS -->
+    <div class="grid-2">
+        <!-- Create Tournament -->
+        <div class="admin-section">
+            <h3 class="admin-header">🏆 Create New Tournament</h3>
+            <label>Tournament Name</label>
+            <input type="text" id="newTournName" class="input-dark" placeholder="e.g. Summer Cup 2026" style="margin-bottom: 15px;">
+            <label>Format</label>
+            <select id="newTournFormat" class="input-dark" style="margin-bottom: 20px;">
+                <option value="T20">T20</option>
+                <option value="ONEDAY">One Day</option>
+                <option value="TEST">Multi-Day</option>
+            </select>
+            <button type="button" class="btn-orange" onclick="createTournament()">Save Tournament</button>
         </div>
-        <button type="button" onclick="loadRosters()" style="width: 100%; padding: 12px; margin-top: 15px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Fetch Master Rosters</button>
+
+        <!-- Create Team -->
+        <div class="admin-section">
+            <h3 class="admin-header" style="color: #10b981;">🛡️ Create New Team</h3>
+            <label>Team Name</label>
+            <input type="text" id="newTeamName" class="input-dark" placeholder="e.g. Mumbai Mashers" style="margin-bottom: 15px;">
+            <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 25px;">After creating a team, use <b>roster.html</b> to assign players to it.</p>
+            <button type="button" class="btn-green" onclick="createTeam()">Save Team</button>
+        </div>
     </div>
 
-    <!-- STEP 2: Map Squads -->
-    <div id="rosterSelectionBox" class="hidden" style="background: #1e293b; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #475569;">
-        <h3 style="margin-top: 0; color: #f59e0b;">2. Map Tournament Squads</h3>
-        <p style="font-size: 0.85rem; color: #94a3b8; margin-top:0;">Select the players from the master roster who will be available for this specific match/tournament.</p>
+    <!-- MATCH CREATION & SQUAD MAPPING -->
+    <div class="admin-section">
+        <h2 class="admin-header" style="color: #f8fafc; font-size: 1.5rem; text-align: center;">🏏 Generate Match & Lock Squads</h2>
         
-        <div style="display: flex; gap: 20px;">
-            <div style="flex: 1; background: #020617; padding: 15px; border-radius: 6px; border: 1px solid #334155;">
-                <h4 id="labelTeamA" style="margin-top: 0; color: #cbd5e1; border-bottom: 1px solid #334155; padding-bottom: 5px;">Team A</h4>
-                <div id="listTeamA" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;"></div>
+        <!-- STEP 1: Select Event -->
+        <div style="background: #1e293b; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #475569;">
+            <h3 style="margin-top: 0; color: #38bdf8;">1. Select Event & Teams</h3>
+            <div class="grid-3">
+                <div>
+                    <label>Tournament</label>
+                    <select id="selTournament" class="input-dark"></select>
+                </div>
+                <div>
+                    <label>Team A</label>
+                    <select id="selTeamA" class="input-dark"></select>
+                </div>
+                <div>
+                    <label>Team B</label>
+                    <select id="selTeamB" class="input-dark"></select>
+                </div>
             </div>
-            <div style="flex: 1; background: #020617; padding: 15px; border-radius: 6px; border: 1px solid #334155;">
-                <h4 id="labelTeamB" style="margin-top: 0; color: #cbd5e1; border-bottom: 1px solid #334155; padding-bottom: 5px;">Team B</h4>
-                <div id="listTeamB" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;"></div>
+            <button type="button" class="btn-blue" style="margin-top: 20px;" onclick="loadRosters()">Fetch Master Rosters</button>
+        </div>
+
+        <!-- STEP 2: Map Squads -->
+        <div id="rosterSelectionBox" class="hidden" style="background: #1e293b; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #475569;">
+            <h3 style="margin-top: 0; color: #f59e0b;">2. Map Tournament Squads</h3>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-top:0; margin-bottom: 20px;">Select the players who are physically playing in this specific match. These players will be pushed to the scoring engine.</p>
+            
+            <div class="grid-2">
+                <div class="roster-card">
+                    <h4 id="labelTeamA" style="margin-top: 0; color: #cbd5e1; border-bottom: 1px solid #334155; padding-bottom: 10px;">Team A</h4>
+                    <div id="listTeamA"></div>
+                </div>
+                <div class="roster-card">
+                    <h4 id="labelTeamB" style="margin-top: 0; color: #cbd5e1; border-bottom: 1px solid #334155; padding-bottom: 10px;">Team B</h4>
+                    <div id="listTeamB"></div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- STEP 3: Create Match -->
-    <div id="matchCreationBox" class="hidden" style="background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #475569;">
-        <h3 style="margin-top: 0; color: #ec4899;">3. Finalize & Generate Match</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-            <div>
-                <label style="display:block; color:#94a3b8; font-size:0.85rem; margin-bottom:5px;">Scorer PIN (For Gateway Login)</label>
-                <input type="text" id="matchPin" value="1234" style="width:100%; padding:10px; background:#020617; color:white; border:1px solid #334155; border-radius:4px; font-weight:bold;">
+        <!-- STEP 3: Create Match -->
+        <div id="matchCreationBox" class="hidden" style="background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #10b981;">
+            <h3 style="margin-top: 0; color: #10b981;">3. Secure & Generate Match</h3>
+            <div class="grid-2" style="margin-bottom: 20px;">
+                <div>
+                    <label>Scorer PIN (For Dashboard Login)</label>
+                    <input type="text" id="matchPin" value="1234" class="input-dark" style="font-size: 1.2rem; font-weight: bold; letter-spacing: 2px;">
+                </div>
+                <div>
+                    <label>Venue / Ground</label>
+                    <input type="text" id="matchVenue" placeholder="e.g. Captain Roop Singh Stadium" class="input-dark">
+                </div>
             </div>
-            <div>
-                <label style="display:block; color:#94a3b8; font-size:0.85rem; margin-bottom:5px;">Venue / Ground</label>
-                <input type="text" id="matchVenue" placeholder="e.g. Captain Roop Singh Stadium" style="width:100%; padding:10px; background:#020617; color:white; border:1px solid #334155; border-radius:4px;">
-            </div>
+            <button type="button" class="btn-green" style="padding: 15px; font-size: 1.2rem;" onclick="createMatch()">✅ Create Match & Inject to Database</button>
         </div>
-        <button type="button" onclick="createMatch()" style="width: 100%; padding: 15px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 1.1rem; cursor: pointer;">✅ Create Match & Inject Database</button>
+
+        <div id="statusMessage" style="margin-top: 25px; text-align: center; font-weight: bold; font-size: 1.1rem;"></div>
     </div>
-
-    <div id="statusMessage" style="margin-top: 20px; text-align: center; font-weight: bold; font-size: 1.1rem;"></div>
-
 </div>
 
 <script src="admin.js"></script>
