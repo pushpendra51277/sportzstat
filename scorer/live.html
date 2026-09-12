@@ -10,7 +10,6 @@
 </head>
 <body>
    <div id="animContainer" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9999; overflow:hidden;"></div>
-<datalist id="savedTeamsList"></datalist>
 
 <div class="container">
     
@@ -107,7 +106,7 @@
                 <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 0;">Select who takes strike, non-striker, and who bowls the first over.</p>
                 <div class="admin-grid" style="grid-template-columns: repeat(3, 1fr); gap: 15px;">
                     <div class="input-group" style="margin-bottom:0;">
-                        <label style="color:#10b981; font-weight:bold;">🏏 Opening Striker (Batting)</label>
+                        <label style="color:#10b981; font-weight:bold;">🏏 Opening Striker</label>
                         <select id="gwStriker" style="width:100%; padding:10px; background:#0f172a; color:white; border:1px solid #475569; border-radius:6px; font-weight:bold;"></select>
                     </div>
                     <div class="input-group" style="margin-bottom:0;">
@@ -115,7 +114,7 @@
                         <select id="gwNonStriker" style="width:100%; padding:10px; background:#0f172a; color:white; border:1px solid #475569; border-radius:6px; font-weight:bold;"></select>
                     </div>
                     <div class="input-group" style="margin-bottom:0;">
-                        <label style="color:#ef4444; font-weight:bold;">⚾ Opening Bowler (Bowling)</label>
+                        <label style="color:#ef4444; font-weight:bold;">⚾ Opening Bowler</label>
                         <select id="gwBowler" style="width:100%; padding:10px; background:#0f172a; color:white; border:1px solid #ef4444; border-radius:6px; font-weight:bold;"></select>
                     </div>
                 </div>
@@ -125,7 +124,7 @@
             
             <div class="flex-row gap-10 mt-10">
                 <button type="button" onclick="hardResetSystem()" class="btn-action w-100" style="background:#b91c1c; padding:12px;">⚠️ Emergency Clear Match</button>
-                <button type="button" onclick="openManualEntryView()" class="btn-action w-100" style="background:#4f46e5; padding:12px;">📝 LOG PAST MATCH (MANUAL DATA ENTRY)</button>
+                <button type="button" onclick="openManualEntryView()" class="btn-action w-100" style="background:#4f46e5; padding:12px;">📝 LOG PAST MATCH</button>
             </div>
         </div>
     </div>
@@ -169,7 +168,7 @@
         <div id="meNoGridsBtn" class="mt-20"><button type="button" class="btn-action" style="background:#334155; width:200px;" onclick="closeManualEntryView()">🔙 Back to Setup</button></div>
     </div>
     
-    <!-- PRESERVED LIVE SCORING ENGINE -->
+    <!-- LIVE SCORING ENGINE -->
     <div id="scoringView" class="scoring-screen hidden">
         <aside>
             <h3 id="dispBatTeamName" class="text-accent mt-0" style="text-transform: uppercase;">BATTING TEAM</h3>
