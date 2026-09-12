@@ -72,6 +72,24 @@
         <div id="step1" class="dashboard-section active">
             <div class="admin-form">
                 <h3 style="margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px;">1. Tournament Details & Team Selection</h3>
+                
+                <!-- Tournament Mode Selector (Create New vs Edit Existing) -->
+                <div style="background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #334155; display: flex; gap: 15px; align-items: center;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; font-weight: bold; display:block;">Mode Selection</label>
+                        <select id="tournament-mode-select" onchange="toggleTournamentMode(this.value)" style="width: 100%; padding: 10px; background: #020617; border: 1px solid #475569; color: white; border-radius: 6px;">
+                            <option value="new">➕ Create New Tournament</option>
+                            <option value="edit">✏️ Edit Existing Tournament</option>
+                        </select>
+                    </div>
+                    <div id="existing-tournament-wrapper" style="flex: 1; display: none;">
+                        <label style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; font-weight: bold; display:block;">Select Tournament to Edit</label>
+                        <select id="existing-tournament-select" onchange="loadExistingTournamentData(this.value)" style="width: 100%; padding: 10px; background: #020617; border: 1px solid #475569; color: white; border-radius: 6px;">
+                            <option value="">Loading tournaments...</option>
+                        </select>
+                    </div>
+                </div>
+
                 <form id="form-step1" class="form-grid">
                     <div class="input-group full-width"><label>Tournament Name *</label><input type="text" id="t-name" required placeholder="e.g., Summer Cup 2026"></div>
                     <div class="input-group"><label>Format *</label><select id="t-format" required><option value="T20">T20</option><option value="One Day">One Day</option></select></div>
@@ -79,7 +97,12 @@
                     
                     <div class="full-width" style="margin-top: 15px;">
                         <h3 style="margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px;">Select Participating Teams from Database</h3>
-                        <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:15px;">Check the teams participating in this tournament.</p>
+                        
+                        <!-- TEAM SEARCH ENGINE -->
+                        <div style="margin-bottom: 12px;">
+                            <input type="text" id="team-search-input" placeholder="🔍 Search teams by name..." oninput="filterTeamCheckboxes(this.value)" style="width: 100%; padding: 10px; background: #020617; border: 1px solid #475569; color: white; border-radius: 6px; box-sizing: border-box;">
+                        </div>
+
                         <div id="db-teams-checkbox-container" style="max-height: 250px; overflow-y: auto; background: #020617; padding: 15px; border-radius: 8px; border: 1px solid #334155;">
                             <div style="color: #94a3b8;">Loading teams from cloud database...</div>
                         </div>
@@ -96,7 +119,6 @@
                 <h3 style="margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px;">2. Verify Squads</h3>
                 <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 0; margin-bottom: 15px;">Review registered players for your selected tournament teams.</p>
                 
-                <!-- JUMP TO ROSTERS BUTTON -->
                 <div style="margin-bottom: 20px;">
                     <a href="rosters.html" target="_blank" style="display: inline-block; background: #8b5cf6; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 0.85rem;">
                         👥 Go to Roster Manager to Add Players
@@ -126,7 +148,6 @@
                     <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-knockouts', this)">Knockout Mapping</button>
                 </div>
 
-                <!-- Pools -->
                 <div id="tab-pools" class="sub-tab-pane active">
                     <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">Organize your teams into custom groups to generate round-robin matches.</p>
                     <div class="pools-workspace">
@@ -147,14 +168,12 @@
                     <button type="button" style="background: #f59e0b; width:100%; padding:12px; border:none; border-radius:6px; color:black; font-weight:bold; margin-top:15px; cursor:pointer;" onclick="lockPoolsAndProceed()">Lock Pools & Proceed</button>
                 </div>
 
-                <!-- Canvas -->
                 <div id="tab-canvas" class="sub-tab-pane">
                     <div id="canvas-container"></div>
                     <button type="button" style="background: transparent; border: 1px dashed #10b981; width: 100%; padding: 12px; color: #10b981; font-weight: bold; cursor:pointer;" onclick="addManualMatch()">+ ADD MATCH</button>
                     <button type="button" style="background: #f59e0b; width:100%; padding:12px; border:none; border-radius:6px; color:black; font-weight:bold; margin-top:15px; cursor:pointer;" onclick="lockCanvasAndProceed()">Lock Canvas & Proceed</button>
                 </div>
 
-                <!-- Knockouts -->
                 <div id="tab-knockouts" class="sub-tab-pane">
                     <div style="background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
                         <label style="color: #f8fafc; font-weight: bold; font-size: 0.9rem;">Auto-Generate Bracket:</label>
@@ -203,9 +222,11 @@
         let finalLockedMatches = []; 
         let currentTournamentId = null;
         let tournamentSquadsCache = {};
+        let allDatabaseTeams = [];
 
         document.addEventListener('DOMContentLoaded', async () => { 
             await loadExistingTeamsFromDB();
+            await loadExistingTournamentsList();
         });
 
         async function loadExistingTeamsFromDB() {
@@ -217,16 +238,99 @@
                 return;
             }
 
+            allDatabaseTeams = data;
+            renderTeamCheckboxes(data);
+        }
+
+        function renderTeamCheckboxes(teams) {
+            const container = document.getElementById('db-teams-checkbox-container');
             let html = "";
-            data.forEach(t => {
+            teams.forEach(t => {
                 activeTeamMap[t.name] = t.team_id;
                 html += `
-                <label class="team-checkbox-item">
+                <label class="team-checkbox-item" data-team-name="${t.name.toLowerCase()}">
                     <input type="checkbox" class="tourney-team-chk" value="${t.name}" style="width: 18px; height: 18px; margin-right: 15px; cursor: pointer;">
                     <span style="color: white; font-weight: bold; font-size: 0.95rem;">${t.name}</span>
                 </label>`;
             });
             container.innerHTML = html;
+        }
+
+        // Search engine filter for teams
+        function filterTeamCheckboxes(query) {
+            const q = query.toLowerCase().trim();
+            const items = document.querySelectorAll('.team-checkbox-item');
+            items.forEach(item => {
+                const name = item.getAttribute('data-team-name');
+                if (name.includes(q)) {
+                    item.style.display = "flex";
+                } else {
+                    item.style.display = "none";
+                }
+            });
+        }
+
+        async function loadExistingTournamentsList() {
+            const { data, error } = await db.from('tournaments').select('*');
+            const select = document.getElementById('existing-tournament-select');
+            if (error || !data || data.length === 0) {
+                select.innerHTML = '<option value="">No existing tournaments found</option>';
+                return;
+            }
+            select.innerHTML = '<option value="">-- Choose tournament to edit --</option>' + 
+                data.map(t => `<option value="${t.tournament_id}">${t.name} (${t.format || 'T20'})</option>`).join('');
+        }
+
+        function toggleTournamentMode(mode) {
+            const wrapper = document.getElementById('existing-tournament-wrapper');
+            if (mode === 'edit') {
+                wrapper.style.display = 'block';
+                document.getElementById('form-step1').reset();
+                currentTournamentId = null;
+            } else {
+                wrapper.style.display = 'none';
+                document.getElementById('form-step1').reset();
+                currentTournamentId = null;
+                document.querySelectorAll('.tourney-team-chk').forEach(c => c.checked = false);
+            }
+        }
+
+        async function loadExistingTournamentData(tournId) {
+            if (!tournId) return;
+            currentTournamentId = tournId;
+
+            // Fetch tournament details
+            const { data: tData, error: tErr } = await db.from('tournaments').select('*').eq('tournament_id', tournId).single();
+            if (tErr || !tData) { alert("Error loading tournament details."); return; }
+
+            document.getElementById('t-name').value = tData.name || '';
+            document.getElementById('t-format').value = tData.format || 'T20';
+            document.getElementById('t-date').value = tData.start_date ? tData.start_date.split('T')[0] : '';
+
+            // Fetch linked teams from tournament_squads or matches for this tournament
+            const { data: squadData } = await db.from('tournament_squads').select('team_id').eq('tournament_id', tournId);
+            const linkedTeamIds = [...new Set((squadData || []).map(s => s.team_id))];
+
+            // Checkboxes matching these team IDs
+            document.querySelectorAll('.tourney-team-chk').forEach(chk => {
+                const tName = chk.value;
+                const tId = activeTeamMap[tName];
+                if (linkedTeamIds.includes(tId)) {
+                    chk.checked = true;
+                } else {
+                    chk.checked = false;
+                }
+            });
+
+            // Update activeTeams array for wizard progression
+            activeTeams = [];
+            document.querySelectorAll('.tourney-team-chk:checked').forEach(chk => activeTeams.push(chk.value));
+
+            const select = document.getElementById('squad-team-select');
+            select.innerHTML = '<option value="">Select a team to verify squad...</option>';
+            activeTeams.forEach(team => { select.innerHTML += `<option value="${team}">${team}</option>`; });
+            
+            alert(`Loaded tournament "${tData.name}" successfully!`);
         }
 
         function generateUniqueMatchID(prefix) {
@@ -265,20 +369,35 @@
             if (activeTeams.length < 2) { alert("Please select at least 2 teams for the tournament."); return; }
             btn.innerText = "Saving Tournament to Cloud...";
 
-            const { data: tData, error: tError } = await db.from('tournaments').insert([{
-                name: document.getElementById('t-name').value,
-                format: document.getElementById('t-format').value,
-                start_date: document.getElementById('t-date').value
-            }]).select();
+            const mode = document.getElementById('tournament-mode-select').value;
+            let tError = null;
+
+            if (mode === 'edit' && currentTournamentId) {
+                // Update existing tournament
+                const { error } = await db.from('tournaments').update({
+                    name: document.getElementById('t-name').value,
+                    format: document.getElementById('t-format').value,
+                    start_date: document.getElementById('t-date').value
+                }).eq('tournament_id', currentTournamentId);
+                tError = error;
+            } else {
+                // Insert new tournament
+                const { data: tData, error } = await db.from('tournaments').insert([{
+                    name: document.getElementById('t-name').value,
+                    format: document.getElementById('t-format').value,
+                    start_date: document.getElementById('t-date').value
+                }]).select();
+                tError = error;
+                if (tData && tData.length > 0) currentTournamentId = tData[0].tournament_id;
+            }
             
             if (tError) { alert("Error saving tournament: " + tError.message); btn.innerText = "Save Tournament & Lock Teams"; return; }
-            currentTournamentId = tData[0].tournament_id;
 
             const select = document.getElementById('squad-team-select');
             select.innerHTML = '<option value="">Select a team to verify squad...</option>';
             activeTeams.forEach(team => { select.innerHTML += `<option value="${team}">${team}</option>`; });
             
-            alert(`✅ Success! Tournament Created with ${activeTeams.length} Teams.`);
+            alert(`✅ Success! Tournament saved with ${activeTeams.length} Teams.`);
             btn.innerText = "Save Tournament & Lock Teams";
             document.querySelectorAll('.wizard-step')[1].click();
         });
@@ -292,7 +411,7 @@
             const { data, error } = await db.from('team_rosters').select('player_id, players(full_name)').eq('team_name', teamName);
             
             if (error || !data || data.length === 0) {
-                container.innerHTML = `<div style="color: #fca5a5; padding: 15px; border: 1px dashed #ef4444; border-radius: 6px;">No players found for "${teamName}". Please use <b>rosters.html</b> to assign players to this team.</div>`;
+                container.innerHTML = `<div style="color: #fca5a5; padding: 15px; border: 1px dashed #ef4444; border-radius: 6px;">No players found for "${teamName}". Please use <a href="rosters.html" target="_blank" style="color:#38bdf8;">Roster Manager</a> to assign players to this team.</div>`;
                 return;
             }
 
