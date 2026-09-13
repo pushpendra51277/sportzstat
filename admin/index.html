@@ -52,6 +52,7 @@
         .canvas-teams select { flex: 1; }
         
         .team-checkbox-item { display: flex; align-items: center; background: #1e293b; padding: 10px 15px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 8px; cursor: pointer; }
+        .counter-badge { background: #10b981; color: #020617; padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; float: right; }
     </style>
 </head>
 <body style="text-align: center; padding: 20px; background-color: #020617; color: white;">
@@ -95,7 +96,10 @@
                     <div class="input-group"><label>Starting Date *</label><input type="date" id="t-date" required></div>
                     
                     <div class="full-width" style="margin-top: 15px;">
-                        <h3 style="margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px;">Select Participating Teams from Database</h3>
+                        <h3 style="margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
+                            Select Participating Teams 
+                            <span id="team-select-count" class="counter-badge">0 Selected</span>
+                        </h3>
                         
                         <div style="margin-bottom: 12px;">
                             <input type="text" id="team-search-input" placeholder="🔍 Search teams by name..." oninput="filterTeamCheckboxes(this.value)" style="width: 100%; padding: 10px; background: #020617; border: 1px solid #475569; color: white; border-radius: 6px; box-sizing: border-box;">
@@ -228,9 +232,15 @@
             await loadExistingTournamentsList();
         });
 
+        // COUNTER FUNCTION FOR STEP 1
+        function updateTeamSelectCount() {
+            let count = document.querySelectorAll('.tourney-team-chk:checked').length;
+            document.getElementById('team-select-count').innerText = `${count} Selected`;
+        }
+
         async function loadExistingTeamsFromDB() {
             const container = document.getElementById('db-teams-checkbox-container');
-            const { data, error } = await db.from('teams').select('*');
+            const { data, error } = await db.from('teams').select('*').order('name', { ascending: true });
             
             if (error || !data || data.length === 0) {
                 container.innerHTML = `<div style="color: #ef4444;">No teams found in database. Please create teams first.</div>`;
@@ -248,11 +258,12 @@
                 activeTeamMap[t.name] = t.team_id;
                 html += `
                 <label class="team-checkbox-item" data-team-name="${t.name.toLowerCase()}">
-                    <input type="checkbox" class="tourney-team-chk" value="${t.name}" style="width: 18px; height: 18px; margin-right: 15px; cursor: pointer;">
+                    <input type="checkbox" class="tourney-team-chk" value="${t.name}" onchange="updateTeamSelectCount()" style="width: 18px; height: 18px; margin-right: 15px; cursor: pointer;">
                     <span style="color: white; font-weight: bold; font-size: 0.95rem;">${index + 1}. ${t.name}</span>
                 </label>`;
             });
             container.innerHTML = html;
+            updateTeamSelectCount();
         }
 
         function filterTeamCheckboxes(query) {
@@ -294,6 +305,7 @@
                 manualMatches = [];
                 renderCanvas();
             }
+            updateTeamSelectCount();
         }
 
         async function loadExistingTournamentData(tournId) {
@@ -355,6 +367,7 @@
 
             renderCanvas();
             updateFinalLockedMatches();
+            updateTeamSelectCount(); // Update the counter!
             
             alert(`✅ Loaded tournament "${tData.name}". \n\n${activeTeams.length} Teams and ${manualMatches.length} Matches were pulled from the cloud!`);
         }
@@ -418,6 +431,12 @@
             document.querySelectorAll('.wizard-step')[1].click();
         });
 
+        // COUNTER FUNCTION FOR STEP 2
+        function updateSquadSelectCount(safeTeamClass) {
+            let count = document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).length;
+            document.getElementById('squad-select-count').innerText = `${count} Selected`;
+        }
+
         // ==============================
         // STEP 2: VERIFY & SELECT SQUADS
         // ==============================
@@ -436,8 +455,8 @@
 
             let safeTeamClass = teamName.replace(/\s+/g, '_');
 
-            let html = `<h4 style="color:#10b981;">Select Tournament Squad</h4>
-                        <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:15px;">Uncheck players from the Master DB who are NOT participating in this specific tournament.</p>
+            let html = `<h4 style="color:#10b981; margin-bottom:5px;">Select Tournament Squad <span id="squad-select-count" class="counter-badge" style="background:#38bdf8;">0 Selected</span></h4>
+                        <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:15px; margin-top:0;">Uncheck players from the Master DB who are NOT participating in this specific tournament.</p>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:left;">`;
             
             let count = 1;
@@ -450,7 +469,7 @@
 
                     html += `
                     <label class="team-checkbox-item" style="margin-bottom:0;">
-                        <input type="checkbox" class="squad-chk-${safeTeamClass}" value="${row.player_id}" ${isChecked} style="width: 18px; height: 18px; margin-right: 15px; cursor: pointer;">
+                        <input type="checkbox" class="squad-chk-${safeTeamClass}" value="${row.player_id}" ${isChecked} onchange="updateSquadSelectCount('${safeTeamClass}')" style="width: 18px; height: 18px; margin-right: 15px; cursor: pointer;">
                         <span style="color: white; font-weight: bold; font-size: 0.95rem;">${count}. ${row.players.full_name}</span>
                     </label>`;
                     count++;
@@ -465,6 +484,7 @@
             html += `<button type="button" style="background:#10b981; width:100%; padding:12px; margin-top:10px; border:none; border-radius:6px; color:white; font-weight:bold; cursor:pointer;" onclick="confirmSquadSelection('${teamName}', '${safeTeamClass}')">Save Squad Selection & Go to Fixtures ➡️</button>`;
             
             container.innerHTML = html;
+            updateSquadSelectCount(safeTeamClass); // Initialize the counter!
         }
 
         function confirmSquadSelection(teamName, safeTeamClass) {
