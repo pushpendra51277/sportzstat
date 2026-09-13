@@ -13,12 +13,19 @@
         .btn-green { background: #10b981; color: white; border: none; padding: 15px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1.2rem; }
         .hidden { display: none; }
         
-        .setup-box { background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #3b82f6; max-width: 900px; margin: 20px auto; text-align: left; }
+        .setup-box { background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #3b82f6; max-width: 1000px; margin: 20px auto; text-align: left; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .squad-list { background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; max-height: 400px; overflow-y: auto; }
-        .player-row { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #334155; cursor: pointer; }
+        .squad-list { background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; max-height: 500px; overflow-y: auto; }
+        .player-row { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #334155; }
         .player-row:hover { background: #334155; }
-        .counter-badge { background: #38bdf8; color: #020617; padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; margin-left: 10px; vertical-align: middle; }
+        
+        .role-select { background: #020617; color: white; border: 1px solid #475569; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .role-select.xi { border-color: #10b981; color: #10b981; }
+        .role-select.sub { border-color: #f59e0b; color: #f59e0b; }
+        
+        .counter-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 5px; }
+        .bg-xi { background: #064e3b; color: #34d399; border: 1px solid #10b981; }
+        .bg-sub { background: #78350f; color: #fbbf24; border: 1px solid #f59e0b; }
     </style>
 </head>
 <body>
@@ -43,21 +50,39 @@
     <!-- PLAYING XI SELECTION SCREEN -->
     <div id="toss-screen" class="setup-box hidden">
         <h3 style="border-bottom: 1px solid #334155; padding-bottom: 10px; margin-top:0; color:#38bdf8;">Toss & Playing XI Selection</h3>
-        <p style="color: #94a3b8; font-size: 0.9rem;">Select the exact players (Playing XI + Substitutes) walking onto the field today.</p>
+        <p style="color: #94a3b8; font-size: 0.9rem;">Assign players to the Playing XI (can bat/bowl) or Substitutes (fielding only).</p>
         
         <div class="grid-2">
             <div>
-                <h4 id="team-a-name" style="color: #f59e0b; text-align: center;">Team A <span id="count-team-a-squad" class="counter-badge">0 Selected</span></h4>
+                <h4 id="team-a-name" style="color: #38bdf8; text-align: center; margin-bottom: 10px;">Team A</h4>
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <span id="count-xi-team-a" class="counter-badge bg-xi">XI: 0/11</span>
+                    <span id="count-sub-team-a" class="counter-badge bg-sub">Subs: 0/4</span>
+                </div>
                 <div id="team-a-squad" class="squad-list">Loading...</div>
             </div>
             <div>
-                <h4 id="team-b-name" style="color: #f59e0b; text-align: center;">Team B <span id="count-team-b-squad" class="counter-badge">0 Selected</span></h4>
+                <h4 id="team-b-name" style="color: #38bdf8; text-align: center; margin-bottom: 10px;">Team B</h4>
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <span id="count-xi-team-b" class="counter-badge bg-xi">XI: 0/11</span>
+                    <span id="count-sub-team-b" class="counter-badge bg-sub">Subs: 0/4</span>
+                </div>
                 <div id="team-b-squad" class="squad-list">Loading...</div>
             </div>
         </div>
 
-        <button type="button" class="btn-green" style="margin-top: 25px;" onclick="lockPlayingXI()">Lock Playing XI & Start Match</button>
+        <button type="button" class="btn-green" style="margin-top: 25px;" onclick="lockPlayingXI()">Lock Squads & Launch Scoring Engine</button>
     </div>
+
+    <!-- MAIN SCORER ENGINE UI (Hidden until Toss is complete) -->
+    <div id="scoring-engine-screen" class="setup-box hidden" style="text-align: center;">
+        <h2 style="color: #f59e0b;">🏏 SCORING ENGINE INITIALIZED</h2>
+        <p style="color: #94a3b8;">The UI elements for the scoreboard will render here.</p>
+        <div id="engine-mount"></div>
+    </div>
+
+    <!-- Include the Scorer Engine Logic -->
+    <script src="scorer.js"></script>
 
     <script>
         const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
@@ -87,16 +112,15 @@
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('toss-screen').classList.remove('hidden');
             
-            // Set Titles, but preserve the counter spans
-            document.getElementById('team-a-name').innerHTML = `${activeMatch.full_state.team1} <span id="count-team-a-squad" class="counter-badge">0 Selected</span>`;
-            document.getElementById('team-b-name').innerHTML = `${activeMatch.full_state.team2} <span id="count-team-b-squad" class="counter-badge">0 Selected</span>`;
+            document.getElementById('team-a-name').innerText = activeMatch.full_state.team1;
+            document.getElementById('team-b-name').innerText = activeMatch.full_state.team2;
 
-            await loadTournamentSquads(activeMatch.team_a_id, 'team-a-squad');
-            await loadTournamentSquads(activeMatch.team_b_id, 'team-b-squad');
+            await loadTournamentSquads(activeMatch.team_a_id, 'team-a', activeMatch.full_state.team1);
+            await loadTournamentSquads(activeMatch.team_b_id, 'team-b', activeMatch.full_state.team2);
         }
 
-        async function loadTournamentSquads(teamId, containerId) {
-            const container = document.getElementById(containerId);
+        async function loadTournamentSquads(teamId, containerPrefix, teamName) {
+            const container = document.getElementById(`${containerPrefix}-squad`);
             
             const { data, error } = await db.from('tournament_squads')
                 .select('player_id, players(full_name)')
@@ -109,49 +133,80 @@
             }
 
             let html = "";
-            let count = 1;
-            data.forEach(row => {
+            data.forEach((row, index) => {
                 if(row.players) {
                     html += `
-                    <label class="player-row">
-                        <input type="checkbox" class="chk-${containerId}" value="${row.player_id}" onchange="updateSelectionCount('${containerId}')" style="width:18px; height:18px; margin-right:15px;">
-                        <span style="font-weight:bold; font-size:0.95rem;">${count}. ${row.players.full_name}</span>
-                    </label>`;
-                    count++;
+                    <div class="player-row">
+                        <span style="font-weight:bold; font-size:0.95rem;">${index + 1}. ${row.players.full_name}</span>
+                        <select class="role-select role-${containerPrefix}" data-pid="${row.player_id}" data-pname="${row.players.full_name}" onchange="updateSquadCounters('${containerPrefix}', this)">
+                            <option value="none">Not Playing</option>
+                            <option value="xi">Playing XI</option>
+                            <option value="sub">Substitute</option>
+                        </select>
+                    </div>`;
                 }
             });
             container.innerHTML = html;
-            updateSelectionCount(containerId); // Init the counter
         }
 
-        function updateSelectionCount(containerId) {
-            let selected = document.querySelectorAll(`.chk-${containerId}:checked`).length;
-            document.getElementById(`count-${containerId}`).innerText = `${selected} Selected`;
+        function updateSquadCounters(prefix, selectElement) {
+            // Apply color coding based on selection
+            selectElement.classList.remove('xi', 'sub');
+            if(selectElement.value === 'xi') selectElement.classList.add('xi');
+            if(selectElement.value === 'sub') selectElement.classList.add('sub');
+
+            // Tally the selections
+            let xiCount = 0;
+            let subCount = 0;
+            document.querySelectorAll(`.role-${prefix}`).forEach(sel => {
+                if(sel.value === 'xi') xiCount++;
+                if(sel.value === 'sub') subCount++;
+            });
+
+            document.getElementById(`count-xi-${prefix}`).innerText = `XI: ${xiCount}/11`;
+            document.getElementById(`count-sub-${prefix}`).innerText = `Subs: ${subCount}/4`;
+            
+            // Warning colors if limits exceeded
+            document.getElementById(`count-xi-${prefix}`).style.color = xiCount > 11 ? '#ef4444' : '#34d399';
+            document.getElementById(`count-sub-${prefix}`).style.color = subCount > 4 ? '#ef4444' : '#fbbf24';
         }
 
         async function lockPlayingXI() {
-            let teamASelected = [];
-            let teamBSelected = [];
+            let state = activeMatch.full_state || {};
+            
+            // Generate distinct arrays holding { id, name }
+            state.team_a_xi = []; state.team_a_subs = [];
+            document.querySelectorAll('.role-team-a').forEach(sel => {
+                if(sel.value === 'xi') state.team_a_xi.push({ id: sel.dataset.pid, name: sel.dataset.pname });
+                if(sel.value === 'sub') state.team_a_subs.push({ id: sel.dataset.pid, name: sel.dataset.pname });
+            });
 
-            document.querySelectorAll('.chk-team-a-squad:checked').forEach(cb => teamASelected.push(cb.value));
-            document.querySelectorAll('.chk-team-b-squad:checked').forEach(cb => teamBSelected.push(cb.value));
+            state.team_b_xi = []; state.team_b_subs = [];
+            document.querySelectorAll('.role-team-b').forEach(sel => {
+                if(sel.value === 'xi') state.team_b_xi.push({ id: sel.dataset.pid, name: sel.dataset.pname });
+                if(sel.value === 'sub') state.team_b_subs.push({ id: sel.dataset.pid, name: sel.dataset.pname });
+            });
 
-            if(teamASelected.length === 0 || teamBSelected.length === 0) {
-                alert("You must select at least 1 player for both teams to start the match!");
+            // Validation
+            if(state.team_a_xi.length === 0 || state.team_b_xi.length === 0) {
+                alert("You must select at least 1 player in the Playing XI for both teams!");
                 return;
             }
 
-            let updatedState = activeMatch.full_state || {};
-            updatedState.playing_xi_a = teamASelected;
-            updatedState.playing_xi_b = teamBSelected;
-
-            const { error } = await db.from('matches').update({ full_state: updatedState }).eq('match_id', activeMatch.match_id);
+            // Sync to Supabase
+            const { error } = await db.from('matches').update({ full_state: state }).eq('match_id', activeMatch.match_id);
 
             if(error) {
                 alert("Error locking Playing XI: " + error.message);
-            } else {
-                alert(`✅ Playing XI Locked! \n\nTeam A: ${teamASelected.length} Players\nTeam B: ${teamBSelected.length} Players\n\nTransitioning to Live Scoreboard...`);
-            }
+                return;
+            } 
+
+            // Transition UI and launch the engine!
+            document.getElementById('toss-screen').classList.add('hidden');
+            document.getElementById('scoring-engine-screen').classList.remove('hidden');
+            
+            // This function is inside scorer.js!
+            initializeScoringEngine(state); 
         }
     </script>
 </body>
