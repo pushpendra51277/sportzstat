@@ -87,6 +87,12 @@ async function authenticateMatch() {
 
     if (error || !data) { errBox.style.color = "#ef4444"; errBox.innerText = "❌ Invalid Match ID or PIN."; return; }
 
+    if (data.full_state && data.full_state.match_status === 'completed') {
+        errBox.style.color = "#f59e0b";
+        errBox.innerHTML = "🏁 <b>Match Locked</b><br><span style='font-size:0.85rem; color:#94a3b8;'>This match has already been completed.</span>";
+        return;
+    }
+
     activeMatch = data;
     el('login-screen').classList.add('hidden');
     el('toss-screen').classList.remove('hidden');
@@ -145,6 +151,11 @@ async function lockPlayingXI() {
     let win = el('tossWinner').value, dec = el('tossDecision').value;
     state.battingKey = ((win === 'A' && dec === 'bat') || (win === 'B' && dec === 'bowl')) ? 'A' : 'B';
     state.bowlingKey = state.battingKey === 'A' ? 'B' : 'A';
+
+    let updatedFullState = activeMatch.full_state || {};
+    updatedFullState.match_status = 'live';
+    const { error } = await supabaseClient.from('matches').update({ full_state: updatedFullState }).eq('match_id', activeMatch.match_id);
+    if(error) { alert("Error connecting to cloud: " + error.message); return; }
 
     el('toss-screen').classList.add('hidden');
     el('initialization-screen').classList.remove('hidden');
@@ -247,6 +258,9 @@ async function triggerCloudSync() {
     if (!supabaseClient || !state.matchId) return;
     let fullStatePayload = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
     
+    // ENSURE IT STAYS LIVE DURING SCORING
+    fullStatePayload.match_status = 'live'; 
+    
     try {
         const { error } = await supabaseClient.from('matches').update({ full_state: fullStatePayload }).eq('match_id', state.matchId);
         if (error) console.error("Cloud sync error: ", error);
@@ -262,7 +276,16 @@ async function logBallEvent(batterObj, bowlerObj, runsBat, runsExtra, extraType,
 async function logCareerStats() {
     if (!supabaseClient || !state.matchId) return;
     let payloadStr = JSON.stringify(state.inningsSummaries);
-    try { await supabaseClient.from('completed_matches').upsert({ match_id: state.matchId, final_data: payloadStr }, { onConflict: 'match_id' }); } catch (e) {}
+    try { 
+        await supabaseClient.from('completed_matches').upsert({ match_id: state.matchId, final_data: payloadStr }, { onConflict: 'match_id' }); 
+        
+        // PERMANENTLY LOCK MATCH
+        let finalState = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
+        finalState.match_status = 'completed'; 
+        await supabaseClient.from('matches').update({ full_state: finalState }).eq('match_id', state.matchId);
+    } catch (e) {
+        console.error("Error finalizing match:", e);
+    }
 }
 
 function ballScored(runs, isB) {
@@ -272,7 +295,6 @@ function ballScored(runs, isB) {
     b.rc += runs; b.o++; cur.runs += runs; cur.runsInThisOver += runs; cur.balls++; cur.currPartnership.runs += runs; cur.currPartnership.balls++; 
     cur.currentOverLog.push({label: runs.toString(), type: isB ? (runs === 4 ? 'four' : 'six') : 'normal'}); cur.isFreeHit = false;
     
-    // Send event data to the cloud safely
     logBallEvent(s, b, runs, 0, 'None', false, null, null).then(() => {}); 
     
     if(runs % 2 !== 0) manualRotate(); 
@@ -310,8 +332,6 @@ function processExtraSubmit() {
     }
     
     cur.currentOverLog.push({label: lbl, type: 'extra'}); 
-    
-    // Send event data to the cloud safely
     logBallEvent(s, b, runsBat, runsExt, exLabel, false, null, null).then(() => {}); 
     
     if(ex % 2 !== 0) manualRotate(); 
@@ -379,7 +399,6 @@ function processWicketSubmit() {
         let dT = ""; if (wType === 'Bowled') dT = `b ${b.name}`; else if (wType === 'Caught') dT = `c ${wFldr || 'Sub'} b ${b.name}`; else if (wType === 'LBW') dT = `lbw b ${b.name}`; else if (wType === 'Stumped') dT = `st ${wFldr} b ${b.name}`; else if (wType === 'RunOut') dT = `run out (${wFldr || 'Sub'})`; else if (wType === 'HitWicket') dT = `hit wicket b ${b.name}`; else if (wType === 'ObstructingField') dT = `obstructing the field`; else if (wType === 'HitBallTwice') dT = `hit the ball twice`; else if (wType === 'TimedOut') dT = `timed out`;
         if (extraType === 'wide') dT += ' (wd)'; else if (extraType === 'noball') dT += ' (nb)'; oB.dismissalInfo = dT;
         
-        // Send event data to the cloud safely
         logBallEvent(s, b, runsBat, runsExt, exLabel, true, wType, oB).then(() => {}); 
     }
 
@@ -995,7 +1014,6 @@ function executeTransition(nBat, nBowl, action) {
     
     updateUI(); 
     
-    // 🔥 This calls the popup to ask for the new batters and bowler! 🔥
     setTimeout(() => { openMatchStartModal(); }, 200); 
 }
 
