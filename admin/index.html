@@ -244,12 +244,12 @@
         function renderTeamCheckboxes(teams) {
             const container = document.getElementById('db-teams-checkbox-container');
             let html = "";
-            teams.forEach(t => {
+            teams.forEach((t, index) => {
                 activeTeamMap[t.name] = t.team_id;
                 html += `
                 <label class="team-checkbox-item" data-team-name="${t.name.toLowerCase()}">
                     <input type="checkbox" class="tourney-team-chk" value="${t.name}" style="width: 18px; height: 18px; margin-right: 15px; cursor: pointer;">
-                    <span style="color: white; font-weight: bold; font-size: 0.95rem;">${t.name}</span>
+                    <span style="color: white; font-weight: bold; font-size: 0.95rem;">${index + 1}. ${t.name}</span>
                 </label>`;
             });
             container.innerHTML = html;
@@ -276,7 +276,7 @@
                 return;
             }
             select.innerHTML = '<option value="">-- Choose tournament to edit --</option>' + 
-                data.map(t => `<option value="${t.tournament_id}">${t.name} (${t.format || 'T20'})</option>`).join('');
+                data.map((t, index) => `<option value="${t.tournament_id}">${index + 1}. ${t.name} (${t.format || 'T20'})</option>`).join('');
         }
 
         function toggleTournamentMode(mode) {
@@ -332,7 +332,6 @@
 
             const { data: squadData } = await db.from('tournament_squads').select('team_id, player_id').eq('tournament_id', tournId);
             if (squadData) {
-                // Populate tournamentSquadsCache from database so checkboxes render correctly in Step 2!
                 tournamentSquadsCache = {};
                 squadData.forEach(s => {
                     let tName = Object.keys(activeTeamMap).find(name => activeTeamMap[name] === s.team_id);
@@ -352,7 +351,7 @@
 
             const select = document.getElementById('squad-team-select');
             select.innerHTML = '<option value="">Select a team to verify squad...</option>';
-            activeTeams.forEach(team => { select.innerHTML += `<option value="${team}">${team}</option>`; });
+            activeTeams.forEach((team, index) => { select.innerHTML += `<option value="${team}">${index + 1}. ${team}</option>`; });
 
             renderCanvas();
             updateFinalLockedMatches();
@@ -412,7 +411,7 @@
 
             const select = document.getElementById('squad-team-select');
             select.innerHTML = '<option value="">Select a team to verify squad...</option>';
-            activeTeams.forEach(team => { select.innerHTML += `<option value="${team}">${team}</option>`; });
+            activeTeams.forEach((team, index) => { select.innerHTML += `<option value="${team}">${index + 1}. ${team}</option>`; });
             
             alert(`✅ Success! Tournament saved with ${activeTeams.length} Teams.`);
             btn.innerText = "Save Tournament & Lock Teams";
@@ -441,10 +440,10 @@
                         <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:15px;">Uncheck players from the Master DB who are NOT participating in this specific tournament.</p>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:left;">`;
             
+            let count = 1;
             data.forEach(row => {
                 if(row.players) {
                     let isChecked = "checked";
-                    // If we have a cache and the player is NOT in it, uncheck them.
                     if(tournamentSquadsCache[teamName] && !tournamentSquadsCache[teamName].includes(row.player_id)) {
                         isChecked = "";
                     }
@@ -452,8 +451,9 @@
                     html += `
                     <label class="team-checkbox-item" style="margin-bottom:0;">
                         <input type="checkbox" class="squad-chk-${safeTeamClass}" value="${row.player_id}" ${isChecked} style="width: 18px; height: 18px; margin-right: 15px; cursor: pointer;">
-                        <span style="color: white; font-weight: bold; font-size: 0.95rem;">${row.players.full_name}</span>
+                        <span style="color: white; font-weight: bold; font-size: 0.95rem;">${count}. ${row.players.full_name}</span>
                     </label>`;
+                    count++;
                 }
             });
             html += `</div>`;
@@ -512,7 +512,7 @@
             document.getElementById('canvas-container').innerHTML = manualMatches.map((m, i) => `
                 <div class="canvas-row">
                     <div class="canvas-header">
-                        <b style="color:#f59e0b">${m.id}</b>
+                        <b style="color:#f59e0b">${i + 1}. ${m.id}</b>
                         ${m.pin ? `<span style="background:#10b981; color:white; padding:2px 8px; border-radius:4px; font-size:0.7rem;">LIVE</span>` : ''}
                         <input class="canvas-name-input" value="${m.name}" oninput="manualMatches[${i}].name=this.value">
                         <button type="button" class="btn-delete" onclick="deleteCanvasMatch(${i})">X</button>
@@ -533,8 +533,8 @@
         function addNewPool() { let pNames = Object.keys(poolsData); poolsData["Pool " + String.fromCharCode(65 + pNames.length)] = []; renderPoolsWorkspace(); }
         function renderPoolsWorkspace() {
             let assigned = [].concat(...Object.values(poolsData)); let unassigned = activeTeams.filter(t => !assigned.includes(t));
-            document.getElementById('staging-teams-list').innerHTML = unassigned.map(t => `<div style="background:#0f172a; padding:8px; border-radius:4px; margin-bottom:5px; font-weight:bold;">${t} <select style="background:#1e293b; color:white; float:right;" onchange="assignTeam('${t}', this.value)"><option value="">Move...</option>${Object.keys(poolsData).map(p => `<option value="${p}">${p}</option>`)}</select></div>`).join('');
-            document.getElementById('pools-container-grid').innerHTML = Object.keys(poolsData).map(pName => `<div class="pool-card"><b style="color:#f59e0b;">${pName}</b><div class="pool-teams-box">${poolsData[pName].map(t => `<div class="team-pill">${t} <span style="cursor:pointer; margin-left:5px;" onclick="removeTeam('${pName}', '${t}')">×</span></div>`).join('')}</div></div>`).join('');
+            document.getElementById('staging-teams-list').innerHTML = unassigned.map((t, i) => `<div style="background:#0f172a; padding:8px; border-radius:4px; margin-bottom:5px; font-weight:bold;">${i + 1}. ${t} <select style="background:#1e293b; color:white; float:right;" onchange="assignTeam('${t}', this.value)"><option value="">Move...</option>${Object.keys(poolsData).map(p => `<option value="${p}">${p}</option>`)}</select></div>`).join('');
+            document.getElementById('pools-container-grid').innerHTML = Object.keys(poolsData).map(pName => `<div class="pool-card"><b style="color:#f59e0b;">${pName}</b><div class="pool-teams-box">${poolsData[pName].map((t, i) => `<div class="team-pill">${i + 1}. ${t} <span style="cursor:pointer; margin-left:5px;" onclick="removeTeam('${pName}', '${t}')">×</span></div>`).join('')}</div></div>`).join('');
         }
         function assignTeam(t, p) { if(p) { poolsData[p].push(t); renderPoolsWorkspace(); } }
         function removeTeam(p, t) { poolsData[p] = poolsData[p].filter(x => x !== t); renderPoolsWorkspace(); }
@@ -564,7 +564,7 @@
         }
         function renderKnockouts() {
             let opts = `<option value="">Select Team/Placeholder...</option>` + activeTeams.map(t => `<option value="${t}">${t}</option>`).join('');
-            document.getElementById('knockout-mapping-container').innerHTML = koGeneratedMatches.map((m, i) => `<div class="canvas-row"><div class="canvas-header"><b style="color:#f59e0b">${m.id}</b><input class="canvas-name-input" value="${m.name}" oninput="koGeneratedMatches[${i}].name=this.value"></div><div class="canvas-teams"><select class="postings-select" onchange="koGeneratedMatches[${i}].t1=this.value"><option value="${m.t1}" selected>${m.t1}</option>${opts}</select> VS <select class="postings-select" onchange="koGeneratedMatches[${i}].t2=this.value"><option value="${m.t2}" selected>${m.t2}</option>${opts}</select></div></div>`).join('');
+            document.getElementById('knockout-mapping-container').innerHTML = koGeneratedMatches.map((m, i) => `<div class="canvas-row"><div class="canvas-header"><b style="color:#f59e0b">${i + 1}. ${m.id}</b><input class="canvas-name-input" value="${m.name}" oninput="koGeneratedMatches[${i}].name=this.value"></div><div class="canvas-teams"><select class="postings-select" onchange="koGeneratedMatches[${i}].t1=this.value"><option value="${m.t1}" selected>${m.t1}</option>${opts}</select> VS <select class="postings-select" onchange="koGeneratedMatches[${i}].t2=this.value"><option value="${m.t2}" selected>${m.t2}</option>${opts}</select></div></div>`).join('');
         }
         function lockKnockoutsAndProceed() { updateFinalLockedMatches(); document.querySelectorAll('.wizard-step')[3].click(); }
 
@@ -573,7 +573,7 @@
             document.getElementById('postings-body').innerHTML = finalLockedMatches.map((m, i) => `
                 <tr>
                     <td style="font-weight: bold; color: #38bdf8; font-size: 1.1rem;">
-                        ${m.name}<div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">${m.t1 || 'TBD'} vs ${m.t2 || 'TBD'}</div>
+                        ${i + 1}. ${m.name}<div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">${m.t1 || 'TBD'} vs ${m.t2 || 'TBD'}</div>
                     </td>
                     <td>
                         <div style="color:#10b981; font-weight:bold;">${m.pin ? 'Live on Cloud (PIN: ' + m.pin + ')' : 'Ready for Cloud Injection'}</div>
@@ -624,7 +624,7 @@
 
         function displayPins(matches) {
             let html = `<div style="background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #10b981; margin-top: 25px;"><h3 style="color: #10b981; margin-top: 0;">✅ Database Injected Successfully!</h3><p style="color: #94a3b8; font-size: 0.9rem;">Share these exact Match IDs and PINs with your Scorers.</p><table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem;"><tr style="background: #1e293b; color: #cbd5e1;"><th style="padding: 10px; text-align: left;">Match ID</th><th style="padding: 10px; text-align: left;">Teams</th><th style="padding: 10px; text-align: center; color: #f59e0b;">Scorer PIN</th></tr>`;
-            matches.forEach(m => { html += `<tr style="border-bottom: 1px solid #1e293b;"><td style="padding: 10px; color: #38bdf8; font-weight:bold;">${m.id}</td><td style="padding: 10px; color: #94a3b8;">${m.t1} vs ${m.t2} <div style="font-size:0.75rem; color:white;">${m.name}</div></td><td style="padding: 10px; text-align: center; font-size: 1.5rem; font-weight: bold; color: #f59e0b; letter-spacing: 3px;">${m.pin}</td></tr>`; });
+            matches.forEach((m, index) => { html += `<tr style="border-bottom: 1px solid #1e293b;"><td style="padding: 10px; color: #38bdf8; font-weight:bold;">${index + 1}. ${m.id}</td><td style="padding: 10px; color: #94a3b8;">${m.t1} vs ${m.t2} <div style="font-size:0.75rem; color:white;">${m.name}</div></td><td style="padding: 10px; text-align: center; font-size: 1.5rem; font-weight: bold; color: #f59e0b; letter-spacing: 3px;">${m.pin}</td></tr>`; });
             html += `</table></div>`;
             document.getElementById('step4').innerHTML += html;
         }
