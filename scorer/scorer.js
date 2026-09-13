@@ -11,7 +11,6 @@ const supabaseClient = (typeof window.supabase !== 'undefined' && SUPABASE_URL.i
 if (typeof window.Chart !== 'undefined') { Chart.defaults.color = '#cbd5e1'; Chart.defaults.borderColor = '#334155'; } window.matchChart = null; 
 const el = id => document.getElementById(id); const getBatTeam = () => state.teams[state.battingKey]; const getBowlTeam = () => state.teams[state.bowlingKey]; const formatOver = balls => Math.floor(balls/6) + "." + (balls%6); const getBadgeHtml = b => b.type === 'divider' ? `<span class="over-divider">/</span>` : `<div class="ball-badge ball-${b.type}">${b.label}</div>`;
 const calcMins = (inT, outT, brk = 0) => { if(!inT) return "-"; try { let endT = outT || new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); let d1 = new Date("01/01/2000 " + inT), d2 = new Date("01/01/2000 " + endT); if(d2 < d1) d2.setDate(d2.getDate() + 1); let mins = Math.round((d2 - d1) / 60000) - brk; if (mins < 0) mins = 0; return isNaN(mins) ? "-" : mins + "m"; } catch(e) { return "-"; } };
-const skillPermutations = ["Right Hand Batter", "Left Hand Batter", "Right Hand Batter / WK", "Left Hand Batter / WK", "RHB / Right Arm Medium Pacer", "RHB / Right Arm Off Break", "RHB / Right Arm Leg Break", "LHB / Right Arm Medium Pacer", "LHB / Right Arm Off Break", "LHB / Right Arm Leg Break", "RHB / Left Arm Medium Pacer", "RHB / Slow Left Arm Orthodox", "RHB / Left Arm Unorthodox", "LHB / Left Arm Medium Pacer", "LHB / Slow Left Orthodox", "LHB / Left Arm Unorthodox", "Right Arm Medium Pacer", "Right Arm Off Break", "Right Arm Leg Break", "Left Arm Medium Pacer", "Slow Left Arm Orthodox", "Left Arm Unorthodox"];
 
 function getEffectiveBalls(cur) {
     let effective = 0; let prevActual = 0;
@@ -172,55 +171,15 @@ function startInnings() {
     state.current.bowlersInCurrentOver.add(state.current.bIdx);
     state.current.inningsStartTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     
-    // Safely fallback if activeMatch is null (e.g. if the user resumed a match from local memory)
-    el('displayTournament').innerText = (activeMatch && activeMatch.full_state) ? activeMatch.full_state.tournament : "MATCH IN PROGRESS"; 
+    if(activeMatch && activeMatch.full_state) {
+        el('displayTournament').innerText = activeMatch.full_state.tournament || "MATCH IN PROGRESS"; 
+    }
     el('dispGroundName').innerText = "Live Ground"; 
     
     el('initialization-screen').classList.add('hidden');
     el('top-title').classList.add('hidden');
     el('scoringView').classList.remove('hidden');
     updateUI();
-}
-
-function executeTransition(nBat, nBowl, action) { 
-    state.inningsNum++; state.battingKey = nBat; state.bowlingKey = nBowl; 
-    if (action === 'forfeit') { 
-        state.inningsSummaries.push({ innNum: state.inningsNum, batTeam: state.teams[nBat].name, bowlTeam: state.teams[nBowl].name, runs: 0, wkts: 0, overs: "0.0", penalties: 0, overHistory: [], batters: JSON.parse(JSON.stringify(state.teams[nBat].players)), bowlers: JSON.parse(JSON.stringify(state.teams[nBowl].players)), fow: [], extras: {w:0, nb:0, b:0, lb:0}, startTime: "-", endTime: "-", allowances: 0 }); 
-        remarkLog.push({ over: "0.0", time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), batters: "-", bowler: "-", fielder: "-", remark: `Innings ${state.inningsNum} Forfeited by ${state.teams[nBat].name}` }); 
-        showMatchSummary(); 
-        return; 
-    }
-    
-    state.current = { runs: state.teams[state.battingKey].pendingPenalties || 0, wkts:0, balls:0, sIdx:null, nsIdx:null, bIdx:null, isFreeHit: false, penalties: state.teams[state.battingKey].pendingPenalties || 0, lastOverBowlers: new Set(), extras: {w:0, nb:0, b:0, lb:0}, recentBalls: [], currentOverLog: [], runsInThisOver: 0, bowlersInCurrentOver: new Set(), overHistory: [], currPartnership: { runs: 0, balls: 0 }, fow: [], activeBreak: null, activeBreakStartTime: null, activeBreakInsp: null, pendingBreakMins: 0, inningsStartTime: null, inningsEndTime: null, allowances: 0 }; 
-    state.teams[state.battingKey].pendingPenalties = 0; 
-    ['A', 'B'].forEach(t => state.teams[t].players.forEach(p => { p.r = p.b = p.f = p.s = p.o = p.rc = p.w = p.m = p.ex = p.wd = p.nb = p.cw = p.catches = p.stumpings = p.runouts = p.byes = p.legbyes = p.quotaOvers = p.breakMins = 0; p.out = p.hasBatted = false; p.outOnDuck = 0; p.dismissalInfo = ""; p.inTime = p.outTime = null; })); 
-    
-    // 1. Hide the Live Scoreboard
-    el('scoringView').classList.add('hidden');
-    
-    // 2. Bring back the Cloud Initialization Screen!
-    el('initialization-screen').classList.remove('hidden');
-    
-    el('init-bat-title').innerText = `${state.teams[state.battingKey].name} Openers`;
-    el('init-bowl-title').innerText = `${state.teams[state.bowlingKey].name} Bowler`;
-
-    // 3. Populate dropdowns using ONLY the Playing XI for the new innings
-    let batOpts = '<option value="">-- Select Batter --</option>';
-    state.teams[state.battingKey].players.forEach((p, index) => { if(p.isPlayingXI) batOpts += `<option value="${index}">${p.name}</option>`; });
-    
-    let bowlOpts = '<option value="">-- Select Bowler --</option>';
-    state.teams[state.bowlingKey].players.forEach((p, index) => { if(p.isPlayingXI) bowlOpts += `<option value="${index}">${p.name}</option>`; });
-
-    el('sel-striker').innerHTML = batOpts; 
-    el('sel-nonstriker').innerHTML = batOpts; 
-    el('sel-bowler').innerHTML = bowlOpts;
-
-    // Reset dropdown values to blank
-    el('sel-striker').value = "";
-    el('sel-nonstriker').value = "";
-    el('sel-bowler').value = "";
-
-    updateUI(); 
 }
 
 // ==========================================
@@ -581,7 +540,7 @@ function generateReportHTML(isExcel) {
     if (isExcel) { html += `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>${css}</style></head><body><div align="center">`; } 
     else { html += `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Match Report PDF</title><style>${css}</style></head><body><div align="center">`; }
 
-    let res = state.matchResult || calculateResultText() || "Match in Progress"; let mId = state.matchId || "N/A"; let tourn = activeMatch.full_state.tournament || "Match"; let date = new Date().toLocaleDateString();
+    let res = state.matchResult || calculateResultText() || "Match in Progress"; let mId = state.matchId || "N/A"; let tourn = (activeMatch && activeMatch.full_state) ? activeMatch.full_state.tournament : "Match"; let date = new Date().toLocaleDateString();
     
     html += `<table><tr><th colspan="11" class="main-header">SPORTZSTAT OFFICIAL MATCH REPORT</th></tr><tr><td colspan="5" class="sub-header">🏆 Tournament: ${tourn}</td><td colspan="6" class="sub-header text-right">Match ID: ${mId}</td></tr><tr><td colspan="5" class="sub-header">📅 Date: ${date}</td><td colspan="6" class="sub-header text-right" style="color:#2563eb;">🏁 Result: ${res}</td></tr></table>`;
 
@@ -686,7 +645,7 @@ function openCardStudio() {
 
 function previewCombinedCard() {
     let perfs = getTopPerformers();
-    let tournName = activeMatch.full_state.tournament || "OFFICIAL MATCH CARD";
+    let tournName = (activeMatch && activeMatch.full_state) ? activeMatch.full_state.tournament : "OFFICIAL MATCH CARD";
     
     let allInn = [...state.inningsSummaries];
     if ((state.current.balls > 0 || state.current.runs > 0) && state.inningsNum > state.inningsSummaries.length) {
@@ -1023,12 +982,62 @@ function openTransitionManager() {
 
 function executeTransition(nBat, nBowl, action) { 
     state.inningsNum++; state.battingKey = nBat; state.bowlingKey = nBowl; 
-    if (action === 'forfeit') { state.inningsSummaries.push({ innNum: state.inningsNum, batTeam: state.teams[nBat].name, bowlTeam: state.teams[nBowl].name, runs: 0, wkts: 0, overs: "0.0", penalties: 0, overHistory: [], batters: JSON.parse(JSON.stringify(state.teams[nBat].players)), bowlers: JSON.parse(JSON.stringify(state.teams[nBowl].players)), fow: [], extras: {w:0, nb:0, b:0, lb:0}, startTime: "-", endTime: "-", allowances: 0 }); remarkLog.push({ over: "0.0", time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), batters: "-", bowler: "-", fielder: "-", remark: `Innings ${state.inningsNum} Forfeited by ${state.teams[nBat].name}` }); showMatchSummary(); return; }
+    if (action === 'forfeit') { 
+        state.inningsSummaries.push({ innNum: state.inningsNum, batTeam: state.teams[nBat].name, bowlTeam: state.teams[nBowl].name, runs: 0, wkts: 0, overs: "0.0", penalties: 0, overHistory: [], batters: JSON.parse(JSON.stringify(state.teams[nBat].players)), bowlers: JSON.parse(JSON.stringify(state.teams[nBowl].players)), fow: [], extras: {w:0, nb:0, b:0, lb:0}, startTime: "-", endTime: "-", allowances: 0 }); 
+        remarkLog.push({ over: "0.0", time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), batters: "-", bowler: "-", fielder: "-", remark: `Innings ${state.inningsNum} Forfeited by ${state.teams[nBat].name}` }); 
+        showMatchSummary(); 
+        return; 
+    }
     
     state.current = { runs: state.teams[state.battingKey].pendingPenalties || 0, wkts:0, balls:0, sIdx:null, nsIdx:null, bIdx:null, isFreeHit: false, penalties: state.teams[state.battingKey].pendingPenalties || 0, lastOverBowlers: new Set(), extras: {w:0, nb:0, b:0, lb:0}, recentBalls: [], currentOverLog: [], runsInThisOver: 0, bowlersInCurrentOver: new Set(), overHistory: [], currPartnership: { runs: 0, balls: 0 }, fow: [], activeBreak: null, activeBreakStartTime: null, activeBreakInsp: null, pendingBreakMins: 0, inningsStartTime: null, inningsEndTime: null, allowances: 0 }; 
     state.teams[state.battingKey].pendingPenalties = 0; 
     ['A', 'B'].forEach(t => state.teams[t].players.forEach(p => { p.r = p.b = p.f = p.s = p.o = p.rc = p.w = p.m = p.ex = p.wd = p.nb = p.cw = p.catches = p.stumpings = p.runouts = p.byes = p.legbyes = p.quotaOvers = p.breakMins = 0; p.out = p.hasBatted = false; p.outOnDuck = 0; p.dismissalInfo = ""; p.inTime = p.outTime = null; })); 
-    updateUI(); setTimeout(() => { openMatchStartModal(); }, 100); 
+    
+    updateUI(); 
+    
+    // 🔥 This calls the popup to ask for the new batters and bowler! 🔥
+    setTimeout(() => { openMatchStartModal(); }, 200); 
+}
+
+function openMatchStartModal() {
+    let bI = []; 
+    getBatTeam().players.forEach((p, i) => { if(p.isPlayingXI) bI.push(i); });
+    
+    let sO = getBatTeam().players.map((p, i) => p.isPlayingXI ? `<option value="${i}" ${i===bI[0]?'selected':''}>${p.name}</option>` : '').join('');
+    let nsO = getBatTeam().players.map((p, i) => p.isPlayingXI ? `<option value="${i}" ${i===bI[1]?'selected':''}>${p.name}</option>` : '').join('');
+    let bowlOpts = getBowlTeam().players.map((p, i) => p.isPlayingXI ? `<option value="${i}">${p.name}</option>` : '').join('');
+    
+    let html = `
+    <div style="display:flex; flex-direction:column; gap:15px; margin-top:10px;">
+        <div style="background:rgba(16, 185, 129, 0.1); border:1px solid #10b981; padding:15px; border-radius:8px;">
+            <label style="color:#10b981; font-weight:bold; display:block; margin-bottom:5px;">🏏 STRIKER (Facing 1st Ball)</label>
+            <select id="sStr" class="modal-input w-100" style="margin-bottom:10px;">${sO}</select>
+            
+            <label style="color:#10b981; font-weight:bold; display:block; margin-bottom:5px;">🏃 NON-STRIKER</label>
+            <select id="sNStr" class="modal-input w-100" style="margin-bottom:0;">${nsO}</select>
+        </div>
+        <div style="background:rgba(239, 68, 68, 0.1); border:1px solid #ef4444; padding:15px; border-radius:8px;">
+            <label style="color:#ef4444; font-weight:bold; display:block; margin-bottom:5px;">⚾ OPENING BOWLER</label>
+            <select id="sBwl" class="modal-input w-100" style="margin-bottom:0;">${bowlOpts}</select>
+        </div>
+    </div>
+    <div id="startError" class="text-danger font-bold text-center mt-15"></div>`;
+    
+    showModal(`START INNINGS ${state.inningsNum}`, html, () => { 
+        let s1 = parseInt(el('sStr').value), s2 = parseInt(el('sNStr').value), b1 = parseInt(el('sBwl').value); 
+        if (s1 === s2) { el('startError').innerText = "🚨 Striker and Non-Striker must be different players!"; return; } 
+        if (isNaN(b1)) { el('startError').innerText = "🚨 Please select a Bowler!"; return; } 
+        
+        saveState(); 
+        state.current.sIdx = s1; state.current.nsIdx = s2; state.current.bIdx = b1; 
+        getBatTeam().players[s1].hasBatted = true; getBatTeam().players[s2].hasBatted = true; 
+        state.current.bowlersInCurrentOver.add(b1); 
+        state.current.currPartnership = { runs: 0, balls: 0 }; 
+        state.current.inningsStartTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); 
+        
+        closeModal(); 
+        updateUI(); 
+    }, false, "400px", "Start Innings"); 
 }
 
 function executeEndOver() {
