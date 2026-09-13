@@ -172,13 +172,55 @@ function startInnings() {
     state.current.bowlersInCurrentOver.add(state.current.bIdx);
     state.current.inningsStartTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     
-    el('displayTournament').innerText = activeMatch.full_state.tournament || "MATCH IN PROGRESS"; 
+    // Safely fallback if activeMatch is null (e.g. if the user resumed a match from local memory)
+    el('displayTournament').innerText = (activeMatch && activeMatch.full_state) ? activeMatch.full_state.tournament : "MATCH IN PROGRESS"; 
     el('dispGroundName').innerText = "Live Ground"; 
     
     el('initialization-screen').classList.add('hidden');
     el('top-title').classList.add('hidden');
     el('scoringView').classList.remove('hidden');
     updateUI();
+}
+
+function executeTransition(nBat, nBowl, action) { 
+    state.inningsNum++; state.battingKey = nBat; state.bowlingKey = nBowl; 
+    if (action === 'forfeit') { 
+        state.inningsSummaries.push({ innNum: state.inningsNum, batTeam: state.teams[nBat].name, bowlTeam: state.teams[nBowl].name, runs: 0, wkts: 0, overs: "0.0", penalties: 0, overHistory: [], batters: JSON.parse(JSON.stringify(state.teams[nBat].players)), bowlers: JSON.parse(JSON.stringify(state.teams[nBowl].players)), fow: [], extras: {w:0, nb:0, b:0, lb:0}, startTime: "-", endTime: "-", allowances: 0 }); 
+        remarkLog.push({ over: "0.0", time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), batters: "-", bowler: "-", fielder: "-", remark: `Innings ${state.inningsNum} Forfeited by ${state.teams[nBat].name}` }); 
+        showMatchSummary(); 
+        return; 
+    }
+    
+    state.current = { runs: state.teams[state.battingKey].pendingPenalties || 0, wkts:0, balls:0, sIdx:null, nsIdx:null, bIdx:null, isFreeHit: false, penalties: state.teams[state.battingKey].pendingPenalties || 0, lastOverBowlers: new Set(), extras: {w:0, nb:0, b:0, lb:0}, recentBalls: [], currentOverLog: [], runsInThisOver: 0, bowlersInCurrentOver: new Set(), overHistory: [], currPartnership: { runs: 0, balls: 0 }, fow: [], activeBreak: null, activeBreakStartTime: null, activeBreakInsp: null, pendingBreakMins: 0, inningsStartTime: null, inningsEndTime: null, allowances: 0 }; 
+    state.teams[state.battingKey].pendingPenalties = 0; 
+    ['A', 'B'].forEach(t => state.teams[t].players.forEach(p => { p.r = p.b = p.f = p.s = p.o = p.rc = p.w = p.m = p.ex = p.wd = p.nb = p.cw = p.catches = p.stumpings = p.runouts = p.byes = p.legbyes = p.quotaOvers = p.breakMins = 0; p.out = p.hasBatted = false; p.outOnDuck = 0; p.dismissalInfo = ""; p.inTime = p.outTime = null; })); 
+    
+    // 1. Hide the Live Scoreboard
+    el('scoringView').classList.add('hidden');
+    
+    // 2. Bring back the Cloud Initialization Screen!
+    el('initialization-screen').classList.remove('hidden');
+    
+    el('init-bat-title').innerText = `${state.teams[state.battingKey].name} Openers`;
+    el('init-bowl-title').innerText = `${state.teams[state.bowlingKey].name} Bowler`;
+
+    // 3. Populate dropdowns using ONLY the Playing XI for the new innings
+    let batOpts = '<option value="">-- Select Batter --</option>';
+    state.teams[state.battingKey].players.forEach((p, index) => { if(p.isPlayingXI) batOpts += `<option value="${index}">${p.name}</option>`; });
+    
+    let bowlOpts = '<option value="">-- Select Bowler --</option>';
+    state.teams[state.bowlingKey].players.forEach((p, index) => { if(p.isPlayingXI) bowlOpts += `<option value="${index}">${p.name}</option>`; });
+
+    el('sel-striker').innerHTML = batOpts; 
+    el('sel-nonstriker').innerHTML = batOpts; 
+    el('sel-bowler').innerHTML = bowlOpts;
+
+    // Reset dropdown values to blank
+    el('sel-striker').value = "";
+    el('sel-nonstriker').value = "";
+    el('sel-bowler').value = "";
+
+    updateUI(); 
 }
 
 // ==========================================
