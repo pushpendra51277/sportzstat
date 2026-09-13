@@ -51,7 +51,7 @@ let state = { matchId: "", inningsNum: 1, battingKey: 'A', bowlingKey: 'B', matc
 let modalContext = {}, stateHistory = [], remarkLog = [];
 
 // ==========================================
-// PHASE 2: NEW CLOUD INITIALIZATION SYSTEM
+// NEW CLOUD INITIALIZATION SYSTEM
 // ==========================================
 let activeMatch = null;
 
@@ -140,7 +140,6 @@ async function lockPlayingXI() {
     state.teams.A.name = activeMatch.full_state.team1;
     state.teams.B.name = activeMatch.full_state.team2;
     
-    // BUILD THE OLD STATE FORMAT SO ALL OLD CODE WORKS FLAWLESSLY
     state.teams.A.players = [...tA_XI.map(p => buildPlayerObject(p, true)), ...tA_Sub.map(p => buildPlayerObject(p, false))];
     state.teams.B.players = [...tB_XI.map(p => buildPlayerObject(p, true)), ...tB_Sub.map(p => buildPlayerObject(p, false))];
 
@@ -183,7 +182,7 @@ function startInnings() {
 }
 
 // ==========================================
-// PHASE 3: THE ORIGINAL SCORING ENGINE LOGIC
+// SCORING ENGINE LOGIC & CLOUD SYNC
 // ==========================================
 function toggleFullScreen() { let fsBtn = el('fsBtn'); if (!document.fullscreenElement) { document.documentElement.requestFullscreen().then(() => { fsBtn.innerText = '🔳 EXIT FULL SCREEN'; }).catch(err => alert("Fullscreen not supported.")); } else { if (document.exitFullscreen) { document.exitFullscreen().then(() => { fsBtn.innerText = '🔲 FULL'; }); } } }
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) { el('fsBtn').innerText = '🔲 FULL'; } });
@@ -243,11 +242,8 @@ function finalizeOver(isPartialTerminal = false) {
     cur.lastOverBowlers = new Set(cur.bowlersInCurrentOver); cur.runsInThisOver = 0; cur.bowlersInCurrentOver.clear(); cur.recentBalls.push(...cur.currentOverLog, {label: '/', type: 'divider'}); if(cur.recentBalls.length > 14) cur.recentBalls = cur.recentBalls.slice(-14); cur.currentOverLog = []; 
 }
 
-// THIS PUSHES THE FULL STATE TO SUPABASE INSTEAD OF JUST LIGHTWEIGHT DATA
 async function triggerCloudSync() {
     if (!supabaseClient || !state.matchId) return;
-    
-    // Always sync the COMPLETE state so we can restore perfectly on refresh!
     let fullStatePayload = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
     
     try {
@@ -259,7 +255,7 @@ async function triggerCloudSync() {
 async function logBallEvent(batterObj, bowlerObj, runsBat, runsExtra, extraType, isWicket, wicketType, dismissedObj) {
     if (!supabaseClient || !state.matchId) return;
     let ballData = { match_id: state.matchId, innings_no: state.inningsNum, over_no: Math.floor(state.current.balls / 6), ball_no: (state.current.balls % 6) + 1, batter_name: batterObj ? batterObj.name : "Unknown", bowler_name: bowlerObj ? bowlerObj.name : "Unknown", runs_batter: runsBat, runs_extra: runsExtra, is_valid_ball: (extraType !== 'Wide' && extraType !== 'No-Ball'), extra_type: extraType, is_wicket: isWicket, wicket_type: wicketType || null, dismissed_player_name: dismissedObj ? dismissedObj.name : null };
-    try { supabaseClient.from('ball_by_ball').insert([ballData]).then(({error}) => { if(error) console.warn("Supabase Ball log error:", error); }); } catch(e) {}
+    try { await supabaseClient.from('ball_by_ball').insert([ballData]); } catch(e) {}
 }
 
 async function logCareerStats() {
@@ -275,7 +271,9 @@ function ballScored(runs, isB) {
     b.rc += runs; b.o++; cur.runs += runs; cur.runsInThisOver += runs; cur.balls++; cur.currPartnership.runs += runs; cur.currPartnership.balls++; 
     cur.currentOverLog.push({label: runs.toString(), type: isB ? (runs === 4 ? 'four' : 'six') : 'normal'}); cur.isFreeHit = false;
     
-    logBallEvent(s, b, runs, 0, 'None', false, null, null);[cite: 2]
+    // Send event data to the cloud safely
+    logBallEvent(s, b, runs, 0, 'None', false, null, null).then(() => {}); 
+    
     if(runs % 2 !== 0) manualRotate(); 
     if (checkTargetReached()) { finalizeOver(true); setTimeout(endInnings, 100); return; }
     updateUI(); checkAutoOverPrompt();
@@ -311,7 +309,10 @@ function processExtraSubmit() {
     }
     
     cur.currentOverLog.push({label: lbl, type: 'extra'}); 
-    logBallEvent(s, b, runsBat, runsExt, exLabel, false, null, null);[cite: 2]
+    
+    // Send event data to the cloud safely
+    logBallEvent(s, b, runsBat, runsExt, exLabel, false, null, null).then(() => {}); 
+    
     if(ex % 2 !== 0) manualRotate(); 
     if (checkTargetReached()) { finalizeOver(true); closeModal(); setTimeout(endInnings, 100); return; }
     closeModal(); updateUI(); checkAutoOverPrompt();
@@ -350,7 +351,7 @@ function processWicketSubmit() {
     if (wType === 'RetiredHurt' || wType === 'RetiredOut') { 
         if (wType === 'RetiredHurt') { oB.out = 'retiredHurt'; oB.dismissalInfo = "Retired Hurt (Not Out)"; } else { cur.wkts++; oB.out = true; oB.dismissalInfo = "Retired Out"; } 
         cur.currentOverLog.push({label: 'Ret', type: 'wicket'}); 
-        logBallEvent(s, b, 0, 0, 'None', true, wType, oB); 
+        logBallEvent(s, b, 0, 0, 'None', true, wType, oB).then(() => {}); 
     } 
     else {
         cur.wkts++; oB.out = true; 
@@ -377,7 +378,8 @@ function processWicketSubmit() {
         let dT = ""; if (wType === 'Bowled') dT = `b ${b.name}`; else if (wType === 'Caught') dT = `c ${wFldr || 'Sub'} b ${b.name}`; else if (wType === 'LBW') dT = `lbw b ${b.name}`; else if (wType === 'Stumped') dT = `st ${wFldr} b ${b.name}`; else if (wType === 'RunOut') dT = `run out (${wFldr || 'Sub'})`; else if (wType === 'HitWicket') dT = `hit wicket b ${b.name}`; else if (wType === 'ObstructingField') dT = `obstructing the field`; else if (wType === 'HitBallTwice') dT = `hit the ball twice`; else if (wType === 'TimedOut') dT = `timed out`;
         if (extraType === 'wide') dT += ' (wd)'; else if (extraType === 'noball') dT += ' (nb)'; oB.dismissalInfo = dT;
         
-        logBallEvent(s, b, runsBat, runsExt, exLabel, true, wType, oB);[cite: 2]
+        // Send event data to the cloud safely
+        logBallEvent(s, b, runsBat, runsExt, exLabel, true, wType, oB).then(() => {}); 
     }
 
     oB.outTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
