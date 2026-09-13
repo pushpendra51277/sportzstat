@@ -416,6 +416,9 @@
         // ==============================
         // VERIFY & SYNC SQUADS
         // ==============================
+        // ==============================
+        // STEP 2: VERIFY & SELECT SQUADS
+        // ==============================
         async function loadWizardSquad(teamName) {
             const container = document.getElementById('wizard-player-slots-container');
             if(!teamName) { container.innerHTML = ''; return; }
@@ -429,14 +432,74 @@
                 return;
             }
 
-            let playerIds = data.map(d => d.player_id);
-            tournamentSquadsCache[teamName] = playerIds;
+            let safeTeamClass = teamName.replace(/\s+/g, '_'); // Creates a safe class name without spaces
 
-            let html = `<h4 style="color:#10b981;">Verified Squad (${data.length} Players)</h4><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">`;
+            let html = `<h4 style="color:#10b981;">Select Tournament Squad</h4>
+                        <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:15px;">Uncheck players from the Master DB who are NOT participating in this specific tournament.</p>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:left;">`;
+            
             data.forEach(row => {
-                if(row.players) html += `<div style="background:#1e293b; padding:10px; border-radius:6px; display:flex; justify-content:space-between;"><span style="color:white; font-weight:bold;">${row.players.full_name}</span><span style="color:#10b981;">✔</span></div>`;
+                if(row.players) {
+                    // Keep previously selected players checked if flipping between teams
+                    let isChecked = "checked";
+                    if(tournamentSquadsCache[teamName] && !tournamentSquadsCache[teamName].includes(row.player_id)) {
+                        isChecked = "";
+                    }
+
+                    html += `
+                    <label class="team-checkbox-item" style="margin-bottom:0;">
+                        <input type="checkbox" class="squad-chk-${safeTeamClass}" value="${row.player_id}" ${isChecked} style="width: 18px; height: 18px; margin-right: 15px; cursor: pointer;">
+                        <span style="color: white; font-weight: bold; font-size: 0.95rem;">${row.players.full_name}</span>
+                    </label>`;
+                }
             });
             html += `</div>`;
+
+            if (currentTournamentId) {
+                html += `<button type="button" style="background:#f59e0b; width:100%; padding:12px; margin-top:20px; border:none; border-radius:6px; color:black; font-weight:bold; cursor:pointer;" onclick="syncSquadToTournament(event, '${teamName}', '${safeTeamClass}')">🔄 Sync Selected Roster to Live Tournament</button>`;
+            }
+
+            html += `<button type="button" style="background:#10b981; width:100%; padding:12px; margin-top:10px; border:none; border-radius:6px; color:white; font-weight:bold; cursor:pointer;" onclick="confirmSquadSelection('${teamName}', '${safeTeamClass}')">Save Squad Selection & Go to Fixtures ➡️</button>`;
+            
+            container.innerHTML = html;
+        }
+
+        // Helper function to save the checked boxes to memory
+        function confirmSquadSelection(teamName, safeTeamClass) {
+            let selectedIds = [];
+            document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).forEach(chk => selectedIds.push(chk.value));
+            tournamentSquadsCache[teamName] = selectedIds;
+            document.querySelectorAll('.wizard-step')[2].click();
+        }
+
+        async function syncSquadToTournament(event, teamName, safeTeamClass) {
+            if(!currentTournamentId) { alert("Tournament not saved yet."); return; }
+            let teamUUID = activeTeamMap[teamName];
+            
+            // Get currently checked players
+            let selectedIds = [];
+            document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).forEach(chk => selectedIds.push(chk.value));
+            tournamentSquadsCache[teamName] = selectedIds;
+            
+            if(!teamUUID || selectedIds.length === 0) { alert("Please select at least one player to sync."); return; }
+            
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "⏳ Syncing...";
+
+            let payload = selectedIds.map(pid => ({ tournament_id: currentTournamentId, team_id: teamUUID, player_id: pid }));
+            
+            const { error } = await db.from('tournament_squads').upsert(payload, {onConflict: 'tournament_id, team_id, player_id'});
+            
+            if(error) {
+                alert("Error syncing squad: " + error.message);
+                btn.innerText = originalText;
+            } else {
+                alert(`✅ Successfully synced ${selectedIds.length} players to the live tournament!`);
+                btn.innerText = "✅ Synced Successfully!";
+                setTimeout(() => btn.innerText = originalText, 3000);
+            }
+        }
 
             // SYNC NEW PLAYERS BUTTON 
             if (currentTournamentId) {
@@ -448,18 +511,78 @@
             container.innerHTML = html;
         }
 
-        async function syncSquadToTournament(event, teamName) {
+       // ==============================
+        // STEP 2: VERIFY & SELECT SQUADS
+        // ==============================
+        async function loadWizardSquad(teamName) {
+            const container = document.getElementById('wizard-player-slots-container');
+            if(!teamName) { container.innerHTML = ''; return; }
+            
+            container.innerHTML = `<div style="text-align: center; color: #94a3b8; padding: 20px;">Fetching Master Roster for ${teamName}...</div>`;
+
+            const { data, error } = await db.from('team_rosters').select('player_id, players(full_name)').eq('team_name', teamName);
+            
+            if (error || !data || data.length === 0) {
+                container.innerHTML = `<div style="color: #fca5a5; padding: 15px; border: 1px dashed #ef4444; border-radius: 6px;">No players found for "${teamName}". Please use <a href="rosters.html" target="_blank" style="color:#38bdf8;">Roster Manager</a> to assign players to this team.</div>`;
+                return;
+            }
+
+            let safeTeamClass = teamName.replace(/\s+/g, '_'); // Creates a safe class name without spaces
+
+            let html = `<h4 style="color:#10b981;">Select Tournament Squad</h4>
+                        <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:15px;">Uncheck players from the Master DB who are NOT participating in this specific tournament.</p>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:left;">`;
+            
+            data.forEach(row => {
+                if(row.players) {
+                    // Keep previously selected players checked if flipping between teams
+                    let isChecked = "checked";
+                    if(tournamentSquadsCache[teamName] && !tournamentSquadsCache[teamName].includes(row.player_id)) {
+                        isChecked = "";
+                    }
+
+                    html += `
+                    <label class="team-checkbox-item" style="margin-bottom:0;">
+                        <input type="checkbox" class="squad-chk-${safeTeamClass}" value="${row.player_id}" ${isChecked} style="width: 18px; height: 18px; margin-right: 15px; cursor: pointer;">
+                        <span style="color: white; font-weight: bold; font-size: 0.95rem;">${row.players.full_name}</span>
+                    </label>`;
+                }
+            });
+            html += `</div>`;
+
+            if (currentTournamentId) {
+                html += `<button type="button" style="background:#f59e0b; width:100%; padding:12px; margin-top:20px; border:none; border-radius:6px; color:black; font-weight:bold; cursor:pointer;" onclick="syncSquadToTournament(event, '${teamName}', '${safeTeamClass}')">🔄 Sync Selected Roster to Live Tournament</button>`;
+            }
+
+            html += `<button type="button" style="background:#10b981; width:100%; padding:12px; margin-top:10px; border:none; border-radius:6px; color:white; font-weight:bold; cursor:pointer;" onclick="confirmSquadSelection('${teamName}', '${safeTeamClass}')">Save Squad Selection & Go to Fixtures ➡️</button>`;
+            
+            container.innerHTML = html;
+        }
+
+        // Helper function to save the checked boxes to memory
+        function confirmSquadSelection(teamName, safeTeamClass) {
+            let selectedIds = [];
+            document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).forEach(chk => selectedIds.push(chk.value));
+            tournamentSquadsCache[teamName] = selectedIds;
+            document.querySelectorAll('.wizard-step')[2].click();
+        }
+
+        async function syncSquadToTournament(event, teamName, safeTeamClass) {
             if(!currentTournamentId) { alert("Tournament not saved yet."); return; }
             let teamUUID = activeTeamMap[teamName];
-            let playerIds = tournamentSquadsCache[teamName];
             
-            if(!teamUUID || !playerIds || playerIds.length === 0) { alert("No players found to sync."); return; }
+            // Get currently checked players
+            let selectedIds = [];
+            document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).forEach(chk => selectedIds.push(chk.value));
+            tournamentSquadsCache[teamName] = selectedIds;
+            
+            if(!teamUUID || selectedIds.length === 0) { alert("Please select at least one player to sync."); return; }
             
             const btn = event.target;
             const originalText = btn.innerText;
             btn.innerText = "⏳ Syncing...";
 
-            let payload = playerIds.map(pid => ({ tournament_id: currentTournamentId, team_id: teamUUID, player_id: pid }));
+            let payload = selectedIds.map(pid => ({ tournament_id: currentTournamentId, team_id: teamUUID, player_id: pid }));
             
             const { error } = await db.from('tournament_squads').upsert(payload, {onConflict: 'tournament_id, team_id, player_id'});
             
@@ -467,10 +590,11 @@
                 alert("Error syncing squad: " + error.message);
                 btn.innerText = originalText;
             } else {
-                alert(`✅ Successfully synced ${playerIds.length} players to the live tournament!`);
+                alert(`✅ Successfully synced ${selectedIds.length} players to the live tournament!`);
                 btn.innerText = "✅ Synced Successfully!";
                 setTimeout(() => btn.innerText = originalText, 3000);
             }
+        }
         }
 
         // ==============================
