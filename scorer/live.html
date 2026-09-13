@@ -6,18 +6,18 @@
     <title>Sportzstat - Live Scorer</title>
     <link rel="stylesheet" href="../style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { background-color: #020617; color: white; font-family: sans-serif; padding: 20px; text-align: center; }
         .auth-box { background: #0f172a; padding: 30px; border-radius: 12px; border: 1px solid #334155; max-width: 400px; margin: 50px auto; }
         .input-dark { width: 100%; padding: 15px; background: #020617; color: white; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box; margin-bottom: 15px; font-size: 1.2rem; text-align: center; letter-spacing: 2px; }
         .btn-green { background: #10b981; color: white; border: none; padding: 15px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1.2rem; }
-        .hidden { display: none; }
+        .hidden { display: none !important; }
         
         .setup-box { background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #3b82f6; max-width: 1000px; margin: 20px auto; text-align: left; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .squad-list { background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; max-height: 500px; overflow-y: auto; }
         .player-row { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #334155; }
-        .player-row:hover { background: #334155; }
         
         .role-select { background: #020617; color: white; border: 1px solid #475569; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer; }
         .role-select.xi { border-color: #10b981; color: #10b981; }
@@ -29,8 +29,9 @@
     </style>
 </head>
 <body>
+    <div id="animContainer" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9999; overflow:hidden;"></div>
 
-    <h2 style="color: #10b981; letter-spacing: 2px;">OFFICIAL SCORER PORTAL</h2>
+    <h2 id="top-title" style="color: #10b981; letter-spacing: 2px;">OFFICIAL SCORER PORTAL</h2>
 
     <!-- LOGIN SCREEN -->
     <div id="login-screen" class="auth-box">
@@ -47,9 +48,21 @@
         <div id="login-error" style="color: #ef4444; margin-top: 15px; font-weight: bold;"></div>
     </div>
 
-    <!-- PLAYING XI SELECTION SCREEN -->
+    <!-- TOSS & XI SCREEN -->
     <div id="toss-screen" class="setup-box hidden">
         <h3 style="border-bottom: 1px solid #334155; padding-bottom: 10px; margin-top:0; color:#38bdf8;">Toss & Playing XI Selection</h3>
+        
+        <div style="background:rgba(245, 158, 11, 0.1); border:1px solid #f59e0b; padding:15px; border-radius:8px; margin-bottom:20px;">
+            <label style="color:#f59e0b; font-weight:bold; display:block; margin-bottom:10px;">Who won the toss and what did they choose?</label>
+            <div style="display:flex; gap:10px;">
+                <select id="tossWinner" class="input-dark" style="margin-bottom:0;"></select>
+                <select id="tossDecision" class="input-dark" style="margin-bottom:0;">
+                    <option value="bat">Bat First</option>
+                    <option value="bowl">Bowl First</option>
+                </select>
+            </div>
+        </div>
+
         <p style="color: #94a3b8; font-size: 0.9rem;">Assign players to the Playing XI (can bat/bowl) or Substitutes (fielding only).</p>
         
         <div class="grid-2">
@@ -70,144 +83,124 @@
                 <div id="team-b-squad" class="squad-list">Loading...</div>
             </div>
         </div>
-
-        <button type="button" class="btn-green" style="margin-top: 25px;" onclick="lockPlayingXI()">Lock Squads & Launch Scoring Engine</button>
+        <button type="button" class="btn-green" style="margin-top: 25px;" onclick="lockPlayingXI()">Lock Squads & Initialize Engine</button>
     </div>
 
-    <!-- MAIN SCORER ENGINE UI (Hidden until Toss is complete) -->
-    <div id="scoring-engine-screen" class="setup-box hidden" style="text-align: center;">
-        <h2 style="color: #f59e0b;">🏏 SCORING ENGINE INITIALIZED</h2>
-        <p style="color: #94a3b8;">The UI elements for the scoreboard will render here.</p>
-        <div id="engine-mount"></div>
+    <!-- INITIALIZATION SCREEN -->
+    <div id="initialization-screen" class="setup-box hidden">
+        <h3 style="color:#38bdf8; margin-top:0;">Openers & First Bowler</h3>
+        <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:20px;">Substitutes have been successfully filtered out. Select your starting players to launch the scoreboard.</p>
+        
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+            <div style="background:#020617; padding:15px; border-radius:8px; border:1px solid #10b981;">
+                <h4 id="init-bat-title" style="color:#10b981; margin-top:0; text-align:center;">Batting Openers</h4>
+                <label style="color:#94a3b8; font-size:0.85rem; font-weight:bold;">Striker (On Strike)</label>
+                <select id="sel-striker" class="input-dark"></select>
+                <label style="color:#94a3b8; font-size:0.85rem; font-weight:bold;">Non-Striker</label>
+                <select id="sel-nonstriker" class="input-dark"></select>
+            </div>
+            <div style="background:#020617; padding:15px; border-radius:8px; border:1px solid #ef4444;">
+                <h4 id="init-bowl-title" style="color:#ef4444; margin-top:0; text-align:center;">Opening Bowler</h4>
+                <label style="color:#94a3b8; font-size:0.85rem; font-weight:bold;">Bowler</label>
+                <select id="sel-bowler" class="input-dark"></select>
+            </div>
+        </div>
+        <button type="button" class="btn-green" style="margin-top: 25px;" onclick="startInnings()">▶ START INNINGS & LAUNCH SCOREBOARD</button>
     </div>
 
-    <!-- Include the Scorer Engine Logic -->
+    <!-- FULL LIVE SCOREBOARD (Imported from your old live.html) -->
+    <div class="container">
+        <div id="scoringView" class="scoring-screen hidden">
+            <aside>
+                <h3 id="dispBatTeamName" class="text-accent mt-0" style="text-transform: uppercase;">BATTING TEAM</h3>
+                <div id="battersContainer"></div>
+            </aside>
+            
+            <main>
+                <div class="score-display">
+                    <div id="freeHitBadge" class="free-hit-badge hidden">🚨 FREE HIT 🚨</div>
+                    <div id="inningsBadge" class="innings-badge">INNINGS 1</div>
+                    <p id="displayTournament" class="text-primary font-bold mt-0 mb-0" style="font-size:0.9rem;"></p>
+                    <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px; margin-bottom:5px;">📍 <span id="dispGroundName"></span> | Batting: <span id="dispBatTeamNameTop" class="text-accent font-bold"></span></div>
+                    <div id="targetDisplayBox" class="target-box hidden" onclick="openEditTarget()" title="Edit Target"><span style="font-size:1.2rem;">🎯</span> <span id="dispTargetText" style="font-size:1rem;"></span> <span style="font-size:0.7rem; opacity:0.6;">✏️</span></div>
+                    <div id="inningsHistoryText"></div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 5px; margin: 10px 0;">
+                        <div id="miniLiveBatters" style="text-align: left; font-size: 0.8rem; line-height: 1.4; padding-left: 5px; overflow: hidden;"></div>
+                        <div style="text-align: center;">
+                            <h1 class="big-score" style="margin-bottom: 5px;"><span id="liveRuns">0</span>/<span id="liveWkts" style="color: var(--danger);">0</span></h1>
+                            <p class="font-bold text-success mt-0 mb-0" style="font-size:0.85rem;">🏏 P'ship: <span id="livePartnership">0 (0)</span></p>
+                        </div>
+                        <div id="miniLiveBowler" style="text-align: right; font-size: 0.8rem; line-height: 1.4; padding-right: 5px; overflow: hidden;"></div>
+                    </div>
+
+                    <div id="leadTrailBox"></div>
+                    <p style="font-size:1.3rem;" class="mt-5 mb-0">Overs: <span id="liveOvers" class="font-bold">0.0</span> <span class="text-muted ml-10" style="font-size:0.9rem;">CRR: <span id="liveCrr" class="text-white font-bold">0.00</span></span><span id="rrrBox" class="text-muted ml-10 hidden" style="font-size:0.9rem;">| Req: <span id="liveReq"></span> | RRR: <span id="liveRrr" class="text-accent font-bold">0.00</span></span></p>
+                    <p style="font-size:0.75rem;" class="text-muted mt-5">Extras: <span id="liveExtras">0</span> (W:<span id="exW">0</span>, NB:<span id="exNB">0</span>, B:<span id="exB">0</span>, LB:<span id="exLB">0</span>) <span class="text-accent font-bold">| PEN: <span id="livePenalties">0</span></span></p>
+                </div>
+                
+                <div class="recent-balls-box flex-row gap-5" style="justify-content: center;"><span style="font-size:0.65rem; text-transform:uppercase;" class="text-muted font-bold">Recent:</span><div id="recentBallsData" class="flex-row gap-5" style="flex-wrap: wrap; justify-content: center;"></div></div>
+
+                <div id="scoringEventsBox">
+                    <div class="btn-grid">
+                        <div class="section-label">Scoring Events</div>
+                        <button type="button" class="btn-action" onclick="ballScored(0, false)">0</button><button type="button" class="btn-action" onclick="ballScored(1, false)">1</button><button type="button" class="btn-action" onclick="ballScored(2, false)">2</button><button type="button" class="btn-action" onclick="ballScored(3, false)">3</button>
+                        <button type="button" class="btn-action btn-col-2" style="background:var(--manual);" onclick="openManualRun()">Manual</button><button type="button" class="btn-action" style="background:var(--b4);" onclick="ballScored(4, true)">4</button><button type="button" class="btn-action" style="background:var(--b6);" onclick="ballScored(6, true)">6</button>
+                        <button type="button" class="btn-action" style="background:#0891b2;" onclick="openExtra('W')">WIDE</button><button type="button" class="btn-action" style="background:#0891b2;" onclick="openExtra('NB')">NO BALL</button><button type="button" class="btn-action" style="background:#0891b2;" onclick="openExtra('B')">BYES</button><button type="button" class="btn-action" style="background:#0891b2;" onclick="openExtra('LB')">LEG BYES</button>
+                        
+                        <button type="button" class="btn-action btn-col-2" style="background:var(--danger);" onclick="openWicket()">🚨 WICKET</button>
+                        <button type="button" class="btn-action" style="background: #ea580c;" onclick="openRetire()">🏃 RETIRE</button>
+                        <button type="button" class="btn-action" style="background: #d97706;" onclick="manualEndOver()">🛑 CALL OVER</button>
+                        
+                        <div class="section-label">Match Control</div>
+                        <button type="button" class="btn-action" style="font-size:0.85rem; background:#475569;" onclick="manualRotateUI()">Rotate 🔄</button>
+                        <button type="button" class="btn-action" style="font-size:0.85rem; background:#8b5cf6;" onclick="openRemarkModal()">📝 REMARK</button>
+                        <button type="button" class="btn-action" style="font-size:0.85rem; background:#b91c1c;" onclick="openPenalty()">⚠️ PENALTY</button>
+                        <button type="button" class="btn-action" style="font-size:0.85rem; background:#0f766e;" onclick="openChangeWK()">🧤 CHANGE WK</button>
+                        
+                        <button type="button" class="btn-action btn-col-2" style="background: #334155; padding:10px; font-size:1rem;" onclick="undoLastAction()">↩️ UNDO</button>
+                        <button type="button" id="fsBtn" class="btn-action" style="background: #334155; padding:10px;" onclick="toggleFullScreen()">🔲 FULL</button>
+                        <button type="button" class="btn-action" style="background: #2563eb; padding:10px;" onclick="showMatchGraphs()">📈 GRAPHS</button>
+                        
+                        <button type="button" class="btn-action btn-col-2" style="background: #ca8a04; padding:10px;" onclick="openPlayerSwap()">🔄 INJURY SUB</button>
+                        <button type="button" class="btn-action btn-col-2" style="background: #4f46e5; padding:10px;" onclick="openEditSquad()">🛠️ EDIT SQUAD</button>
+                        
+                        <div style="grid-column: span 4; display: flex; gap: 6px;">
+                            <button type="button" id="breakBtn" class="btn-action hidden" style="flex: 1; background: #fb923c; color:black; padding:12px; font-size:0.95rem;" onclick="openBreakModal()">⏱️ STUMPS / BREAK</button>
+                            <button type="button" class="btn-action" style="flex: 1; background: #38bdf8; color:black; padding:12px; font-size:0.95rem;" onclick="openInterruptionModal()">⛈️ DELAY</button>
+                        </div>
+                        <button type="button" class="btn-action" style="grid-column: span 4; font-size:1rem; background: #047857; padding:12px;" onclick="endInnings()">🏁 DECLARE / END INNINGS</button>
+                    </div>
+                </div>
+
+                <div id="breakOverlayBox" class="hidden" style="background: rgba(245, 158, 11, 0.1); border: 2px dashed var(--accent); padding: 30px 15px; border-radius: 12px; text-align: center; margin-top: 15px;">
+                    <h2 id="breakTitle" class="text-accent mt-0" style="text-transform: uppercase;">MATCH PAUSED</h2>
+                    <div id="breakSubtitle" class="mb-20 font-bold" style="color:var(--text-muted); font-size:1.1rem;"></div>
+                    <p class="text-muted mb-20">Scoring is temporarily locked during this interval.</p>
+                    <button type="button" class="btn-action w-100" style="background: var(--success); font-size: 1.2rem; padding: 20px;" onclick="openResumeModal()">▶️ RESTART</button>
+                </div>
+            </main>
+            
+            <aside>
+                <h3 id="dispBowlTeamName" class="text-primary mt-0" style="text-transform: uppercase;">BOWLING TEAM</h3>
+                <div class="stat-card" style="border-color:var(--primary); background:rgba(59,130,246,0.1)">
+                    <label class="text-primary">ACTIVE BOWLER</label>
+                    <div id="activeBowlerNameRight" style="font-weight:bold; font-size:1.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">Select...</div>
+                    <div id="activeBowlerProgress" class="bowler-progress"></div>
+                    <button type="button" class="btn-action w-100 mt-10" style="background:var(--danger); font-size:0.85rem; padding:8px;" onclick="openSelector('bowler', '🚑 Mid-Over Swap')">🚑 Swap Bowler</button>
+                </div>
+                <div class="table-wrapper custom-scroll">
+                    <table class="bowler-table" style="font-size: 0.75rem; margin-top:10px; white-space: nowrap; min-width: 100%;">
+                        <thead><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Ex</th><th>NB</th><th>WD</th></tr></thead>
+                        <tbody id="bowlStatsBody"></tbody>
+                    </table>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <div id="dynamicModal" class="modal-overlay hidden"><div id="modalBoxElement" class="modal-box"><h3 id="modalHeading" class="text-primary mt-0">Modal</h3><div id="modalBody"></div><div class="flex-row gap-10 mt-15"><button type="button" id="modalCancelBtn" class="btn-action w-100" style="background:transparent; border:1px solid var(--border);" onclick="closeModal()">Cancel</button><button type="button" id="modalConfirmBtn" class="btn-action w-100" style="background:var(--success);">Confirm</button></div></div></div>
+
     <script src="scorer.js"></script>
-
-    <script>
-        const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
-        const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
-        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        let activeMatch = null;
-
-        async function authenticateMatch() {
-            const matchId = document.getElementById('login-match-id').value.trim().toUpperCase();
-            const pin = document.getElementById('login-pin').value.trim();
-            const errBox = document.getElementById('login-error');
-
-            if(!matchId || !pin) { errBox.innerText = "Please enter both Match ID and PIN."; return; }
-            errBox.style.color = "#38bdf8";
-            errBox.innerText = "⏳ Authenticating with Cloud...";
-
-            const { data, error } = await db.from('matches').select('*').eq('match_id', matchId).eq('scorer_pin', pin).single();
-
-            if (error || !data) {
-                errBox.style.color = "#ef4444";
-                errBox.innerText = "❌ Invalid Match ID or PIN.";
-                return;
-            }
-
-            activeMatch = data;
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('toss-screen').classList.remove('hidden');
-            
-            document.getElementById('team-a-name').innerText = activeMatch.full_state.team1;
-            document.getElementById('team-b-name').innerText = activeMatch.full_state.team2;
-
-            await loadTournamentSquads(activeMatch.team_a_id, 'team-a', activeMatch.full_state.team1);
-            await loadTournamentSquads(activeMatch.team_b_id, 'team-b', activeMatch.full_state.team2);
-        }
-
-        async function loadTournamentSquads(teamId, containerPrefix, teamName) {
-            const container = document.getElementById(`${containerPrefix}-squad`);
-            
-            const { data, error } = await db.from('tournament_squads')
-                .select('player_id, players(full_name)')
-                .eq('tournament_id', activeMatch.tournament_id)
-                .eq('team_id', teamId);
-
-            if(error || !data || data.length === 0) {
-                container.innerHTML = `<div style="color:#ef4444;">No players assigned to this tournament squad by Admin.</div>`;
-                return;
-            }
-
-            let html = "";
-            data.forEach((row, index) => {
-                if(row.players) {
-                    html += `
-                    <div class="player-row">
-                        <span style="font-weight:bold; font-size:0.95rem;">${index + 1}. ${row.players.full_name}</span>
-                        <select class="role-select role-${containerPrefix}" data-pid="${row.player_id}" data-pname="${row.players.full_name}" onchange="updateSquadCounters('${containerPrefix}', this)">
-                            <option value="none">Not Playing</option>
-                            <option value="xi">Playing XI</option>
-                            <option value="sub">Substitute</option>
-                        </select>
-                    </div>`;
-                }
-            });
-            container.innerHTML = html;
-        }
-
-        function updateSquadCounters(prefix, selectElement) {
-            // Apply color coding based on selection
-            selectElement.classList.remove('xi', 'sub');
-            if(selectElement.value === 'xi') selectElement.classList.add('xi');
-            if(selectElement.value === 'sub') selectElement.classList.add('sub');
-
-            // Tally the selections
-            let xiCount = 0;
-            let subCount = 0;
-            document.querySelectorAll(`.role-${prefix}`).forEach(sel => {
-                if(sel.value === 'xi') xiCount++;
-                if(sel.value === 'sub') subCount++;
-            });
-
-            document.getElementById(`count-xi-${prefix}`).innerText = `XI: ${xiCount}/11`;
-            document.getElementById(`count-sub-${prefix}`).innerText = `Subs: ${subCount}/4`;
-            
-            // Warning colors if limits exceeded
-            document.getElementById(`count-xi-${prefix}`).style.color = xiCount > 11 ? '#ef4444' : '#34d399';
-            document.getElementById(`count-sub-${prefix}`).style.color = subCount > 4 ? '#ef4444' : '#fbbf24';
-        }
-
-        async function lockPlayingXI() {
-            let state = activeMatch.full_state || {};
-            
-            // Generate distinct arrays holding { id, name }
-            state.team_a_xi = []; state.team_a_subs = [];
-            document.querySelectorAll('.role-team-a').forEach(sel => {
-                if(sel.value === 'xi') state.team_a_xi.push({ id: sel.dataset.pid, name: sel.dataset.pname });
-                if(sel.value === 'sub') state.team_a_subs.push({ id: sel.dataset.pid, name: sel.dataset.pname });
-            });
-
-            state.team_b_xi = []; state.team_b_subs = [];
-            document.querySelectorAll('.role-team-b').forEach(sel => {
-                if(sel.value === 'xi') state.team_b_xi.push({ id: sel.dataset.pid, name: sel.dataset.pname });
-                if(sel.value === 'sub') state.team_b_subs.push({ id: sel.dataset.pid, name: sel.dataset.pname });
-            });
-
-            // Validation
-            if(state.team_a_xi.length === 0 || state.team_b_xi.length === 0) {
-                alert("You must select at least 1 player in the Playing XI for both teams!");
-                return;
-            }
-
-            // Sync to Supabase
-            const { error } = await db.from('matches').update({ full_state: state }).eq('match_id', activeMatch.match_id);
-
-            if(error) {
-                alert("Error locking Playing XI: " + error.message);
-                return;
-            } 
-
-            // Transition UI and launch the engine!
-            document.getElementById('toss-screen').classList.add('hidden');
-            document.getElementById('scoring-engine-screen').classList.remove('hidden');
-            
-            // This function is inside scorer.js!
-            initializeScoringEngine(state); 
-        }
-    </script>
 </body>
 </html>
