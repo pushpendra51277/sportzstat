@@ -49,6 +49,11 @@
         .directory-table th { background: #0f172a; color: #94a3b8; padding: 10px 12px; text-transform: uppercase; font-size: 0.75rem; border-bottom: 1px solid #334155; }
         .directory-table td { padding: 12px; border-bottom: 1px solid #334155; }
         .pin-badge { background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #f59e0b; padding: 4px 8px; border-radius: 4px; font-weight: 900; letter-spacing: 2px; }
+        
+        .state-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; }
+        .state-live { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
+        .state-upcoming { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
+        .state-completed { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
     </style>
 </head>
 <body>
@@ -212,17 +217,18 @@
         // MATCH HUB WIDGET LOGIC
         // ==========================================
         async function fetchMatchHubData() {
-            // FIX: We now explicitly fetch the admin_id from the linked tournaments table
             const { data: matches, error } = await db
                 .from('matches')
-                .select('match_id, match_state, scorer_pin, full_state, tournaments(admin_id)');
+                .select('match_id, scorer_pin, full_state, tournaments(admin_id)');
                 
             if (error || !matches) return;
 
             hubMatches = { live: [], upcoming: [], completed: [] };
 
             matches.forEach(m => {
-                const state = m.match_state.toLowerCase();
+                let p = m.full_state || {};
+                const state = (p.match_status || 'upcoming').toLowerCase();
+                
                 if (state === 'live' || state === 'innings_break') hubMatches.live.push(m);
                 else if (state === 'completed') hubMatches.completed.push(m);
                 else hubMatches.upcoming.push(m); 
@@ -268,7 +274,6 @@
             }).join('');
         }
 
-        // FIX: The Smart Click now enforces ownership rules before exposing the PIN
         function handleSmartClick(matchId, tabCategory, pin, matchAdminId) {
             const role = currentUserProfile.role.toLowerCase();
 
@@ -282,25 +287,21 @@
                 }
             } 
             else if (role === 'superadmin') {
-                // God Mode: Sees everything
                 alert(`ADMIN ACTIONS FOR: ${matchId}\n\nStatus: ${tabCategory.toUpperCase()}\nScorer PIN: ${pin}\n\n(Edit/Delete functionality routing here in Phase 4)`);
             } 
             else if (role === 'admin' && matchAdminId === currentUser.id) {
-                // Verified Owner: Sees their own match tools
                 alert(`ADMIN ACTIONS FOR: ${matchId}\n\nStatus: ${tabCategory.toUpperCase()}\nScorer PIN: ${pin}\n\n(Edit/Delete functionality routing here in Phase 4)`);
             }
             else if (role === 'selector' && tabCategory === 'completed') {
                 alert(`Routing to deep analytics scorecard for match ${matchId}...`);
             } 
             else {
-                // Fan & Default Fallback: (Also intercepts non-owner Admins)
-                alert(`Routing to public Fan Scorecard for match ${matchId}...`);
                 window.location.href = `fan.html`;
             }
         }
 
         // ==========================================
-        // DIRECTORY & AUTH LOGIC
+        // DIRECTORY LOGIC
         // ==========================================
         async function toggleDirectoryView() {
             const section = document.getElementById('directory-section');
@@ -311,8 +312,7 @@
 
             const isSuperAdmin = currentUserProfile.role.toLowerCase() === 'superadmin';
             
-            // Build query based on role
-            let query = db.from('matches').select('match_id, match_state, scorer_pin, full_state, tournaments!inner(admin_id)');
+            let query = db.from('matches').select('match_id, scorer_pin, full_state, tournaments!inner(admin_id)');
             if (!isSuperAdmin) {
                 query = query.eq('tournaments.admin_id', currentUser.id);
             }
@@ -322,11 +322,13 @@
 
             tbody.innerHTML = matches.map(m => {
                 let p = m.full_state || {};
-                let sClass = m.match_state === 'live' ? 'state-live' : (m.match_state === 'completed' ? 'state-completed' : 'state-draft');
+                let mStatus = p.match_status || 'upcoming';
+                let sClass = mStatus === 'live' ? 'state-live' : (mStatus === 'completed' ? 'state-completed' : 'state-upcoming');
+                
                 return `<tr>
                     <td style="color: #cbd5e1; font-size:0.8rem;">${p.tournament || 'Unknown'}<br><b style="color:white; font-size:0.9rem;">${p.team1} vs ${p.team2}</b></td>
                     <td style="font-weight: bold; color: #38bdf8; letter-spacing: 1px;">${m.match_id}</td>
-                    <td style="text-align: center;"><span class="state-badge ${sClass}">${m.match_state}</span></td>
+                    <td style="text-align: center;"><span class="state-badge ${sClass}">${mStatus}</span></td>
                     <td style="text-align: center;"><span class="pin-badge">${m.scorer_pin || '----'}</span></td>
                 </tr>`;
             }).join('');
