@@ -15,12 +15,15 @@
         .back-link { color: #cbd5e1; text-decoration: none; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 10px; }
         .match-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 15px; cursor: pointer; transition: 0.2s; }
         .match-card:active { transform: scale(0.98); border-color: #38bdf8; }
+        
         .live-pulse { display: inline-flex; align-items: center; gap: 5px; color: #ef4444; font-size: 0.75rem; font-weight: bold; background: rgba(239, 68, 68, 0.15); padding: 3px 6px; border-radius: 4px; }
         .pulse-dot { width: 6px; height: 6px; background: #ef4444; border-radius: 50%; animation: pulse 1.5s infinite; }
+        .comp-badge { display: inline-flex; align-items: center; gap: 5px; color: #10b981; font-size: 0.75rem; font-weight: bold; background: rgba(16, 185, 129, 0.15); padding: 3px 6px; border-radius: 4px; }
+        
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
 
         /* VIEW: DEEP DIVE SCORECARD */
-        #view-scorecard { display: none; height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: #0f172a; }
+        #view-scorecard { display: none; height: 100vh; flex-direction: column; overflow: hidden; background: #0f172a; }
         
         /* Sticky Header */
         .sc-header { background: #1e293b; border-bottom: 1px solid #334155; padding: 15px 20px 10px 20px; flex-shrink: 0; z-index: 10;}
@@ -46,7 +49,6 @@
         .data-row { padding: 12px 15px; border-bottom: 1px solid #334155; display: grid; font-size: 0.85rem; align-items: center; }
         .data-row:last-child { border-bottom: none; }
         
-        /* Grid Layouts for specific tables */
         .grid-bat { grid-template-columns: 3fr 1fr 1fr 1fr 1fr 1.5fr; }
         .grid-bowl { grid-template-columns: 3fr 1fr 1fr 1fr 1fr 1.5fr; }
         .text-right { text-align: right; }
@@ -76,18 +78,14 @@
             <p style="color: #94a3b8; margin: 0; font-size: 0.9rem;">Live match center and global scorecards.</p>
         </div>
         
-        <h3 style="color: #38bdf8; border-bottom: 1px solid #334155; padding-bottom: 5px;">🔴 Live Matches</h3>
+        <h3 style="color: #ef4444; border-bottom: 1px solid #334155; padding-bottom: 5px;">🔴 Live Matches</h3>
         <div id="live-matches-container">
-            <!-- Dummy Card (Will be replaced by JS) -->
-            <div class="match-card" onclick="openScorecard('M-TEST')">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <div style="font-size: 0.75rem; color: #94a3b8;">SUMMER CUP 2026</div>
-                    <div class="live-pulse"><div class="pulse-dot"></div> LIVE</div>
-                </div>
-                <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 5px;">Gwalior Strikers <span style="color:#94a3b8; font-size:0.9rem;">vs</span> Indore Royals</div>
-                <div style="color: #10b981; font-weight: bold; font-size: 1rem;">GS: 124/3 (14.2)</div>
-                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">Tap to view full scorecard →</div>
-            </div>
+            <div style="color: #94a3b8; font-style: italic;">Loading cloud data...</div>
+        </div>
+
+        <h3 style="color: #10b981; border-bottom: 1px solid #334155; padding-bottom: 5px; margin-top: 30px;">✅ Completed Matches</h3>
+        <div id="completed-matches-container">
+            <div style="color: #94a3b8; font-style: italic;">Loading cloud data...</div>
         </div>
     </div>
 
@@ -97,17 +95,17 @@
         <!-- Sticky Header -->
         <div class="sc-header">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                <button onclick="closeScorecard()" style="background: transparent; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer; padding: 0;">←</button>
-                <div class="live-pulse"><div class="pulse-dot"></div> LIVE</div>
+                <button onclick="closeScorecard()" style="background: transparent; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer; padding: 0;">← Back</button>
+                <div id="sc-header-badge"></div>
             </div>
-            <div class="sc-tourney" id="sc-header-tourney">SUMMER CUP 2026 • FINAL</div>
-            <div class="sc-main-score" id="sc-header-score">GS 124/3 <span style="font-size:1rem; color:#94a3b8;">(14.2)</span></div>
-            <div class="sc-equation" id="sc-header-equation">Indore Royals won the toss and elected to field.</div>
+            <div class="sc-tourney" id="sc-header-tourney">Loading...</div>
+            <div class="sc-main-score" id="sc-header-score">0/0 (0.0)</div>
+            <div class="sc-equation" id="sc-header-equation">Loading match details...</div>
         </div>
 
         <!-- Horizontal Swipeable Nav -->
         <div class="sc-tabs">
-            <div class="sc-tab active" onclick="switchTab('tab-live', this)">LIVE</div>
+            <div class="sc-tab active" onclick="switchTab('tab-live', this)" id="tab-btn-live">LIVE</div>
             <div class="sc-tab" onclick="switchTab('tab-scorecard', this)">SCORECARD</div>
             <div class="sc-tab" onclick="switchTab('tab-squads', this)">SQUADS</div>
             <div class="sc-tab" onclick="switchTab('tab-info', this)">INFO</div>
@@ -122,125 +120,267 @@
                     <div class="data-header grid-bat">
                         <div>BATTER</div><div class="text-center">R</div><div class="text-center">B</div><div class="text-center">4s</div><div class="text-center">6s</div><div class="text-right">SR</div>
                     </div>
-                    <div class="data-row grid-bat">
-                        <div style="font-weight:bold; color:white;"><span class="striker-icon">🏏</span>Pushpendra S.</div>
-                        <div class="text-center font-bold">45</div><div class="text-center">32</div><div class="text-center">4</div><div class="text-center">1</div><div class="text-right">140.6</div>
-                    </div>
-                    <div class="data-row grid-bat">
-                        <div style="font-weight:bold; color:#cbd5e1;">Rohit S.</div>
-                        <div class="text-center font-bold">12</div><div class="text-center">10</div><div class="text-center">1</div><div class="text-center">0</div><div class="text-right">120.0</div>
-                    </div>
+                    <div id="live-batters-container"></div>
                 </div>
 
                 <div class="data-card">
                     <div class="data-header grid-bowl">
                         <div>BOWLER</div><div class="text-center">O</div><div class="text-center">M</div><div class="text-center">R</div><div class="text-center">W</div><div class="text-right">ER</div>
                     </div>
-                    <div class="data-row grid-bowl">
-                        <div style="font-weight:bold; color:white;">R. Ashwin</div>
-                        <div class="text-center">2.2</div><div class="text-center">0</div><div class="text-center">18</div><div class="text-center font-bold" style="color:#ef4444;">1</div><div class="text-right">7.71</div>
-                    </div>
+                    <div id="live-bowler-container"></div>
                 </div>
 
                 <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 8px; font-weight: bold;">RECENT DELIVERIES</div>
-                <div class="timeline-box">
-                    <div class="ball-circle">1</div>
-                    <div class="ball-circle ball-0">0</div>
-                    <div class="ball-circle ball-w">W</div>
-                    <div class="ball-circle">1</div>
-                    <div class="ball-circle ball-0">0</div>
-                    <div class="ball-circle ball-4">4</div>
-                    <div class="ball-circle">2</div>
-                    <div class="ball-circle ball-6">6</div>
-                    <div class="ball-circle">1</div>
-                </div>
+                <div class="timeline-box" id="live-recent-balls"></div>
             </div>
 
             <!-- SCORECARD TAB (Deep Dive) -->
             <div id="tab-scorecard" class="tab-pane">
-                <div style="background:#1e293b; padding:10px; border-radius:8px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid #3b82f6;">
-                    <div style="font-weight:bold;">Gwalior Strikers</div>
-                    <div style="color:#38bdf8; font-weight:bold;">124/3 (14.2)</div>
-                </div>
-                
-                <div class="data-card">
-                    <div class="data-header grid-bat">
-                        <div>BATTER</div><div class="text-center">R</div><div class="text-center">B</div><div class="text-center">4s</div><div class="text-center">6s</div><div class="text-right">SR</div>
-                    </div>
-                    <!-- Dismissed -->
-                    <div class="data-row grid-bat" style="background:#0f172a;">
-                        <div>
-                            <div style="font-weight:bold; color:#cbd5e1;">Rahul S.</div>
-                            <div style="font-size:0.65rem; color:#94a3b8;">c. Kohli b. Ashwin</div>
-                        </div>
-                        <div class="text-center font-bold">22</div><div class="text-center">18</div><div class="text-center">2</div><div class="text-center">0</div><div class="text-right">122.2</div>
-                    </div>
-                    <!-- Not Out -->
-                    <div class="data-row grid-bat">
-                        <div>
-                            <div style="font-weight:bold; color:white;">Pushpendra S.</div>
-                            <div style="font-size:0.65rem; color:#10b981;">not out</div>
-                        </div>
-                        <div class="text-center font-bold">45</div><div class="text-center">32</div><div class="text-center">4</div><div class="text-center">1</div><div class="text-right">140.6</div>
-                    </div>
-                </div>
-
-                <div class="data-card">
-                    <div class="data-header grid-bowl">
-                        <div>BOWLER</div><div class="text-center">O</div><div class="text-center">M</div><div class="text-center">R</div><div class="text-center">W</div><div class="text-right">ER</div>
-                    </div>
-                    <div class="data-row grid-bowl">
-                        <div style="font-weight:bold; color:white;">Bumrah</div>
-                        <div class="text-center">4.0</div><div class="text-center">1</div><div class="text-center">22</div><div class="text-center font-bold">2</div><div class="text-right">5.50</div>
-                    </div>
-                    <div class="data-row grid-bowl">
-                        <div style="font-weight:bold; color:white;">R. Ashwin</div>
-                        <div class="text-center">2.2</div><div class="text-center">0</div><div class="text-center">18</div><div class="text-center font-bold">1</div><div class="text-right">7.71</div>
-                    </div>
-                </div>
+                <div id="full-scorecard-container"></div>
             </div>
 
             <!-- SQUADS TAB -->
             <div id="tab-squads" class="tab-pane">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div>
-                        <div style="font-size: 0.8rem; font-weight: bold; color: #10b981; margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 5px;">Gwalior Strikers</div>
-                        <div style="font-size: 0.85rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 8px;">
-                            <div>1. Rahul S.</div>
-                            <div>2. Pushpendra S. (c)</div>
-                            <div>3. Rohit S.</div>
-                            <div>4. Suryakumar Y.</div>
-                        </div>
-                    </div>
-                    <div>
-                        <div style="font-size: 0.8rem; font-weight: bold; color: #f59e0b; margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 5px;">Indore Royals</div>
-                        <div style="font-size: 0.85rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 8px;">
-                            <div>1. Virat K. (c)</div>
-                            <div>2. Ishan K. (wk)</div>
-                            <div>3. Hardik P.</div>
-                            <div>4. R. Ashwin</div>
-                        </div>
-                    </div>
-                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;" id="squads-container"></div>
             </div>
 
             <!-- INFO TAB -->
             <div id="tab-info" class="tab-pane">
-                <div class="data-card" style="padding: 15px; font-size: 0.9rem;">
-                    <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Tournament:</span> <b style="color:white;">Summer Cup 2026</b></div>
-                    <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Format:</span> <b style="color:white;">T20</b></div>
-                    <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Toss:</span> <b style="color:white;">Indore Royals won the toss and elected to field.</b></div>
-                    <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Venue:</span> <b style="color:white;">Captain Roop Singh Stadium, Gwalior</b></div>
-                    <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Umpires:</span> <b style="color:white;">Simon Taufel, Aleem Dar</b></div>
-                    <div><span style="color:#94a3b8;">Match ID:</span> <b style="color:#38bdf8;">M-TEST</b></div>
-                </div>
+                <div class="data-card" style="padding: 15px; font-size: 0.9rem;" id="info-container"></div>
             </div>
             
         </div>
     </div>
 
     <script>
-        // Tab Navigation Logic
+        const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
+        const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let allMatches = [];
+        let activeScorecardId = null;
+
+        // Start real-time polling
+        fetchMatches();
+        setInterval(fetchMatches, 3000); 
+
+        async function fetchMatches() {
+            const { data, error } = await db.from('matches').select('*').order('created_at', { ascending: false });
+            if (error) { console.error("Cloud fetch error", error); return; }
+            allMatches = data;
+            
+            renderMatchList();
+
+            // If a scorecard is open, silently update its data
+            if (activeScorecardId && !document.getElementById('view-scorecard').classList.contains('hidden')) {
+                renderScorecardData(activeScorecardId);
+            }
+        }
+
+        function renderMatchList() {
+            const liveContainer = document.getElementById('live-matches-container');
+            const compContainer = document.getElementById('completed-matches-container');
+            
+            let liveHtml = "";
+            let compHtml = "";
+
+            allMatches.forEach(m => {
+                let fs = m.full_state;
+                if (!fs) return;
+
+                let batTeam = fs.teams && fs.battingKey ? fs.teams[fs.battingKey].name : fs.team1;
+                let bowlTeam = fs.teams && fs.bowlingKey ? fs.teams[fs.bowlingKey].name : fs.team2;
+                
+                let runs = fs.current ? fs.current.runs : 0;
+                let wkts = fs.current ? fs.current.wkts : 0;
+                let overs = fs.current ? Math.floor(fs.current.balls/6) + "." + (fs.current.balls%6) : "0.0";
+                
+                // Card UI Builder
+                let cardHtml = `
+                <div class="match-card" onclick="openScorecard('${m.match_id}')">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <div style="font-size: 0.75rem; color: #94a3b8; font-weight:bold; letter-spacing:1px;">${fs.tournament || 'MATCH'}</div>
+                        ${fs.match_status === 'live' ? '<div class="live-pulse"><div class="pulse-dot"></div> LIVE</div>' : '<div class="comp-badge">✅ COMPLETED</div>'}
+                    </div>
+                    <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 5px;">${fs.team1} <span style="color:#94a3b8; font-size:0.9rem;">vs</span> ${fs.team2}</div>
+                    
+                    ${fs.match_status !== 'upcoming' ? `
+                    <div style="color: ${fs.match_status === 'live' ? '#10b981' : '#38bdf8'}; font-weight: bold; font-size: 1rem;">
+                        ${batTeam}: ${runs}/${wkts} <span style="color:#94a3b8; font-size:0.85rem;">(${overs} ov)</span>
+                    </div>` : `<div style="color:#f59e0b; font-size:0.9rem;">Match begins soon</div>`}
+                    
+                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 8px;">Tap to view details →</div>
+                </div>`;
+
+                if (fs.match_status === 'live') liveHtml += cardHtml;
+                if (fs.match_status === 'completed') compHtml += cardHtml;
+            });
+
+            liveContainer.innerHTML = liveHtml || "<div style='color:#94a3b8;'>No live matches at the moment.</div>";
+            compContainer.innerHTML = compHtml || "<div style='color:#94a3b8;'>No completed matches yet.</div>";
+        }
+
+        function openScorecard(matchId) {
+            activeScorecardId = matchId;
+            document.getElementById('view-list').classList.add('hidden');
+            document.getElementById('view-scorecard').classList.remove('hidden');
+            document.getElementById('view-scorecard').style.display = 'flex';
+            renderScorecardData(matchId);
+        }
+
+        function renderScorecardData(matchId) {
+            let m = allMatches.find(x => x.match_id === matchId);
+            if (!m || !m.full_state) return;
+            let fs = m.full_state;
+
+            // Header Setup
+            document.getElementById('sc-header-tourney').innerText = fs.tournament || "MATCH";
+            document.getElementById('sc-header-badge').innerHTML = fs.match_status === 'live' 
+                ? '<div class="live-pulse"><div class="pulse-dot"></div> LIVE</div>' 
+                : '<div class="comp-badge">COMPLETED</div>';
+
+            if (fs.match_status === 'upcoming') {
+                document.getElementById('sc-header-score').innerText = `${fs.team1} vs ${fs.team2}`;
+                document.getElementById('sc-header-equation').innerText = "Toss pending. Match will begin soon.";
+                document.getElementById('tab-btn-live').style.display = 'none';
+                switchTab('tab-squads', document.querySelectorAll('.sc-tab')[2]);
+                renderSquadsTab(fs);
+                renderInfoTab(fs, m);
+                return;
+            }
+
+            document.getElementById('tab-btn-live').style.display = 'block';
+
+            let batTeam = fs.teams[fs.battingKey].name;
+            let runs = fs.current.runs;
+            let wkts = fs.current.wkts;
+            let overs = Math.floor(fs.current.balls/6) + "." + (fs.current.balls%6);
+            
+            document.getElementById('sc-header-score').innerHTML = `${batTeam} ${runs}/${wkts} <span style="font-size:1rem; color:#94a3b8;">(${overs})</span>`;
+            document.getElementById('sc-header-equation').innerText = fs.matchResult || `Innings ${fs.inningsNum} Ongoing`;
+
+            // LIVE TAB BUILDER
+            let liveBattersHtml = "";
+            let sIdx = fs.current.sIdx;
+            let nsIdx = fs.current.nsIdx;
+            let batRoster = fs.teams[fs.battingKey].players;
+            
+            if (sIdx !== null && batRoster[sIdx]) {
+                let p = batRoster[sIdx];
+                let sr = p.b > 0 ? ((p.r/p.b)*100).toFixed(1) : "0.0";
+                liveBattersHtml += `<div class="data-row grid-bat"><div style="font-weight:bold; color:white; white-space:nowrap; overflow:hidden;"><span class="striker-icon">🏏</span>${p.name}</div><div class="text-center font-bold">${p.r}</div><div class="text-center">${p.b}</div><div class="text-center">${p.f}</div><div class="text-center">${p.s}</div><div class="text-right color-accent">${sr}</div></div>`;
+            }
+            if (nsIdx !== null && batRoster[nsIdx]) {
+                let p = batRoster[nsIdx];
+                let sr = p.b > 0 ? ((p.r/p.b)*100).toFixed(1) : "0.0";
+                liveBattersHtml += `<div class="data-row grid-bat"><div style="font-weight:bold; color:#cbd5e1; white-space:nowrap; overflow:hidden;">${p.name}</div><div class="text-center font-bold">${p.r}</div><div class="text-center">${p.b}</div><div class="text-center">${p.f}</div><div class="text-center">${p.s}</div><div class="text-right color-accent">${sr}</div></div>`;
+            }
+            document.getElementById('live-batters-container').innerHTML = liveBattersHtml || "<div style='padding:15px; color:#94a3b8;'>Waiting for batters...</div>";
+
+            let liveBowlerHtml = "";
+            let bIdx = fs.current.bIdx;
+            let bowlRoster = fs.teams[fs.bowlingKey].players;
+            if (bIdx !== null && bowlRoster[bIdx]) {
+                let p = bowlRoster[bIdx];
+                let bOvers = Math.floor(p.o) + "." + Math.round((p.o - Math.floor(p.o))*10);
+                let er = p.o > 0 ? ((p.rc/p.o)*6).toFixed(1) : "0.0";
+                liveBowlerHtml = `<div class="data-row grid-bowl"><div style="font-weight:bold; color:white; white-space:nowrap; overflow:hidden;">${p.name}</div><div class="text-center">${bOvers}</div><div class="text-center">${p.m}</div><div class="text-center">${p.rc}</div><div class="text-center font-bold" style="color:#ef4444;">${p.w}</div><div class="text-right">${er}</div></div>`;
+            }
+            document.getElementById('live-bowler-container').innerHTML = liveBowlerHtml || "<div style='padding:15px; color:#94a3b8;'>Waiting for bowler...</div>";
+
+            let timelineHtml = "";
+            (fs.current.recentBalls || []).forEach(b => {
+                if (b.type === 'divider') timelineHtml += `<div style="color:#94a3b8; font-weight:bold;">|</div>`;
+                else {
+                    let cls = 'ball-0';
+                    if (b.type === 'four' || b.label === '4') cls = 'ball-4';
+                    if (b.type === 'six' || b.label === '6') cls = 'ball-6';
+                    if (b.type === 'wicket' || b.label.includes('W')) cls = 'ball-w';
+                    timelineHtml += `<div class="ball-circle ${cls}">${b.label}</div>`;
+                }
+            });
+            document.getElementById('live-recent-balls').innerHTML = timelineHtml || "<div style='color:#94a3b8; padding:5px;'>No balls bowled yet.</div>";
+
+            renderFullScorecard(fs);
+            renderSquadsTab(fs);
+            renderInfoTab(fs, m);
+        }
+
+        function renderFullScorecard(fs) {
+            let container = document.getElementById('full-scorecard-container');
+            let html = "";
+            
+            let displayInnings = fs.inningsSummaries ? [...fs.inningsSummaries] : [];
+            if (fs.match_status === 'live' && (fs.current.balls > 0 || fs.current.runs > 0)) {
+                displayInnings.push({
+                    innNum: fs.inningsNum, batTeam: fs.teams[fs.battingKey].name, bowlTeam: fs.teams[fs.bowlingKey].name,
+                    runs: fs.current.runs, wkts: fs.current.wkts, overs: Math.floor(fs.current.balls/6) + "." + (fs.current.balls%6),
+                    batters: fs.teams[fs.battingKey].players, bowlers: fs.teams[fs.bowlingKey].players, isOngoing: true
+                });
+            }
+
+            displayInnings.reverse().forEach(inn => {
+                html += `
+                <div style="background:#1e293b; padding:10px 15px; border-radius:8px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid ${inn.isOngoing ? '#ef4444' : '#334155'};">
+                    <div>
+                        <div style="font-size:0.7rem; color:#94a3b8;">INNINGS ${inn.innNum}</div>
+                        <div style="font-weight:bold; color:white; font-size:1.1rem;">${inn.batTeam}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="color:#38bdf8; font-weight:bold; font-size:1.2rem;">${inn.runs}/${inn.wkts}</div>
+                        <div style="font-size:0.75rem; color:#94a3b8;">(${inn.overs} ov)</div>
+                    </div>
+                </div>
+                
+                <div class="data-card">
+                    <div class="data-header grid-bat"><div>BATTER</div><div class="text-center">R</div><div class="text-center">B</div><div class="text-center">4s</div><div class="text-center">6s</div><div class="text-right">SR</div></div>`;
+                
+                inn.batters.forEach(b => {
+                    if (b.hasBatted) {
+                        let sr = b.b > 0 ? ((b.r/b.b)*100).toFixed(1) : "0.0";
+                        let statTxt = b.out ? `<div style="font-size:0.65rem; color:#94a3b8;">${b.dismissalInfo}</div>` : `<div style="font-size:0.65rem; color:#10b981;">not out</div>`;
+                        html += `<div class="data-row grid-bat"><div><div style="font-weight:bold; color:white;">${b.name}</div>${statTxt}</div><div class="text-center font-bold">${b.r}</div><div class="text-center">${b.b}</div><div class="text-center">${b.f}</div><div class="text-center">${b.s}</div><div class="text-right">${sr}</div></div>`;
+                    }
+                });
+                
+                html += `</div><div class="data-card"><div class="data-header grid-bowl"><div>BOWLER</div><div class="text-center">O</div><div class="text-center">M</div><div class="text-center">R</div><div class="text-center">W</div><div class="text-right">ER</div></div>`;
+                
+                inn.bowlers.forEach(b => {
+                    if (b.o > 0 || b.rc > 0) {
+                        let er = b.o > 0 ? ((b.rc/b.o)*6).toFixed(1) : "0.0";
+                        let bOvers = Math.floor(b.o) + "." + Math.round((b.o - Math.floor(b.o))*10);
+                        html += `<div class="data-row grid-bowl"><div style="font-weight:bold; color:white;">${b.name}</div><div class="text-center">${bOvers}</div><div class="text-center">${b.m}</div><div class="text-center">${b.rc}</div><div class="text-center font-bold" style="color:#ef4444;">${b.w}</div><div class="text-right">${er}</div></div>`;
+                    }
+                });
+                html += `</div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderSquadsTab(fs) {
+            if (!fs.teams) return;
+            let html = `
+            <div>
+                <div style="font-size: 0.8rem; font-weight: bold; color: #10b981; margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 5px;">${fs.teams.A.name}</div>
+                <div style="font-size: 0.85rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 8px;">`;
+            fs.teams.A.players.filter(p => p.isPlayingXI).forEach((p, i) => html += `<div>${i+1}. ${p.name}</div>`);
+            html += `</div></div><div>
+                <div style="font-size: 0.8rem; font-weight: bold; color: #f59e0b; margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 5px;">${fs.teams.B.name}</div>
+                <div style="font-size: 0.85rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 8px;">`;
+            fs.teams.B.players.filter(p => p.isPlayingXI).forEach((p, i) => html += `<div>${i+1}. ${p.name}</div>`);
+            html += `</div></div>`;
+            document.getElementById('squads-container').innerHTML = html;
+        }
+
+        function renderInfoTab(fs, m) {
+            document.getElementById('info-container').innerHTML = `
+                <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Tournament:</span> <b style="color:white;">${fs.tournament || '-'}</b></div>
+                <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Format:</span> <b style="color:white;">${fs.format || '-'}</b></div>
+                <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Match ID:</span> <b style="color:#38bdf8;">${m.match_id}</b></div>
+                <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Status:</span> <b style="color:white; text-transform:uppercase;">${fs.match_status}</b></div>
+            `;
+        }
+
         function switchTab(tabId, el) {
             document.querySelectorAll('.sc-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
@@ -248,18 +388,8 @@
             document.getElementById(tabId).classList.add('active');
         }
 
-        // View Toggling Logic
-        function openScorecard(matchId) {
-            // In Phase 4.2, we will use matchId to fetch the specific data from Supabase here.
-            // For now, we just slide the UI over.
-            document.getElementById('view-list').classList.add('hidden');
-            
-            const detailView = document.getElementById('view-scorecard');
-            detailView.classList.remove('hidden');
-            detailView.style.display = 'flex'; // Enforce flex layout on unhide
-        }
-
         function closeScorecard() {
+            activeScorecardId = null;
             document.getElementById('view-scorecard').classList.add('hidden');
             document.getElementById('view-list').classList.remove('hidden');
         }
