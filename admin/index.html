@@ -92,7 +92,7 @@
 
                 <form id="form-step1" class="form-grid">
                     <div class="input-group full-width"><label>Tournament Name *</label><input type="text" id="t-name" required placeholder="e.g., Summer Cup 2026"></div>
-                    <div class="input-group"><label>Format *</label><select id="t-format" required><option value="T20">T20</option><option value="One Day">One Day</option></select></div>
+                   <div class="input-group"><label>Format *</label><select id="t-format" required><option value="T20">T20</option><option value="One Day">One Day</option><option value="Multi-Day">Multi-Day (Test)</option></select></div>
                     <div class="input-group"><label>Starting Date *</label><input type="date" id="t-date" required></div>
                     
                     <div class="full-width" style="margin-top: 15px;">
@@ -610,11 +610,13 @@
             btn.innerText = "⏳ Injecting Fixtures & Squads to Supabase...";
             let generatedOutput = [];
 
+            let tName = document.getElementById('t-name').value;
+            let tFormat = document.getElementById('t-format').value;
+
             for (let m of finalLockedMatches) {
                 let pin = m.pin || generateUniquePin();
                 let team1UUID = activeTeamMap[m.t1] || null;
                 let team2UUID = activeTeamMap[m.t2] || null;
-                let tName = document.getElementById('t-name').value;
 
                 if(team1UUID && tournamentSquadsCache[m.t1]) {
                     let s1 = tournamentSquadsCache[m.t1].map(pid => ({ tournament_id: currentTournamentId, team_id: team1UUID, player_id: pid }));
@@ -631,8 +633,7 @@
                     team_a_id: team1UUID,
                     team_b_id: team2UUID,
                     scorer_pin: pin,
-                    // CLOUD FLAG ADDED HERE!
-                    full_state: { tournament: tName, team1: m.t1, team2: m.t2, matchName: m.name, match_status: 'upcoming' }
+                    full_state: { tournament: tName, format: tFormat, team1: m.t1, team2: m.t2, matchName: m.name, match_status: 'upcoming' }
                 };
 
                 await db.from('matches').upsert([matchPayload]);
