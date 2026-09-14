@@ -183,6 +183,33 @@ function startInnings() {
     state.current.bowlersInCurrentOver.add(state.current.bIdx);
     state.current.inningsStartTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     
+    // 🔥 CONFIGURE MATCH RULES BASED ON TOURNAMENT FORMAT
+    if (activeMatch && activeMatch.full_state) {
+        let format = activeMatch.full_state.format || 'T20';
+        if (format.includes('Multi-Day') || format === 'Test') {
+            state.matchSettings.matchType = 'multiday';
+            state.matchSettings.maxOvers = 999;
+            state.matchSettings.bowlerQuota = 999;
+            state.matchSettings.maxInnings = 4;
+        } else if (format === 'One Day') {
+            state.matchSettings.matchType = 'oneday';
+            state.matchSettings.maxOvers = 50;
+            state.matchSettings.bowlerQuota = 10;
+            state.matchSettings.maxInnings = 2;
+        } else {
+            state.matchSettings.matchType = 't20';
+            state.matchSettings.maxOvers = 20;
+            state.matchSettings.bowlerQuota = 4;
+            state.matchSettings.maxInnings = 2;
+        }
+        state.matchSettings.originalMaxOvers = state.matchSettings.maxOvers;
+    }
+
+    // Unhide the Stumps/Break Button for Test Matches
+    if (state.matchSettings.matchType === 'multiday') {
+        el('breakBtn').classList.remove('hidden');
+    }
+
     if(activeMatch && activeMatch.full_state) {
         el('displayTournament').innerText = activeMatch.full_state.tournament || "MATCH IN PROGRESS"; 
     }
