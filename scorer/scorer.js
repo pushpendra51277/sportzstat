@@ -66,6 +66,14 @@ window.onload = function() {
                 el('login-screen').classList.add('hidden'); 
                 el('top-title').classList.add('hidden');
                 el('scoringView').classList.remove('hidden'); 
+                
+                // Keep the Stumps button visible if it's a Test match
+                if (state.matchSettings.matchType === 'multiday') {
+                    el('breakBtn').classList.remove('hidden');
+                }
+                
+                activeMatch = JSON.parse(localStorage.getItem('cricStat_activeMatchMetadata')) || null;
+                
                 updateUI(); 
                 closeModal();
             } catch(e) { console.error("Corrupted local state.", e); localStorage.removeItem('cricStat_activeMatch'); location.reload(); }
