@@ -152,8 +152,9 @@ async function lockPlayingXI() {
     state.battingKey = ((win === 'A' && dec === 'bat') || (win === 'B' && dec === 'bowl')) ? 'A' : 'B';
     state.bowlingKey = state.battingKey === 'A' ? 'B' : 'A';
 
+    // 🔥 NEW: IMMEDIATELY MARK MATCH AS LIVE IN THE DATABASE
     let updatedFullState = activeMatch.full_state || {};
-    updatedFullState.match_status = 'live';
+    updatedFullState.match_status = 'live'; 
     const { error } = await supabaseClient.from('matches').update({ full_state: updatedFullState }).eq('match_id', activeMatch.match_id);
     if(error) { alert("Error connecting to cloud: " + error.message); return; }
 
@@ -258,8 +259,14 @@ async function triggerCloudSync() {
     if (!supabaseClient || !state.matchId) return;
     let fullStatePayload = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
     
-    // ENSURE IT STAYS LIVE DURING SCORING
+    // 🔥 NEW: ENSURE THE MATCH STATUS STAYS LIVE
     fullStatePayload.match_status = 'live'; 
+    if (activeMatch && activeMatch.full_state) {
+        fullStatePayload.tournament = activeMatch.full_state.tournament;
+        fullStatePayload.team1 = activeMatch.full_state.team1;
+        fullStatePayload.team2 = activeMatch.full_state.team2;
+        fullStatePayload.matchName = activeMatch.full_state.matchName;
+    }
     
     try {
         const { error } = await supabaseClient.from('matches').update({ full_state: fullStatePayload }).eq('match_id', state.matchId);
@@ -275,17 +282,21 @@ async function logBallEvent(batterObj, bowlerObj, runsBat, runsExtra, extraType,
 
 async function logCareerStats() {
     if (!supabaseClient || !state.matchId) return;
-    let payloadStr = JSON.stringify(state.inningsSummaries);
-    try { 
-        await supabaseClient.from('completed_matches').upsert({ match_id: state.matchId, final_data: payloadStr }, { onConflict: 'match_id' }); 
-        
-        // PERMANENTLY LOCK MATCH
-        let finalState = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
-        finalState.match_status = 'completed'; 
-        await supabaseClient.from('matches').update({ full_state: finalState }).eq('match_id', state.matchId);
-    } catch (e) {
-        console.error("Error finalizing match:", e);
+    
+    // 🔥 NEW: PERMANENTLY LOCK MATCH IN DATABASE
+    let finalState = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
+    finalState.match_status = 'completed'; 
+    if (activeMatch && activeMatch.full_state) {
+        finalState.tournament = activeMatch.full_state.tournament;
+        finalState.team1 = activeMatch.full_state.team1;
+        finalState.team2 = activeMatch.full_state.team2;
+        finalState.matchName = activeMatch.full_state.matchName;
     }
+    try { await supabaseClient.from('matches').update({ full_state: finalState }).eq('match_id', state.matchId); } catch(e){}
+
+    // PUSH TO COMPLETED MATCHES TABLE
+    let payloadStr = JSON.stringify(state.inningsSummaries);
+    try { await supabaseClient.from('completed_matches').upsert({ match_id: state.matchId, final_data: payloadStr }, { onConflict: 'match_id' }); } catch (e) {}
 }
 
 function ballScored(runs, isB) {
