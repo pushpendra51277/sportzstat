@@ -99,10 +99,39 @@ async function authenticateMatch() {
     activeMatch = data;
     localStorage.setItem('cricStat_activeMatchMetadata', JSON.stringify(activeMatch));
 
+    // 🔥 NEW: TRUE CLOUD DISASTER RECOVERY 🔥
+    // If the tablet dies and they log in on a new device, pull the match from the cloud!
+    if (data.full_state && data.full_state.match_status === 'live') {
+        showModal("☁️ Cloud Sync Found", "<div class='text-center mt-10 text-success font-bold'>Match is already in progress!</div><div class='text-center text-muted mt-5' style='font-size:0.85rem;'>Resuming from the latest cloud save...</div>", function() {
+            try {
+                // Reconstruct the exact state from the cloud JSON
+                let parsedState = data.full_state;
+                
+                // JavaScript Sets must be rebuilt from arrays
+                parsedState.current.lastOverBowlers = new Set(parsedState.current.lastOverBowlers || []); 
+                parsedState.current.bowlersInCurrentOver = new Set(parsedState.current.bowlersInCurrentOver || []); 
+                state = parsedState;
+                
+                el('login-screen').classList.add('hidden'); 
+                el('top-title').classList.add('hidden');
+                el('scoringView').classList.remove('hidden'); 
+                
+                if (state.matchSettings.matchType === 'multiday') { el('breakBtn').classList.remove('hidden'); }
+                
+                updateUI(); 
+                closeModal();
+            } catch(e) { 
+                console.error("Cloud Resume Error", e); 
+                alert("Error loading cloud state."); 
+            }
+        }, true, "360px", "Resume Match");
+        return;
+    }
+
+    // If it's not live yet, proceed to the normal Toss screen
     el('login-screen').classList.add('hidden');
     el('toss-screen').classList.remove('hidden');
     
-    // SMART FALLBACK
     let t1 = activeMatch.full_state.team1 || (activeMatch.full_state.teams && activeMatch.full_state.teams.A ? activeMatch.full_state.teams.A.name : 'Team A');
     let t2 = activeMatch.full_state.team2 || (activeMatch.full_state.teams && activeMatch.full_state.teams.B ? activeMatch.full_state.teams.B.name : 'Team B');
 
