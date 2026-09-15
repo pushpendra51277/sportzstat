@@ -55,6 +55,11 @@ let modalContext = {}, stateHistory = [], remarkLog = [];
 let activeMatch = null;
 
 window.onload = function() {
+    // 🔥 FIX: Prevent init crash if datalist doesn't exist
+    if (el('savedTeamsList') && typeof teamRegistry !== 'undefined') {
+        let opts = ''; for (let teamName in teamRegistry) { opts += `<option value="${teamName}">`; } el('savedTeamsList').innerHTML = opts; 
+    }
+
     let activeMatchStr = localStorage.getItem('cricStat_activeMatch');
     if (activeMatchStr) {
         showModal("Resume Match?", "An unfinished match was found in your browser. Would you like to resume it instantly without entering the PIN?", function() {
@@ -70,7 +75,6 @@ window.onload = function() {
                 if (state.matchSettings.matchType === 'multiday') { el('breakBtn').classList.remove('hidden'); }
                 activeMatch = JSON.parse(localStorage.getItem('cricStat_activeMatchMetadata')) || null;
                 
-                // 🔥 NEW: Restore Undo History if device crashed
                 let savedHistory = localStorage.getItem('cricStat_stateHistory');
                 if (savedHistory) { stateHistory = JSON.parse(savedHistory); }
 
@@ -83,67 +87,105 @@ window.onload = function() {
 };
 
 async function authenticateMatch() {
-    const matchId = el('login-match-id').value.trim().toUpperCase();
-    const pin = el('login-pin').value.trim();
-    const errBox = el('login-error');
+    try {
+        const matchId = el('login-match-id').value.trim().toUpperCase();
+        const pin = el('login-pin').value.trim();
+        const errBox = el('login-error');
 
-    if(!matchId || !pin) { errBox.innerText = "Please enter both Match ID and PIN."; return; }
-    errBox.style.color = "#38bdf8"; errBox.innerText = "⏳ Authenticating with Cloud...";
+        if(!matchId || !pin) { errBox.innerText = "Please enter both Match ID and PIN."; return; }
+        errBox.style.color = "#38bdf8"; errBox.innerText = "⏳ Authenticating with Cloud...";
 
-    const { data, error } = await supabaseClient.from('matches').select('*').eq('match_id', matchId).eq('scorer_pin', pin).single();
+        if (!supabaseClient) throw new Error("Database connection failed. Please check your internet connection.");
 
-    if (error || !data) { errBox.style.color = "#ef4444"; errBox.innerText = "❌ Invalid Match ID or PIN."; return; }
+        const { data, error } = await supabaseClient.from('matches').select('*').eq('match_id', matchId).eq('scorer_pin', pin).single();
 
-    if (data.full_state && data.full_state.match_status === 'completed') {
-        errBox.style.color = "#f59e0b";
-        errBox.innerHTML = "🏁 <b>Match Locked</b><br><span style='font-size:0.85rem; color:#94a3b8;'>This match has already been completed.</span>";
-        return;
+        if (error || !data) { errBox.style.color = "#ef4444"; errBox.innerText = "❌ Invalid Match ID or PIN."; return; }
+
+        let fullState = data.full_state || {};
+
+        if (fullState.match_status === 'completed') {
+            errBox.style.color = "#f59e0b";
+            errBox.innerHTML = "🏁 <b>Match Locked</b><br><span style='font-size:0.85rem; color:#94a3b8;'>This match has already been completed.</span>";
+            return;
+        }
+
+        activeMatch = data;
+        localStorage.setItem('cricStat_activeMatchMetadata', JSON.stringify(activeMatch));
+
+        // TRUE CLOUD DISASTER RECOVERY
+        if (fullState.match_status === 'live') {
+            showModal("☁️ Cloud Sync Found", "<div class='text-center mt-10 text-success font-bold'>Match is already in progress!</div><div class='text-center text-muted mt-5' style='font-size:0.85rem;'>Resuming from the latest cloud save...</div>", function() {
+                try {
+                    let parsedState = fullState;
+                    parsedState.current.lastOverBowlers = new Set(parsedState.current.lastOverBowlers || []); 
+                    parsedState.current.bowlersInCurrentOver = new Set(parsedState.current.bowlersInCurrentOver || []); 
+                    state = parsedState;
+                    el('login-screen').classList.add('hidden'); 
+                    el('top-title').classList.add('hidden');
+                    el('scoringView').classList.remove('hidden'); 
+                    
+                    if (state.matchSettings.matchType === 'multiday') { el('breakBtn').classList.remove('hidden'); }
+                    
+                    updateUI(); 
+                    closeModal();
+                } catch(e) { console.error("Cloud Resume Error", e); alert("Error loading cloud state."); }
+            }, true, "360px", "Resume Match");
+            return;
+        }
+
+        el('login-screen').classList.add('hidden');
+        el('toss-screen').classList.remove('hidden');
+        
+        let t1 = fullState.team1 || (fullState.teams && fullState.teams.A ? fullState.teams.A.name : 'Team A');
+        let t2 = fullState.team2 || (fullState.teams && fullState.teams.B ? fullState.teams.B.name : 'Team B');
+
+        el('tossWinner').innerHTML = `<option value="A">${t1}</option><option value="B">${t2}</option>`;
+        el('team-a-name').innerText = t1;
+        el('team-b-name').innerText = t2;
+
+        errBox.innerText = ""; 
+
+        // 🔥 FIX: Passed the team names into the squad loader for fallback generation
+        await loadTournamentSquads(activeMatch.team_a_id, 'team-a', t1);
+        await loadTournamentSquads(activeMatch.team_b_id, 'team-b', t2);
+        
+    } catch(e) {
+        console.error("Auth Exception:", e);
+        let errBox = el('login-error');
+        if(errBox) { errBox.style.color = "#ef4444"; errBox.innerText = "❌ System Error: " + e.message; }
     }
-
-    activeMatch = data;
-    localStorage.setItem('cricStat_activeMatchMetadata', JSON.stringify(activeMatch));
-
-    // 🔥 NEW: TRUE CLOUD DISASTER RECOVERY 🔥
-    if (data.full_state && data.full_state.match_status === 'live') {
-        showModal("☁️ Cloud Sync Found", "<div class='text-center mt-10 text-success font-bold'>Match is already in progress!</div><div class='text-center text-muted mt-5' style='font-size:0.85rem;'>Resuming from the latest cloud save...</div>", function() {
-            try {
-                let parsedState = data.full_state;
-                parsedState.current.lastOverBowlers = new Set(parsedState.current.lastOverBowlers || []); 
-                parsedState.current.bowlersInCurrentOver = new Set(parsedState.current.bowlersInCurrentOver || []); 
-                state = parsedState;
-                el('login-screen').classList.add('hidden'); 
-                el('top-title').classList.add('hidden');
-                el('scoringView').classList.remove('hidden'); 
-                
-                if (state.matchSettings.matchType === 'multiday') { el('breakBtn').classList.remove('hidden'); }
-                
-                updateUI(); 
-                closeModal();
-            } catch(e) { console.error("Cloud Resume Error", e); alert("Error loading cloud state."); }
-        }, true, "360px", "Resume Match");
-        return;
-    }
-
-    el('login-screen').classList.add('hidden');
-    el('toss-screen').classList.remove('hidden');
-    
-    // SMART FALLBACK
-    let t1 = activeMatch.full_state.team1 || (activeMatch.full_state.teams && activeMatch.full_state.teams.A ? activeMatch.full_state.teams.A.name : 'Team A');
-    let t2 = activeMatch.full_state.team2 || (activeMatch.full_state.teams && activeMatch.full_state.teams.B ? activeMatch.full_state.teams.B.name : 'Team B');
-
-    el('tossWinner').innerHTML = `<option value="A">${t1}</option><option value="B">${t2}</option>`;
-    el('team-a-name').innerText = t1;
-    el('team-b-name').innerText = t2;
-
-    await loadTournamentSquads(activeMatch.team_a_id, 'team-a');
-    await loadTournamentSquads(activeMatch.team_b_id, 'team-b');
 }
 
-async function loadTournamentSquads(teamId, containerPrefix) {
+async function loadTournamentSquads(teamId, containerPrefix, fallbackTeamName) {
     const container = el(`${containerPrefix}-squad`);
+    
+    // 🔥 FIX: Smart Squad Fallback if no database roster is linked
+    if (!activeMatch.tournament_id || !teamId) {
+        let html = `<div style="color:#f59e0b; font-size:0.85rem; margin-bottom:10px; background:rgba(245,158,11,0.1); padding:8px; border-radius:4px;">No linked cloud roster found. Generating local squad.</div>`;
+        for(let i=1; i<=15; i++) {
+            let isXI = i <= 11 ? "xi" : "none";
+            let selXI = i <= 11 ? "selected" : "";
+            let selSub = "";
+            let selNone = i > 11 ? "selected" : "";
+            
+            html += `<div class="player-row"><span style="font-weight:bold; font-size:0.95rem;">${i}. ${fallbackTeamName} Player ${i}</span><select class="role-select role-${containerPrefix} ${isXI}" data-pid="dummy_${i}" data-pname="${fallbackTeamName} Player ${i}" onchange="updateSquadCounters('${containerPrefix}', this)">
+                <option value="none" ${selNone}>Not Playing</option>
+                <option value="xi" ${selXI}>Playing XI</option>
+                <option value="sub" ${selSub}>Substitute</option>
+            </select></div>`;
+        }
+        container.innerHTML = html;
+        let dummySelect = container.querySelector('select');
+        if (dummySelect) updateSquadCounters(containerPrefix, dummySelect);
+        return;
+    }
+
     const { data, error } = await supabaseClient.from('tournament_squads').select('player_id, players(full_name)').eq('tournament_id', activeMatch.tournament_id).eq('team_id', teamId);
 
-    if(error || !data || data.length === 0) { container.innerHTML = `<div style="color:#ef4444;">No players assigned by Admin.</div>`; return; }
+    if(error || !data || data.length === 0) { 
+        container.innerHTML = `<div style="color:#ef4444;">No players assigned by Admin. Return to Tournament Creator to add players.</div>`; 
+        return; 
+    }
 
     let html = "";
     data.forEach((row, index) => {
@@ -255,7 +297,6 @@ function startInnings() {
 function toggleFullScreen() { let fsBtn = el('fsBtn'); if (!document.fullscreenElement) { document.documentElement.requestFullscreen().then(() => { fsBtn.innerText = '🔳 EXIT FULL SCREEN'; }).catch(err => alert("Fullscreen not supported.")); } else { if (document.exitFullscreen) { document.exitFullscreen().then(() => { fsBtn.innerText = '🔲 FULL'; }); } } }
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) { el('fsBtn').innerText = '🔲 FULL'; } });
 
-// 🔥 NEW: SAVE UNDO HISTORY TO LOCAL BROWSER IN CASE OF CRASH
 function saveState() { 
     try { 
         stateHistory.push(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value)); 
@@ -275,7 +316,6 @@ function undoLastAction() {
     } else { alert("Nothing to undo!"); } 
 }
 
-// 🔥 NEW: NUCLEAR RESTART FUNCTION FOR DISASTER RECOVERY
 async function restartCloudMatch() {
     let conf = confirm("🚨 DANGER 🚨\nAre you sure you want to RESTART this entire match?\nAll runs, wickets, and history will be permanently wiped from the cloud.");
     if (!conf) return;
@@ -359,7 +399,6 @@ function finalizeOver(isPartialTerminal = false) {
     cur.lastOverBowlers = new Set(cur.bowlersInCurrentOver); cur.runsInThisOver = 0; cur.bowlersInCurrentOver.clear(); cur.recentBalls.push(...cur.currentOverLog, {label: '/', type: 'divider'}); if(cur.recentBalls.length > 14) cur.recentBalls = cur.recentBalls.slice(-14); cur.currentOverLog = []; 
 }
 
-// 🔥 CLOUD FIX 1: Push LIVE lock to matches and live_matches
 async function triggerCloudSync() {
     if (!supabaseClient || !state.matchId) return;
     
@@ -384,7 +423,6 @@ async function logBallEvent(batterObj, bowlerObj, runsBat, runsExtra, extraType,
     try { supabaseClient.from('ball_by_ball').insert([ballData]).then(({error}) => { if(error) console.warn("Supabase Ball log error:", error); }); } catch(e) {}
 }
 
-// 🔥 CLOUD FIX 2: Push COMPLETED lock to both tables
 async function logCareerStats() {
     if (!supabaseClient || !state.matchId) return;
     
@@ -524,7 +562,6 @@ function processWicketSubmit() {
         if (isNaN(runsScoredRotate)) runsScoredRotate = 0;
     }
 
-    // 🔥 YOUR FLAWLESS OFFLINE RUN-OUT/ROTATION LOGIC INTACT
     if (['RunOut', 'ObstructingField'].includes(wType)) { if (runsScoredRotate % 2 === 0) manualRotate(); } else { if (runsScoredRotate % 2 !== 0 && !['Caught', 'Bowled', 'LBW', 'Stumped', 'HitWicket', 'TimedOut'].includes(wType)) { manualRotate(); } }
     
     if (checkTargetReached()) { if(cur.bIdx !== null) finalizeOver(true); closeModal(); setTimeout(endInnings, 100); return; }
@@ -572,11 +609,10 @@ function openSelector(typ, title) {
     }, false, "360px", "Confirm"); 
 }
 
-ffunction updateUI() {
+function updateUI() {
     let cur = state.current, bT = getBatTeam().players, bwT = getBowlTeam().players;
     setTimeout(() => { localStorage.setItem('cricStat_activeMatch', JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value)); triggerCloudSync(); }, 0);
 
-    // 🔥 FIX: Bind the Tournament Name dynamically from the Cloud Metadata
     if (activeMatch && activeMatch.full_state) {
         el('displayTournament').innerText = activeMatch.full_state.tournament || "INDEPENDENT MATCH";
     }
@@ -640,9 +676,7 @@ ffunction updateUI() {
     if(cur.bIdx !== null) { 
         let actB = bwT[cur.bIdx]; let bName = actB.name; if(actB.desig === 'C' || actB.desig === 'C/WK') bName += ' (C)'; if(actB.skill && actB.skill.includes('WK')) bName += ' *'; 
         el('activeBowlerNameRight').innerText = bName; el('activeBowlerNameRight').title = bName; el('activeBowlerProgress').innerHTML = cur.currentOverLog.map(getBadgeHtml).join(''); 
-        
         let totalRuns = (actB.rc || 0); 
-        
         let miniBowlHtml = `<div style="display:flex; justify-content:flex-end; align-items:center; width:100%; margin-bottom:2px;"><div style="flex: 0 0 auto; margin-right:4px;">⚾</div><div style="color:white; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex: 0 1 auto; text-align:right;">${actB.name}</div></div>`; miniBowlHtml += `<div style="color:var(--text-muted); font-size:0.75rem; text-align:right; white-space:nowrap;">${formatOver(actB.o)}-${actB.m}-${totalRuns}-<span class="text-danger" style="font-weight:bold;">${actB.w}</span></div>`; el('miniLiveBowler').innerHTML = miniBowlHtml;
     } else {
         el('activeBowlerNameRight').innerText = "Select..."; el('activeBowlerNameRight').title = ""; el('activeBowlerProgress').innerHTML = ""; el('miniLiveBowler').innerHTML = `<div style="color: var(--text-muted); font-style:italic;">Select Bowler...</div>`;
@@ -651,9 +685,7 @@ ffunction updateUI() {
     el('recentBallsData').innerHTML = cur.recentBalls.map(getBadgeHtml).join(''); 
     el('bowlStatsBody').innerHTML = bwT.filter(p => p.o > 0 || p.rc > 0).map(p => { 
         let bName = p.name; if(p.desig === 'C' || p.desig === 'C/WK') bName += ' (C)'; if(p.skill && p.skill.includes('WK')) bName += ' *'; 
-        
         let totalRuns = p.rc || 0; 
-        
         let exStr = `${p.byes||0}b, ${p.legbyes||0}lb`; let noBalls = p.nb || 0; let wides = p.wd || 0;
         return `<tr><td style="max-width: 85px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.name}">${bName}</td><td>${formatOver(p.o)}</td><td>${p.m}</td><td>${totalRuns}</td><td style="color:var(--danger); font-weight:bold;">${p.w}</td><td style="font-size:0.7rem; color:var(--text-muted);">${exStr}</td><td>${noBalls}</td><td>${wides}</td></tr>`; 
     }).join('');
@@ -704,13 +736,9 @@ function generateReportHTML(isExcel) {
         
         let sumBalls = 0, sumM = 0, sumR = 0, sumW = 0, sumB = 0, sumLB = 0, sumNB = 0, sumWD = 0, sumTotEx = 0;
         inn.bowlers.filter(p => p.o > 0 || p.rc > 0).forEach(p => { 
-            // 🔥 FIX 5: Economy math and PDF total runs accurately reflect bowler penalty
             let totalRuns = p.rc || 0; 
             let e = p.o > 0 ? ((totalRuns / p.o) * 6).toFixed(2) : "0.00"; 
-            
             let dName = p.name + (p.desig === 'C' || p.desig === 'C/WK' ? ' (C)' : '') + (p.skill && p.skill.includes('WK') ? ' *' : ''); let exStr = `${p.byes||0}b, ${p.legbyes||0}lb`; let noBalls = p.nb || 0; let wides = p.wd || 0; let totalExtras = (p.wd || 0) + (p.nb || 0) + (p.byes || 0) + (p.legbyes || 0); 
-            
-            // 🔥 FIX 6: Safely add absolute balls without fractional multiplication
             let bBalls = p.o || 0; 
             
             sumBalls += bBalls; sumM += p.m || 0; sumR += totalRuns; sumW += p.w || 0; sumB += p.byes || 0; sumLB += p.legbyes || 0; sumNB += noBalls; sumWD += wides; sumTotEx += totalExtras; 
