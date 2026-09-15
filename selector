@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sportzstat - Selector Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
+        * { box-sizing: border-box; }
+
+        /* Header & Navigation */
+        .top-header { background: #1e293b; padding: 15px 20px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .back-btn { background: transparent; border: 1px solid #475569; color: #cbd5e1; padding: 6px 12px; border-radius: 6px; cursor: pointer; text-decoration: none; font-size: 0.85rem; }
+        .back-btn:hover { background: #334155; }
+        
+        .main-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        /* Tab System */
+        .nav-tabs { display: flex; gap: 10px; border-bottom: 1px solid #334155; margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; }
+        .nav-tabs::-webkit-scrollbar { display: none; }
+        .tab-btn { background: transparent; color: #94a3b8; border: none; padding: 12px 20px; font-size: 1rem; font-weight: bold; cursor: pointer; white-space: nowrap; border-bottom: 3px solid transparent; transition: 0.2s; }
+        .tab-btn:hover { color: #f8fafc; }
+        .tab-btn.active { color: #8b5cf6; border-bottom: 3px solid #8b5cf6; }
+        
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Cards & Grids */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .stat-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px; }
+        .stat-card h3 { margin: 0 0 15px 0; color: #38bdf8; font-size: 1.1rem; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        
+        /* Tables */
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .data-table th { color: #94a3b8; text-align: left; padding: 10px; border-bottom: 1px solid #334155; font-size: 0.75rem; text-transform: uppercase; }
+        .data-table td { padding: 12px 10px; border-bottom: 1px solid #334155; color: #f8fafc; }
+        .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .highlight-val { color: #10b981; font-weight: bold; }
+
+        /* Comparison specific UI */
+        .compare-controls { display: grid; grid-template-columns: 1fr auto 1fr; gap: 15px; align-items: center; background: #1e293b; padding: 20px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 20px; }
+        .player-select { width: 100%; padding: 12px; background: #0f172a; color: white; border: 1px solid #475569; border-radius: 6px; font-size: 1rem; }
+        .vs-badge { background: #f59e0b; color: black; font-weight: 900; padding: 10px 15px; border-radius: 50%; font-size: 1.2rem; }
+
+        .chart-container { position: relative; height: 350px; width: 100%; }
+        
+        .filters-bar { background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        .filter-select { padding: 8px 12px; background: #0f172a; color: white; border: 1px solid #475569; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="top-header">
+        <div>
+            <h2 style="margin: 0; color: #8b5cf6; letter-spacing: 1px;">📋 SELECTOR ANALYTICS</h2>
+            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">Advanced Metrics & Scouting Dashboard</div>
+        </div>
+        <a href="index.html" class="back-btn">Exit to Command Portal</a>
+    </div>
+
+    <div class="main-container">
+        
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('tab-analytics')">📈 Master Analytics</button>
+            <button class="tab-btn" onclick="switchTab('tab-compare')">⚔️ Player H2H</button>
+            <button class="tab-btn" onclick="switchTab('tab-live')">🔴 Live Scouting</button>
+        </div>
+
+        <!-- TAB 1: MASTER ANALYTICS -->
+        <div id="tab-analytics" class="tab-content active">
+            
+            <div class="filters-bar">
+                <span style="color:#94a3b8; font-weight:bold; font-size:0.9rem;">Filters:</span>
+                <select id="filter-tournament" class="filter-select" onchange="processHistoricalData()">
+                    <option value="ALL">All Tournaments</option>
+                </select>
+                <button style="background:#8b5cf6; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer; font-weight:bold;" onclick="processHistoricalData()">Apply</button>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Top Batters -->
+                <div class="stat-card">
+                    <h3>🏏 Top Run Scorers</h3>
+                    <table class="data-table">
+                        <thead><tr><th>Player</th><th>Inn</th><th>Runs</th><th>Avg</th><th>SR</th></tr></thead>
+                        <tbody id="lead-batters"><tr><td colspan="5" style="color:#94a3b8;">Processing data...</td></tr></tbody>
+                    </table>
+                </div>
+
+                <!-- Top Bowlers -->
+                <div class="stat-card">
+                    <h3>⚾ Top Wicket Takers</h3>
+                    <table class="data-table">
+                        <thead><tr><th>Player</th><th>Inn</th><th>W</th><th>Econ</th><th>SR</th></tr></thead>
+                        <tbody id="lead-bowlers"><tr><td colspan="5" style="color:#94a3b8;">Processing data...</td></tr></tbody>
+                    </table>
+                </div>
+                
+                <!-- Boundary Hitters (Visual) -->
+                <div class="stat-card" style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div>
+                        <h3>💥 Highest Strike Rates (Min 30 Runs)</h3>
+                        <table class="data-table">
+                            <thead><tr><th>Player</th><th>Runs</th><th>Balls</th><th>SR</th></tr></thead>
+                            <tbody id="lead-sr"></tbody>
+                        </table>
+                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:center;">
+                        <h3>Boundary Distribution (Tournament)</h3>
+                        <div style="height: 250px; width: 100%; position:relative;">
+                            <canvas id="boundaryPieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: PLAYER HEAD-TO-HEAD -->
+        <div id="tab-compare" class="tab-content">
+            <p style="color:#94a3b8; margin-top:0;">Select two players from the database to compare their aggregated career metrics side-by-side.</p>
+            
+            <div class="compare-controls">
+                <div>
+                    <label style="color:#94a3b8; font-size:0.8rem; display:block; margin-bottom:5px;">Player 1</label>
+                    <select id="p1-select" class="player-select" onchange="renderComparison()"><option value="">Loading Players...</option></select>
+                </div>
+                <div class="vs-badge">VS</div>
+                <div>
+                    <label style="color:#94a3b8; font-size:0.8rem; display:block; margin-bottom:5px;">Player 2</label>
+                    <select id="p2-select" class="player-select" onchange="renderComparison()"><option value="">Loading Players...</option></select>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <h3>📊 Batting Comparison</h3>
+                    <div class="chart-container">
+                        <canvas id="compareBatChart"></canvas>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <h3>🎯 Batting Metrics</h3>
+                    <table class="data-table" style="text-align:center;">
+                        <thead><tr><th style="text-align:left;">Metric</th><th id="comp-n1">P1</th><th id="comp-n2">P2</th></tr></thead>
+                        <tbody id="comp-table-body">
+                            <tr><td colspan="3" style="color:#94a3b8; text-align:left;">Select two players above.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: LIVE SCOUTING -->
+        <div id="tab-live" class="tab-content">
+            <p style="color:#94a3b8; margin-top:0;">Live match data focused on performance analytics.</p>
+            <div class="dashboard-grid" id="live-scouting-grid">
+                <div class="stat-card" style="grid-column: 1 / -1; text-align:center; color:#94a3b8;">
+                    No live matches available for scouting right now.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
+        const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let rawCompletedMatches = [];
+        let aggregatedPlayers = {};
+        
+        let batChartInstance = null;
+        let pieChartInstance = null;
+
+        // Initialize App
+        window.onload = async () => {
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.borderColor = '#334155';
+            
+            await fetchMasterData();
+            fetchLiveMatches();
+            setInterval(fetchLiveMatches, 5000); // Poll live matches
+        };
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`[onclick="switchTab('${tabId}')"]`).classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // ==========================================
+        // DATA FETCHING & AGGREGATION
+        // ==========================================
+        async function fetchMasterData() {
+            const { data, error } = await db.from('completed_matches').select('*');
+            if (error) { console.error(error); return; }
+            rawCompletedMatches = data;
+
+            // Extract unique tournaments for filter
+            let tournaments = new Set();
+            rawCompletedMatches.forEach(m => {
+                try {
+                    let parsed = JSON.parse(m.final_data);
+                    // If tournament name is embedded, extract it (Handling older schema safely)
+                    if (parsed.length > 0 && parsed[0].tournament) tournaments.add(parsed[0].tournament);
+                } catch(e) {}
+            });
+            
+            let tSelect = document.getElementById('filter-tournament');
+            tournaments.forEach(t => { tSelect.innerHTML += `<option value="${t}">${t}</option>`; });
+
+            processHistoricalData();
+        }
+
+        function processHistoricalData() {
+            aggregatedPlayers = {};
+            let total1s = 0, total4s = 0, total6s = 0;
+            let filterTourn = document.getElementById('filter-tournament').value;
+
+            rawCompletedMatches.forEach(matchRow => {
+                try {
+                    let inningsArray = JSON.parse(matchRow.final_data);
+                    
+                    // Filter Check (If your data stores tournament in the JSON)
+                    // If tournament isn't explicitly in final_data, we aggregate all.
+                    
+                    inningsArray.forEach(inn => {
+                        // Aggregate Batters
+                        (inn.batters || []).forEach(b => {
+                            if (b.hasBatted) {
+                                if(!aggregatedPlayers[b.name]) initPlayerObj(b.name);
+                                let p = aggregatedPlayers[b.name];
+                                p.bat.runs += b.r;
+                                p.bat.balls += b.b;
+                                p.bat.fours += b.f;
+                                p.bat.sixes += b.s;
+                                p.bat.innings += 1;
+                                if(b.out) p.bat.dismissals += 1;
+                                
+                                // Global counters for pie chart
+                                total4s += (b.f * 4);
+                                total6s += (b.s * 6);
+                                total1s += (b.r - (b.f*4) - (b.s*6));
+                            }
+                        });
+
+                        // Aggregate Bowlers
+                        (inn.bowlers || []).forEach(b => {
+                            if (b.o > 0 || b.rc > 0) {
+                                if(!aggregatedPlayers[b.name]) initPlayerObj(b.name);
+                                let p = aggregatedPlayers[b.name];
+                                p.bowl.innings += 1;
+                                p.bowl.runs += b.rc;
+                                p.bowl.wickets += b.w;
+                                p.bowl.maidens += b.m;
+                                // Convert overs back to absolute balls for accurate math
+                                let bOvers = parseFloat(b.o) || 0;
+                                let absBalls = Math.floor(bOvers)*6 + Math.round((bOvers - Math.floor(bOvers))*10);
+                                p.bowl.balls += absBalls;
+                            }
+                        });
+                    });
+                } catch(e) { console.error("Error parsing match data", e); }
+            });
+
+            renderAnalyticsDash(total1s, total4s, total6s);
+            populateCompareDropdowns();
+        }
+
+        function initPlayerObj(name) {
+            aggregatedPlayers[name] = {
+                name: name,
+                bat: { runs: 0, balls: 0, fours: 0, sixes: 0, innings: 0, dismissals: 0 },
+                bowl: { balls: 0, runs: 0, wickets: 0, maidens: 0, innings: 0 }
+            };
+        }
+
+        // ==========================================
+        // RENDER: TAB 1 (LEADERBOARDS)
+        // ==========================================
+        function renderAnalyticsDash(t1, t4, t6) {
+            let playersArray = Object.values(aggregatedPlayers);
+
+            // 1. Top Batters (Sorted by Runs, then Average)
+            let topBatters = [...playersArray].filter(p => p.bat.innings > 0)
+                .map(p => {
+                    p.bat.avg = p.bat.dismissals > 0 ? (p.bat.runs / p.bat.dismissals) : p.bat.runs;
+                    p.bat.sr = p.bat.balls > 0 ? ((p.bat.runs / p.bat.balls) * 100) : 0;
+                    return p;
+                })
+                .sort((a,b) => b.bat.runs - a.bat.runs || b.bat.avg - a.bat.avg)
+                .slice(0, 10);
+
+            document.getElementById('lead-batters').innerHTML = topBatters.map(p => 
+                `<tr><td><b>${p.name}</b></td><td>${p.bat.innings}</td><td class="highlight-val">${p.bat.runs}</td><td>${p.bat.avg.toFixed(1)}</td><td>${p.bat.sr.toFixed(1)}</td></tr>`
+            ).join('');
+
+            // 2. Top Bowlers (Sorted by Wickets, then Economy)
+            let topBowlers = [...playersArray].filter(p => p.bowl.innings > 0)
+                .map(p => {
+                    p.bowl.econ = p.bowl.balls > 0 ? ((p.bowl.runs / p.bowl.balls) * 6) : 0;
+                    p.bowl.sr = p.bowl.wickets > 0 ? (p.bowl.balls / p.bowl.wickets) : 0;
+                    return p;
+                })
+                .sort((a,b) => b.bowl.wickets - a.bowl.wickets || a.bowl.econ - b.bowl.econ)
+                .slice(0, 10);
+
+            document.getElementById('lead-bowlers').innerHTML = topBowlers.map(p => 
+                `<tr><td><b>${p.name}</b></td><td>${p.bowl.innings}</td><td class="highlight-val" style="color:#ef4444;">${p.bowl.wickets}</td><td>${p.bowl.econ.toFixed(2)}</td><td>${p.bowl.sr.toFixed(1)}</td></tr>`
+            ).join('');
+
+            // 3. Highest Strike Rates (Min 30 runs)
+            let topSR = [...playersArray].filter(p => p.bat.runs >= 30)
+                .sort((a,b) => b.bat.sr - a.bat.sr)
+                .slice(0, 5);
+
+            document.getElementById('lead-sr').innerHTML = topSR.map(p => 
+                `<tr><td><b>${p.name}</b></td><td>${p.bat.runs}</td><td>${p.bat.balls}</td><td class="highlight-val" style="color:#f59e0b;">${p.bat.sr.toFixed(1)}</td></tr>`
+            ).join('');
+
+            // 4. Boundary Doughnut Chart
+            if (pieChartInstance) pieChartInstance.destroy();
+            let ctx = document.getElementById('boundaryPieChart').getContext('2d');
+            pieChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Singles/Twos/Threes', 'Fours', 'Sixes'],
+                    datasets: [{
+                        data: [t1, t4, t6],
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels:{color:'#cbd5e1'} } } }
+            });
+        }
+
+        // ==========================================
+        // RENDER: TAB 2 (PLAYER COMPARISON)
+        // ==========================================
+        function populateCompareDropdowns() {
+            let names = Object.keys(aggregatedPlayers).sort();
+            let opts = `<option value="">-- Select Player --</option>` + names.map(n => `<option value="${n}">${n}</option>`).join('');
+            document.getElementById('p1-select').innerHTML = opts;
+            document.getElementById('p2-select').innerHTML = opts;
+        }
+
+        function renderComparison() {
+            let n1 = document.getElementById('p1-select').value;
+            let n2 = document.getElementById('p2-select').value;
+            if (!n1 || !n2) return;
+
+            let p1 = aggregatedPlayers[n1];
+            let p2 = aggregatedPlayers[n2];
+
+            document.getElementById('comp-n1').innerText = p1.name;
+            document.getElementById('comp-n2').innerText = p2.name;
+
+            // Compute Batting Averages safely
+            let a1 = p1.bat.dismissals > 0 ? (p1.bat.runs / p1.bat.dismissals) : p1.bat.runs;
+            let a2 = p2.bat.dismissals > 0 ? (p2.bat.runs / p2.bat.dismissals) : p2.bat.runs;
+            
+            let sr1 = p1.bat.balls > 0 ? ((p1.bat.runs / p1.bat.balls) * 100) : 0;
+            let sr2 = p2.bat.balls > 0 ? ((p2.bat.runs / p2.bat.balls) * 100) : 0;
+
+            // Update Table
+            document.getElementById('comp-table-body').innerHTML = `
+                <tr><td style="text-align:left;">Innings Batted</td><td>${p1.bat.innings}</td><td>${p2.bat.innings}</td></tr>
+                <tr><td style="text-align:left; color:#10b981; font-weight:bold;">Total Runs</td><td style="color:#10b981; font-weight:bold;">${p1.bat.runs}</td><td style="color:#10b981; font-weight:bold;">${p2.bat.runs}</td></tr>
+                <tr><td style="text-align:left;">Batting Average</td><td>${a1.toFixed(1)}</td><td>${a2.toFixed(1)}</td></tr>
+                <tr><td style="text-align:left;">Strike Rate</td><td>${sr1.toFixed(1)}</td><td>${sr2.toFixed(1)}</td></tr>
+                <tr><td style="text-align:left;">Boundaries (4s/6s)</td><td>${p1.bat.fours} / ${p1.bat.sixes}</td><td>${p2.bat.fours} / ${p2.bat.sixes}</td></tr>
+            `;
+
+            // Draw Bar Chart
+            if (batChartInstance) batChartInstance.destroy();
+            let ctx = document.getElementById('compareBatChart').getContext('2d');
+            batChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Runs', 'Average', 'Strike Rate'],
+                    datasets: [
+                        { label: p1.name, data: [p1.bat.runs, a1.toFixed(1), sr1.toFixed(1)], backgroundColor: '#3b82f6' },
+                        { label: p2.name, data: [p2.bat.runs, a2.toFixed(1), sr2.toFixed(1)], backgroundColor: '#f59e0b' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid:{color:'#334155'} }, x:{ grid:{display:false} } }, plugins: { legend: { labels:{color:'white'} } } }
+            });
+        }
+
+        // ==========================================
+        // RENDER: TAB 3 (LIVE SCOUTING)
+        // ==========================================
+        async function fetchLiveMatches() {
+            if (!document.getElementById('tab-live').classList.contains('active')) return;
+
+            const { data, error } = await db.from('live_matches').select('*');
+            if (error || !data || data.length === 0) {
+                document.getElementById('live-scouting-grid').innerHTML = `<div class="stat-card" style="grid-column: 1 / -1; text-align:center; color:#94a3b8;">No live matches available for scouting right now.</div>`;
+                return;
+            }
+
+            let html = "";
+            data.forEach(m => {
+                let d = m.live_data;
+                if(!d) return;
+
+                let b1 = d.batters[0]; let b2 = d.batters[1];
+                let bStr = "";
+                if(b1) { let sr = b1.b>0?((b1.r/b1.b)*100).toFixed(1):"0.0"; bStr += `<div><span style="color:white; font-weight:bold;">${b1.name}</span>: ${b1.r}(${b1.b}) <span style="color:#8b5cf6; font-size:0.8rem;">[SR: ${sr}]</span></div>`; }
+                if(b2) { let sr = b2.b>0?((b2.r/b2.b)*100).toFixed(1):"0.0"; bStr += `<div style="margin-top:5px;"><span style="color:white; font-weight:bold;">${b2.name}</span>: ${b2.r}(${b2.b}) <span style="color:#8b5cf6; font-size:0.8rem;">[SR: ${sr}]</span></div>`; }
+
+                let bowlStr = "";
+                if(d.bowler) {
+                    let er = parseFloat(d.bowler.o)>0 ? ((d.bowler.r/parseFloat(d.bowler.o))*6).toFixed(1) : "0.0";
+                    bowlStr = `<div><span style="color:white; font-weight:bold;">${d.bowler.name}</span>: ${d.bowler.o} Ov | ${d.bowler.w}/${d.bowler.r} <span style="color:#ef4444; font-size:0.8rem;">[ER: ${er}]</span></div>`;
+                }
+
+                html += `
+                <div class="stat-card" style="border-color:#10b981;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #334155; padding-bottom:10px;">
+                        <h3 style="margin:0; border:none; padding:0; color:#10b981;">${d.batTeam} vs ${d.bowlTeam}</h3>
+                        <span style="background:rgba(16,185,129,0.2); color:#10b981; padding:3px 8px; border-radius:4px; font-size:0.75rem; font-weight:bold;">LIVE</span>
+                    </div>
+                    <div style="font-size:1.8rem; font-weight:900; color:white; margin-bottom:5px;">${d.runs}/${d.wkts} <span style="font-size:1rem; color:#94a3b8;">(${d.overs} ov)</span></div>
+                    <div style="font-size:0.85rem; color:#f59e0b; font-weight:bold; margin-bottom:15px;">CRR: ${d.crr}</div>
+                    
+                    <div style="background:#0f172a; padding:12px; border-radius:6px; margin-bottom:10px; font-size:0.9rem;">
+                        <div style="color:#94a3b8; font-size:0.75rem; font-weight:bold; margin-bottom:5px; text-transform:uppercase;">At The Crease</div>
+                        ${bStr || '<span style="color:#475569;">Waiting for batters...</span>'}
+                    </div>
+                    
+                    <div style="background:#0f172a; padding:12px; border-radius:6px; font-size:0.9rem;">
+                        <div style="color:#94a3b8; font-size:0.75rem; font-weight:bold; margin-bottom:5px; text-transform:uppercase;">Bowling Attack</div>
+                        ${bowlStr || '<span style="color:#475569;">Waiting for bowler...</span>'}
+                    </div>
+                </div>`;
+            });
+
+            document.getElementById('live-scouting-grid').innerHTML = html;
+        }
+    </script>
+</body>
+</html>
