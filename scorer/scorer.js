@@ -70,6 +70,10 @@ window.onload = function() {
                 if (state.matchSettings.matchType === 'multiday') { el('breakBtn').classList.remove('hidden'); }
                 activeMatch = JSON.parse(localStorage.getItem('cricStat_activeMatchMetadata')) || null;
                 
+                // 🔥 NEW: Restore Undo History if device crashed
+                let savedHistory = localStorage.getItem('cricStat_stateHistory');
+                if (savedHistory) { stateHistory = JSON.parse(savedHistory); }
+
                 updateUI(); closeModal();
             } catch(e) { console.error("Corrupted local state.", e); localStorage.removeItem('cricStat_activeMatch'); location.reload(); }
         }, false, "360px", "Resume Match");
@@ -100,18 +104,13 @@ async function authenticateMatch() {
     localStorage.setItem('cricStat_activeMatchMetadata', JSON.stringify(activeMatch));
 
     // 🔥 NEW: TRUE CLOUD DISASTER RECOVERY 🔥
-    // If the tablet dies and they log in on a new device, pull the match from the cloud!
     if (data.full_state && data.full_state.match_status === 'live') {
         showModal("☁️ Cloud Sync Found", "<div class='text-center mt-10 text-success font-bold'>Match is already in progress!</div><div class='text-center text-muted mt-5' style='font-size:0.85rem;'>Resuming from the latest cloud save...</div>", function() {
             try {
-                // Reconstruct the exact state from the cloud JSON
                 let parsedState = data.full_state;
-                
-                // JavaScript Sets must be rebuilt from arrays
                 parsedState.current.lastOverBowlers = new Set(parsedState.current.lastOverBowlers || []); 
                 parsedState.current.bowlersInCurrentOver = new Set(parsedState.current.bowlersInCurrentOver || []); 
                 state = parsedState;
-                
                 el('login-screen').classList.add('hidden'); 
                 el('top-title').classList.add('hidden');
                 el('scoringView').classList.remove('hidden'); 
@@ -120,18 +119,15 @@ async function authenticateMatch() {
                 
                 updateUI(); 
                 closeModal();
-            } catch(e) { 
-                console.error("Cloud Resume Error", e); 
-                alert("Error loading cloud state."); 
-            }
+            } catch(e) { console.error("Cloud Resume Error", e); alert("Error loading cloud state."); }
         }, true, "360px", "Resume Match");
         return;
     }
 
-    // If it's not live yet, proceed to the normal Toss screen
     el('login-screen').classList.add('hidden');
     el('toss-screen').classList.remove('hidden');
     
+    // SMART FALLBACK
     let t1 = activeMatch.full_state.team1 || (activeMatch.full_state.teams && activeMatch.full_state.teams.A ? activeMatch.full_state.teams.A.name : 'Team A');
     let t2 = activeMatch.full_state.team2 || (activeMatch.full_state.teams && activeMatch.full_state.teams.B ? activeMatch.full_state.teams.B.name : 'Team B');
 
@@ -259,8 +255,57 @@ function startInnings() {
 function toggleFullScreen() { let fsBtn = el('fsBtn'); if (!document.fullscreenElement) { document.documentElement.requestFullscreen().then(() => { fsBtn.innerText = '🔳 EXIT FULL SCREEN'; }).catch(err => alert("Fullscreen not supported.")); } else { if (document.exitFullscreen) { document.exitFullscreen().then(() => { fsBtn.innerText = '🔲 FULL'; }); } } }
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) { el('fsBtn').innerText = '🔲 FULL'; } });
 
-function saveState() { try { stateHistory.push(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value)); if (stateHistory.length > 300) stateHistory.shift(); } catch(e) { console.warn("State save failed"); } }
-function undoLastAction() { if (stateHistory.length > 0) { let prevState = JSON.parse(stateHistory.pop()); prevState.current.lastOverBowlers = new Set(prevState.current.lastOverBowlers); prevState.current.bowlersInCurrentOver = new Set(prevState.current.bowlersInCurrentOver); state = prevState; updateUI(); } else { alert("Nothing to undo!"); } }
+// 🔥 NEW: SAVE UNDO HISTORY TO LOCAL BROWSER IN CASE OF CRASH
+function saveState() { 
+    try { 
+        stateHistory.push(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value)); 
+        if (stateHistory.length > 100) stateHistory.shift(); 
+        localStorage.setItem('cricStat_stateHistory', JSON.stringify(stateHistory));
+    } catch(e) { console.warn("State save failed"); } 
+}
+
+function undoLastAction() { 
+    if (stateHistory.length > 0) { 
+        let prevState = JSON.parse(stateHistory.pop()); 
+        prevState.current.lastOverBowlers = new Set(prevState.current.lastOverBowlers); 
+        prevState.current.bowlersInCurrentOver = new Set(prevState.current.bowlersInCurrentOver); 
+        state = prevState; 
+        localStorage.setItem('cricStat_stateHistory', JSON.stringify(stateHistory));
+        updateUI(); 
+    } else { alert("Nothing to undo!"); } 
+}
+
+// 🔥 NEW: NUCLEAR RESTART FUNCTION FOR DISASTER RECOVERY
+async function restartCloudMatch() {
+    let conf = confirm("🚨 DANGER 🚨\nAre you sure you want to RESTART this entire match?\nAll runs, wickets, and history will be permanently wiped from the cloud.");
+    if (!conf) return;
+
+    let pin = prompt("To confirm, please enter the 4-Digit Scorer PIN for this match:");
+    if (pin !== activeMatch.scorer_pin) { alert("❌ Incorrect PIN. Match restart aborted."); return; }
+
+    let resetState = {
+        tournament: activeMatch.full_state.tournament || "MATCH",
+        format: activeMatch.full_state.format || "T20",
+        team1: activeMatch.full_state.team1 || (activeMatch.full_state.teams ? activeMatch.full_state.teams.A.name : "Team A"),
+        team2: activeMatch.full_state.team2 || (activeMatch.full_state.teams ? activeMatch.full_state.teams.B.name : "Team B"),
+        matchName: activeMatch.full_state.matchName || "",
+        match_status: 'upcoming'
+    };
+
+    try {
+        await supabaseClient.from('matches').update({ full_state: resetState }).eq('match_id', state.matchId);
+        await supabaseClient.from('live_matches').delete().eq('match_id', state.matchId);
+        await supabaseClient.from('ball_by_ball').delete().eq('match_id', state.matchId);
+    } catch(e) { console.error("Error wiping cloud records:", e); }
+
+    localStorage.removeItem('cricStat_activeMatch');
+    localStorage.removeItem('cricStat_activeMatchMetadata');
+    localStorage.removeItem('cricStat_stateHistory');
+    
+    alert("✅ Match has been wiped and reset to Upcoming. Returning to login...");
+    window.location.reload();
+}
+
 function syncMetadataToHistory(syncPlayingXI) { stateHistory = stateHistory.map(hStr => { let h = JSON.parse(hStr); ['A', 'B'].forEach(t => { for(let i=0; i<h.teams[t].players.length; i++) { h.teams[t].players[i].name = state.teams[t].players[i].name; h.teams[t].players[i].regNo = state.teams[t].players[i].regNo; h.teams[t].players[i].skill = state.teams[t].players[i].skill; if (syncPlayingXI) { h.teams[t].players[i].isPlayingXI = state.teams[t].players[i].isPlayingXI; } } }); return JSON.stringify(h, (k, v) => v instanceof Set ? [...v] : v); }); }
 
 function openRemarkModal() { 
@@ -591,7 +636,7 @@ function updateUI() {
         let actB = bwT[cur.bIdx]; let bName = actB.name; if(actB.desig === 'C' || actB.desig === 'C/WK') bName += ' (C)'; if(actB.skill && actB.skill.includes('WK')) bName += ' *'; 
         el('activeBowlerNameRight').innerText = bName; el('activeBowlerNameRight').title = bName; el('activeBowlerProgress').innerHTML = cur.currentOverLog.map(getBadgeHtml).join(''); 
         
-        // 🔥 FIX: Bowler UI runs NO LONGER include Byes or Leg-Byes.
+        // 🔥 FIX 3: Byes and Leg Byes removed from Bowler UI Stats
         let totalRuns = (actB.rc || 0); 
         
         let miniBowlHtml = `<div style="display:flex; justify-content:flex-end; align-items:center; width:100%; margin-bottom:2px;"><div style="flex: 0 0 auto; margin-right:4px;">⚾</div><div style="color:white; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex: 0 1 auto; text-align:right;">${actB.name}</div></div>`; miniBowlHtml += `<div style="color:var(--text-muted); font-size:0.75rem; text-align:right; white-space:nowrap;">${formatOver(actB.o)}-${actB.m}-${totalRuns}-<span class="text-danger" style="font-weight:bold;">${actB.w}</span></div>`; el('miniLiveBowler').innerHTML = miniBowlHtml;
@@ -603,7 +648,7 @@ function updateUI() {
     el('bowlStatsBody').innerHTML = bwT.filter(p => p.o > 0 || p.rc > 0).map(p => { 
         let bName = p.name; if(p.desig === 'C' || p.desig === 'C/WK') bName += ' (C)'; if(p.skill && p.skill.includes('WK')) bName += ' *'; 
         
-        // 🔥 FIX: Scorecard table Bowler Runs NO LONGER include Byes/Leg-Byes.
+        // 🔥 FIX 4: Scorecard table Bowler Runs NO LONGER include Byes/Leg-Byes.
         let totalRuns = p.rc || 0; 
         
         let exStr = `${p.byes||0}b, ${p.legbyes||0}lb`; let noBalls = p.nb || 0; let wides = p.wd || 0;
@@ -656,13 +701,13 @@ function generateReportHTML(isExcel) {
         
         let sumBalls = 0, sumM = 0, sumR = 0, sumW = 0, sumB = 0, sumLB = 0, sumNB = 0, sumWD = 0, sumTotEx = 0;
         inn.bowlers.filter(p => p.o > 0 || p.rc > 0).forEach(p => { 
-            // 🔥 FIX: Economy math and PDF total runs accurately reflect bowler penalty
+            // 🔥 FIX 5: Economy math and PDF total runs accurately reflect bowler penalty
             let totalRuns = p.rc || 0; 
             let e = p.o > 0 ? ((totalRuns / p.o) * 6).toFixed(2) : "0.00"; 
             
             let dName = p.name + (p.desig === 'C' || p.desig === 'C/WK' ? ' (C)' : '') + (p.skill && p.skill.includes('WK') ? ' *' : ''); let exStr = `${p.byes||0}b, ${p.legbyes||0}lb`; let noBalls = p.nb || 0; let wides = p.wd || 0; let totalExtras = (p.wd || 0) + (p.nb || 0) + (p.byes || 0) + (p.legbyes || 0); 
             
-            // 🔥 FIX: Safely add absolute balls without fractional multiplication
+            // 🔥 FIX 6: Safely add absolute balls without fractional multiplication
             let bBalls = p.o || 0; 
             
             sumBalls += bBalls; sumM += p.m || 0; sumR += totalRuns; sumW += p.w || 0; sumB += p.byes || 0; sumLB += p.legbyes || 0; sumNB += noBalls; sumWD += wides; sumTotEx += totalExtras; 
@@ -1163,6 +1208,7 @@ function resetMatch() {
     el('inningsHistoryText').innerHTML = ''; el('scoringView').classList.add('hidden');
     localStorage.removeItem('cricStat_activeMatch');
     localStorage.removeItem('cricStat_activeMatchMetadata');
+    localStorage.removeItem('cricStat_stateHistory');
     if (window.matchChart) window.matchChart.destroy();
     window.location.reload();
 }
