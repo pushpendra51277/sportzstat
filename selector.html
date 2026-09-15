@@ -86,7 +86,7 @@
                     <h3>🏏 Top Run Scorers</h3>
                     <table class="data-table">
                         <thead><tr><th>Player</th><th>Inn</th><th>Runs</th><th>Avg</th><th>SR</th></tr></thead>
-                        <tbody id="lead-batters"><tr><td colspan="5" style="color:#94a3b8;">Processing data...</td></tr></tbody>
+                        <tbody id="lead-batters"><tr><td colspan="5" style="color:#94a3b8; text-align:center;">Fetching database...</td></tr></tbody>
                     </table>
                 </div>
 
@@ -95,7 +95,7 @@
                     <h3>⚾ Top Wicket Takers</h3>
                     <table class="data-table">
                         <thead><tr><th>Player</th><th>Inn</th><th>W</th><th>Econ</th><th>SR</th></tr></thead>
-                        <tbody id="lead-bowlers"><tr><td colspan="5" style="color:#94a3b8;">Processing data...</td></tr></tbody>
+                        <tbody id="lead-bowlers"><tr><td colspan="5" style="color:#94a3b8; text-align:center;">Fetching database...</td></tr></tbody>
                     </table>
                 </div>
                 
@@ -197,18 +197,18 @@
         // DATA FETCHING & AGGREGATION
         // ==========================================
         async function fetchMasterData() {
-            const { data, error } = await db.from('completed_matches').select('*');
+            // FIX: Pull directly from the unified matches table instead of completed_matches
+            const { data, error } = await db.from('matches').select('full_state');
             if (error) { console.error(error); return; }
-            rawCompletedMatches = data;
 
-            // Extract unique tournaments for filter
+            rawCompletedMatches = [];
             let tournaments = new Set();
-            rawCompletedMatches.forEach(m => {
-                try {
-                    let parsed = JSON.parse(m.final_data);
-                    // If tournament name is embedded, extract it (Handling older schema safely)
-                    if (parsed.length > 0 && parsed[0].tournament) tournaments.add(parsed[0].tournament);
-                } catch(e) {}
+
+            data.forEach(m => {
+                if (m.full_state && m.full_state.match_status === 'completed' && m.full_state.inningsSummaries) {
+                    rawCompletedMatches.push(m.full_state);
+                    if (m.full_state.tournament) tournaments.add(m.full_state.tournament);
+                }
             });
             
             let tSelect = document.getElementById('filter-tournament');
@@ -222,50 +222,49 @@
             let total1s = 0, total4s = 0, total6s = 0;
             let filterTourn = document.getElementById('filter-tournament').value;
 
-            rawCompletedMatches.forEach(matchRow => {
-                try {
-                    let inningsArray = JSON.parse(matchRow.final_data);
-                    
-                    // Filter Check (If your data stores tournament in the JSON)
-                    // If tournament isn't explicitly in final_data, we aggregate all.
-                    
-                    inningsArray.forEach(inn => {
-                        // Aggregate Batters
-                        (inn.batters || []).forEach(b => {
-                            if (b.hasBatted) {
-                                if(!aggregatedPlayers[b.name]) initPlayerObj(b.name);
-                                let p = aggregatedPlayers[b.name];
-                                p.bat.runs += b.r;
-                                p.bat.balls += b.b;
-                                p.bat.fours += b.f;
-                                p.bat.sixes += b.s;
-                                p.bat.innings += 1;
-                                if(b.out) p.bat.dismissals += 1;
-                                
-                                // Global counters for pie chart
-                                total4s += (b.f * 4);
-                                total6s += (b.s * 6);
-                                total1s += (b.r - (b.f*4) - (b.s*6));
-                            }
-                        });
+            rawCompletedMatches.forEach(fullState => {
+                // Filter by tournament if not ALL
+                if (filterTourn !== 'ALL' && fullState.tournament !== filterTourn) return;
 
-                        // Aggregate Bowlers
-                        (inn.bowlers || []).forEach(b => {
-                            if (b.o > 0 || b.rc > 0) {
-                                if(!aggregatedPlayers[b.name]) initPlayerObj(b.name);
-                                let p = aggregatedPlayers[b.name];
-                                p.bowl.innings += 1;
-                                p.bowl.runs += b.rc;
-                                p.bowl.wickets += b.w;
-                                p.bowl.maidens += b.m;
-                                // Convert overs back to absolute balls for accurate math
-                                let bOvers = parseFloat(b.o) || 0;
-                                let absBalls = Math.floor(bOvers)*6 + Math.round((bOvers - Math.floor(bOvers))*10);
-                                p.bowl.balls += absBalls;
-                            }
-                        });
+                let inningsArray = fullState.inningsSummaries || [];
+                
+                inningsArray.forEach(inn => {
+                    // Aggregate Batters
+                    (inn.batters || []).forEach(b => {
+                        if (b.hasBatted) {
+                            if(!aggregatedPlayers[b.name]) initPlayerObj(b.name);
+                            let p = aggregatedPlayers[b.name];
+                            p.bat.runs += b.r;
+                            p.bat.balls += b.b;
+                            p.bat.fours += b.f;
+                            p.bat.sixes += b.s;
+                            p.bat.innings += 1;
+                            if(b.out) p.bat.dismissals += 1;
+                            
+                            // Global counters for pie chart
+                            total4s += (b.f * 4);
+                            total6s += (b.s * 6);
+                            total1s += (b.r - (b.f*4) - (b.s*6));
+                        }
                     });
-                } catch(e) { console.error("Error parsing match data", e); }
+
+                    // Aggregate Bowlers
+                    (inn.bowlers || []).forEach(b => {
+                        if (b.o > 0 || b.rc > 0) {
+                            if(!aggregatedPlayers[b.name]) initPlayerObj(b.name);
+                            let p = aggregatedPlayers[b.name];
+                            p.bowl.innings += 1;
+                            p.bowl.runs += b.rc;
+                            p.bowl.wickets += b.w;
+                            p.bowl.maidens += b.m;
+                            
+                            // Safe absolute ball calculation
+                            let bOvers = parseFloat(b.o) || 0;
+                            let absBalls = Math.floor(bOvers)*6 + Math.round((bOvers - Math.floor(bOvers))*10);
+                            p.bowl.balls += absBalls;
+                        }
+                    });
+                });
             });
 
             renderAnalyticsDash(total1s, total4s, total6s);
@@ -285,6 +284,13 @@
         // ==========================================
         function renderAnalyticsDash(t1, t4, t6) {
             let playersArray = Object.values(aggregatedPlayers);
+
+            if (playersArray.length === 0) {
+                document.getElementById('lead-batters').innerHTML = '<tr><td colspan="5" style="color:#94a3b8; text-align:center;">No completed match data found.</td></tr>';
+                document.getElementById('lead-bowlers').innerHTML = '<tr><td colspan="5" style="color:#94a3b8; text-align:center;">No completed match data found.</td></tr>';
+                document.getElementById('lead-sr').innerHTML = '<tr><td colspan="4" style="color:#94a3b8; text-align:center;">No data found.</td></tr>';
+                return;
+            }
 
             // 1. Top Batters (Sorted by Runs, then Average)
             let topBatters = [...playersArray].filter(p => p.bat.innings > 0)
@@ -325,6 +331,10 @@
 
             // 4. Boundary Doughnut Chart
             if (pieChartInstance) pieChartInstance.destroy();
+            
+            // Safety check if no boundaries exist
+            if (t1 === 0 && t4 === 0 && t6 === 0) { t1 = 1; }
+
             let ctx = document.getElementById('boundaryPieChart').getContext('2d');
             pieChartInstance = new Chart(ctx, {
                 type: 'doughnut',
