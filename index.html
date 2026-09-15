@@ -69,7 +69,12 @@
             <div class="input-group"><label>Email Address</label><input type="email" id="auth-email" required></div>
             <div class="input-group"><label>Password</label><input type="password" id="auth-password" required></div>
             <div class="input-group hidden" id="role-group"><label>Request Role</label>
-                <select id="auth-role"><option value="fan">Fan (Default)</option><option value="scorer">Official Scorer</option><option value="admin">Tournament Admin</option></select>
+               <select id="auth-role">
+    <option value="fan">Fan (Default)</option>
+    <option value="scorer">Official Scorer</option>
+    <option value="selector">Team Selector / Coach</option>
+    <option value="admin">Tournament Admin</option>
+</select>
             </div>
             <button type="submit" class="btn-launch" id="auth-submit-btn">Sign In</button>
         </form>
