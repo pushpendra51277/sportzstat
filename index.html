@@ -259,7 +259,9 @@
 
             carousel.innerHTML = matches.map(m => {
                 let p = m.full_state || {};
-                let t1 = p.team1 || 'Team A'; let t2 = p.team2 || 'Team B';
+                // SMART FALLBACK: Handles older test matches and new multi-level team structures
+                let t1 = p.team1 || (p.teams && p.teams.A ? p.teams.A.name : 'Team A');
+                let t2 = p.team2 || (p.teams && p.teams.B ? p.teams.B.name : 'Team B');
                 let tourney = p.tournament || 'Independent Match';
                 let adminId = m.tournaments ? m.tournaments.admin_id : 'none';
                 
@@ -325,8 +327,12 @@
                 let mStatus = p.match_status || 'upcoming';
                 let sClass = mStatus === 'live' ? 'state-live' : (mStatus === 'completed' ? 'state-completed' : 'state-upcoming');
                 
+                // SMART FALLBACK: Apply it to the directory table as well!
+                let t1 = p.team1 || (p.teams && p.teams.A ? p.teams.A.name : 'Team A');
+                let t2 = p.team2 || (p.teams && p.teams.B ? p.teams.B.name : 'Team B');
+                
                 return `<tr>
-                    <td style="color: #cbd5e1; font-size:0.8rem;">${p.tournament || 'Unknown'}<br><b style="color:white; font-size:0.9rem;">${p.team1} vs ${p.team2}</b></td>
+                    <td style="color: #cbd5e1; font-size:0.8rem;">${p.tournament || 'Unknown'}<br><b style="color:white; font-size:0.9rem;">${t1} vs ${t2}</b></td>
                     <td style="font-weight: bold; color: #38bdf8; letter-spacing: 1px;">${m.match_id}</td>
                     <td style="text-align: center;"><span class="state-badge ${sClass}">${mStatus}</span></td>
                     <td style="text-align: center;"><span class="pin-badge">${m.scorer_pin || '----'}</span></td>
