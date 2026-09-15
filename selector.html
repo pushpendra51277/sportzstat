@@ -183,7 +183,7 @@
             
             await fetchMasterData();
             fetchLiveMatches();
-            setInterval(fetchLiveMatches, 5000); // Poll live matches
+            setInterval(fetchLiveMatches, 5000); 
         };
 
         function switchTab(tabId) {
@@ -197,21 +197,48 @@
         // DATA FETCHING & AGGREGATION
         // ==========================================
         async function fetchMasterData() {
-            // FIX: Pull directly from the unified matches table instead of completed_matches
-            const { data, error } = await db.from('matches').select('full_state');
-            if (error) { console.error(error); return; }
+            // 1. Fetch the actual stats from completed matches
+            const { data: compData, error: compErr } = await db.from('completed_matches').select('*');
+            if (compErr) { console.error(compErr); return; }
 
+            // 🔥 FIX: Direct Relational Join! This asks Supabase to look up the official Tournament name directly.
+            const { data: matchData, error: matchErr } = await db.from('matches').select('match_id, full_state, tournaments(name)');
+            
             rawCompletedMatches = [];
             let tournaments = new Set();
 
-            data.forEach(m => {
-                if (m.full_state && m.full_state.match_status === 'completed' && m.full_state.inningsSummaries) {
-                    rawCompletedMatches.push(m.full_state);
-                    if (m.full_state.tournament) tournaments.add(m.full_state.tournament);
-                }
-            });
+            if (compData) {
+                compData.forEach(comp => {
+                    try {
+                        let inningsArray = JSON.parse(comp.final_data);
+                        if (!inningsArray || inningsArray.length === 0) return;
+
+                        let tName = 'Independent Match';
+                        
+                        // Locate the parent match metadata
+                        let meta = matchData ? matchData.find(m => m.match_id === comp.match_id) : null;
+                        
+                        if (meta) {
+                            // Smart Priority: 1. Relational Database Name -> 2. JSON State Name -> 3. Fallback
+                            if (meta.tournaments && meta.tournaments.name) {
+                                tName = meta.tournaments.name;
+                            } else if (meta.full_state && meta.full_state.tournament) {
+                                tName = meta.full_state.tournament;
+                            }
+                        }
+                        
+                        rawCompletedMatches.push({
+                            tournament: tName,
+                            inningsSummaries: inningsArray
+                        });
+                        
+                        tournaments.add(tName);
+                    } catch(e) { console.error("Parse error on match:", e); }
+                });
+            }
             
             let tSelect = document.getElementById('filter-tournament');
+            tSelect.innerHTML = `<option value="ALL">All Tournaments</option>`;
             tournaments.forEach(t => { tSelect.innerHTML += `<option value="${t}">${t}</option>`; });
 
             processHistoricalData();
@@ -222,11 +249,11 @@
             let total1s = 0, total4s = 0, total6s = 0;
             let filterTourn = document.getElementById('filter-tournament').value;
 
-            rawCompletedMatches.forEach(fullState => {
+            rawCompletedMatches.forEach(matchObj => {
                 // Filter by tournament if not ALL
-                if (filterTourn !== 'ALL' && fullState.tournament !== filterTourn) return;
+                if (filterTourn !== 'ALL' && matchObj.tournament !== filterTourn) return;
 
-                let inningsArray = fullState.inningsSummaries || [];
+                let inningsArray = matchObj.inningsSummaries || [];
                 
                 inningsArray.forEach(inn => {
                     // Aggregate Batters
@@ -286,9 +313,10 @@
             let playersArray = Object.values(aggregatedPlayers);
 
             if (playersArray.length === 0) {
-                document.getElementById('lead-batters').innerHTML = '<tr><td colspan="5" style="color:#94a3b8; text-align:center;">No completed match data found.</td></tr>';
-                document.getElementById('lead-bowlers').innerHTML = '<tr><td colspan="5" style="color:#94a3b8; text-align:center;">No completed match data found.</td></tr>';
-                document.getElementById('lead-sr').innerHTML = '<tr><td colspan="4" style="color:#94a3b8; text-align:center;">No data found.</td></tr>';
+                document.getElementById('lead-batters').innerHTML = '<tr><td colspan="5" style="color:#94a3b8; text-align:center; padding: 20px;">No completed match data found for this tournament.</td></tr>';
+                document.getElementById('lead-bowlers').innerHTML = '<tr><td colspan="5" style="color:#94a3b8; text-align:center; padding: 20px;">No completed match data found for this tournament.</td></tr>';
+                document.getElementById('lead-sr').innerHTML = '<tr><td colspan="4" style="color:#94a3b8; text-align:center; padding: 20px;">No data found.</td></tr>';
+                if (pieChartInstance) pieChartInstance.destroy();
                 return;
             }
 
@@ -325,14 +353,17 @@
                 .sort((a,b) => b.bat.sr - a.bat.sr)
                 .slice(0, 5);
 
-            document.getElementById('lead-sr').innerHTML = topSR.map(p => 
-                `<tr><td><b>${p.name}</b></td><td>${p.bat.runs}</td><td>${p.bat.balls}</td><td class="highlight-val" style="color:#f59e0b;">${p.bat.sr.toFixed(1)}</td></tr>`
-            ).join('');
+            if (topSR.length > 0) {
+                document.getElementById('lead-sr').innerHTML = topSR.map(p => 
+                    `<tr><td><b>${p.name}</b></td><td>${p.bat.runs}</td><td>${p.bat.balls}</td><td class="highlight-val" style="color:#f59e0b;">${p.bat.sr.toFixed(1)}</td></tr>`
+                ).join('');
+            } else {
+                document.getElementById('lead-sr').innerHTML = `<tr><td colspan="4" style="color:#94a3b8; text-align:center; padding: 20px;">No player has scored 30+ runs yet.</td></tr>`;
+            }
 
             // 4. Boundary Doughnut Chart
             if (pieChartInstance) pieChartInstance.destroy();
             
-            // Safety check if no boundaries exist
             if (t1 === 0 && t4 === 0 && t6 === 0) { t1 = 1; }
 
             let ctx = document.getElementById('boundaryPieChart').getContext('2d');
@@ -411,7 +442,7 @@
 
             const { data, error } = await db.from('live_matches').select('*');
             if (error || !data || data.length === 0) {
-                document.getElementById('live-scouting-grid').innerHTML = `<div class="stat-card" style="grid-column: 1 / -1; text-align:center; color:#94a3b8;">No live matches available for scouting right now.</div>`;
+                document.getElementById('live-scouting-grid').innerHTML = `<div class="stat-card" style="grid-column: 1 / -1; text-align:center; color:#94a3b8; padding:20px;">No live matches available for scouting right now.</div>`;
                 return;
             }
 
