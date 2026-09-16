@@ -184,25 +184,28 @@
             let liveHtml = "";
             let compHtml = "";
 
-            allMatches.forEach(m => {
+          allMatches.forEach(m => {
                 let fs = m.full_state;
                 if (!fs) return;
 
-                let batTeam = fs.teams && fs.battingKey ? fs.teams[fs.battingKey].name : fs.team1;
-                let bowlTeam = fs.teams && fs.bowlingKey ? fs.teams[fs.bowlingKey].name : fs.team2;
+                // 🔥 AIRTIGHT FALLBACK: Blocks the literal string "undefined"
+                let t1 = (fs.team1 && fs.team1 !== 'undefined') ? fs.team1 : (fs.teams && fs.teams.A && fs.teams.A.name !== 'undefined' ? fs.teams.A.name : 'Team A');
+                let t2 = (fs.team2 && fs.team2 !== 'undefined') ? fs.team2 : (fs.teams && fs.teams.B && fs.teams.B.name !== 'undefined' ? fs.teams.B.name : 'Team B');
+                let tourney = (fs.tournament && fs.tournament !== 'undefined') ? fs.tournament : 'INDEPENDENT MATCH';
+
+                let batTeam = (fs.teams && fs.battingKey && fs.teams[fs.battingKey].name !== 'undefined') ? fs.teams[fs.battingKey].name : t1;
                 
                 let runs = fs.current ? fs.current.runs : 0;
                 let wkts = fs.current ? fs.current.wkts : 0;
-                let overs = fs.current ? Math.floor(fs.current.balls/6) + "." + (fs.current.balls%6) : "0.0";
+                let overs = fs.current ? formatOver(fs.current.balls) : "0.0";
                 
-                // Card UI Builder
                 let cardHtml = `
                 <div class="match-card" onclick="openScorecard('${m.match_id}')">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <div style="font-size: 0.75rem; color: #94a3b8; font-weight:bold; letter-spacing:1px;">${fs.tournament || 'MATCH'}</div>
+                        <div style="font-size: 0.75rem; color: #94a3b8; font-weight:bold; letter-spacing:1px; text-transform:uppercase;">${tourney}</div>
                         ${fs.match_status === 'live' ? '<div class="live-pulse"><div class="pulse-dot"></div> LIVE</div>' : '<div class="comp-badge">✅ COMPLETED</div>'}
                     </div>
-                    <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 5px;">${fs.team1} <span style="color:#94a3b8; font-size:0.9rem;">vs</span> ${fs.team2}</div>
+                    <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 5px;">${t1} <span style="color:#94a3b8; font-size:0.9rem;">vs</span> ${t2}</div>
                     
                     ${fs.match_status !== 'upcoming' ? `
                     <div style="color: ${fs.match_status === 'live' ? '#10b981' : '#38bdf8'}; font-weight: bold; font-size: 1rem;">
