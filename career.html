@@ -13,11 +13,20 @@
         .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 15px; margin-bottom: 20px; }
         .back-btn { background: transparent; border: 1px solid #475569; color: #cbd5e1; padding: 8px 15px; border-radius: 6px; cursor: pointer; text-decoration: none; font-size: 0.85rem; transition: 0.2s; }
         .back-btn:hover { background: #334155; color: white; }
+        .action-btn { background: #1e293b; border: 1px solid #38bdf8; color: #38bdf8; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: 0.2s; }
+        .action-btn:hover { background: #38bdf8; color: #0f172a; }
 
         /* Filtering Bar */
-        .filter-bar { background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #334155; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 25px; align-items: center; }
+        .filter-bar { background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #334155; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; align-items: center; }
         .filter-select, .filter-input { background: #0f172a; color: white; border: 1px solid #475569; padding: 10px; border-radius: 6px; font-size: 0.9rem; flex: 1; min-width: 150px; outline: none; }
         .filter-select:focus, .filter-input:focus { border-color: #38bdf8; }
+
+        /* 🔥 NEW: Column Toggle Panel */
+        .toggle-panel { background: #0f172a; border: 1px solid #38bdf8; border-radius: 8px; padding: 15px; margin-bottom: 25px; display: flex; flex-wrap: wrap; gap: 10px; animation: fadeIn 0.3s ease; }
+        .toggle-lbl { background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; cursor: pointer; display: flex; align-items: center; gap: 6px; border: 1px solid #334155; user-select: none; transition: 0.2s; font-weight: bold; }
+        .toggle-lbl:hover { background: rgba(255,255,255,0.1); border-color: #475569; }
+        .toggle-lbl input { cursor: pointer; margin: 0; width: 14px; height: 14px; accent-color: #38bdf8; }
+        .hidden { display: none !important; }
 
         /* Data Table */
         .table-container { background: #1e293b; border-radius: 10px; border: 1px solid #334155; overflow-x: auto; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
@@ -31,16 +40,42 @@
         tr:hover td { background: rgba(56, 189, 248, 0.05); }
 
         /* Table Column Grouping Colors */
-        .bat-col { color: #f59e0b; font-weight: bold; }
-        .bowl-col { color: #10b981; font-weight: bold; }
+        .bat-col { color: #f59e0b !important; font-weight: bold; }
+        .bowl-col { color: #10b981 !important; font-weight: bold; }
         th.bat-hdr { color: #f59e0b; border-bottom-color: #f59e0b; }
         th.bowl-hdr { color: #10b981; border-bottom-color: #10b981; }
+
+        /* 🔥 NEW: Dynamic Column Hiding Rules */
+        table.hide-mat .col-mat { display: none !important; }
+        table.hide-inn .col-inn { display: none !important; }
+        table.hide-runs .col-runs { display: none !important; }
+        table.hide-best .col-best { display: none !important; }
+        table.hide-bf .col-bf { display: none !important; }
+        table.hide-avg .col-avg { display: none !important; }
+        table.hide-sr .col-sr { display: none !important; }
+        table.hide-hundreds .col-hundreds { display: none !important; }
+        table.hide-fifties .col-fifties { display: none !important; }
+        table.hide-fours .col-fours { display: none !important; }
+        table.hide-sixes .col-sixes { display: none !important; }
+        table.hide-no .col-no { display: none !important; }
+        table.hide-ducks .col-ducks { display: none !important; }
+        table.hide-overs .col-overs { display: none !important; }
+        table.hide-mdn .col-mdn { display: none !important; }
+        table.hide-rc .col-rc { display: none !important; }
+        table.hide-wkts .col-wkts { display: none !important; }
+        table.hide-bbi .col-bbi { display: none !important; }
+        table.hide-bavg .col-bavg { display: none !important; }
+        table.hide-econ .col-econ { display: none !important; }
+        table.hide-w4 .col-w4 { display: none !important; }
+        table.hide-w5 .col-w5 { display: none !important; }
 
         /* Charts Grid */
         .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .chart-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .chart-title { text-align: center; font-size: 1.1rem; font-weight: bold; margin-top: 0; margin-bottom: 15px; color: #f8fafc; }
         .canvas-container { position: relative; height: 300px; width: 100%; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
         @media (max-width: 768px) {
             .charts-grid { grid-template-columns: 1fr; }
@@ -55,7 +90,10 @@
             <h1 style="margin:0; color:#38bdf8;">🏏 Ultimate Career Analytics Hub</h1>
             <p style="margin:5px 0 0 0; color:#94a3b8; font-size:0.9rem;">Interactive Filters, Sortable Columns & Deep Data Visualization</p>
         </div>
-        <a href="index.html" class="back-btn">← Back to Portal</a>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="action-btn" onclick="document.getElementById('col-toggles').classList.toggle('hidden')">👁️ Customize Columns</button>
+            <a href="index.html" class="back-btn">← Back to Portal</a>
+        </div>
     </div>
 
     <!-- FILTER BAR -->
@@ -67,45 +105,74 @@
         <select id="filter-year" class="filter-select" onchange="applyFilters()"><option value="ALL">📅 All Years</option></select>
     </div>
 
+    <!-- 🔥 NEW: COLUMN TOGGLE PANEL -->
+    <div id="col-toggles" class="toggle-panel hidden">
+        <div style="width: 100%; color: #38bdf8; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">GENERAL</div>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('mat', this.checked)"> Matches</label>
+        
+        <div style="width: 100%; color: #f59e0b; font-weight: bold; margin-top: 10px; margin-bottom: 5px; font-size: 0.9rem;">BATTING</div>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('inn', this.checked)"> Innings</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('runs', this.checked)"> Runs</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('best', this.checked)"> Best</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('bf', this.checked)"> BF</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('avg', this.checked)"> Avg</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('sr', this.checked)"> SR</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('hundreds', this.checked)"> 100s</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('fifties', this.checked)"> 50s</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('fours', this.checked)"> 4s</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('sixes', this.checked)"> 6s</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('no', this.checked)"> NO</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('ducks', this.checked)"> Ducks</label>
+
+        <div style="width: 100%; color: #10b981; font-weight: bold; margin-top: 10px; margin-bottom: 5px; font-size: 0.9rem;">BOWLING</div>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('overs', this.checked)"> Overs</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('mdn', this.checked)"> Maidens</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('rc', this.checked)"> Runs Conceded</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('wkts', this.checked)"> Wickets</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('bbi', this.checked)"> BBI</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('bavg', this.checked)"> B.Avg</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('econ', this.checked)"> Econ</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('w4', this.checked)"> 4W</label>
+        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('w5', this.checked)"> 5W</label>
+    </div>
+
     <!-- MASTER DATA TABLE -->
     <div class="table-container">
         <div class="table-header">
             <h3 style="margin:0; color:#38bdf8;">📊 Career Aggregation Table</h3>
             <span style="font-size:0.75rem; color:#94a3b8;">Click any column header to sort</span>
         </div>
-        <table>
+        <table id="career-table">
             <thead>
                 <tr>
                     <th onclick="sortTable('name')">Player Name ↕</th>
                     <th onclick="sortTable('team')">Team ↕</th>
-                    <th onclick="sortTable('mat')">Mat ↕</th>
+                    <th class="col-mat" onclick="sortTable('mat')">Mat ↕</th>
                     
                     <!-- BATTING -->
-                    <th class="bat-hdr" onclick="sortTable('inn')">Inn ↕</th>
-                    <th class="bat-hdr" onclick="sortTable('runs')">Runs ↕</th>
-                    <th class="bat-hdr" onclick="sortTable('best')">Best ↕</th>
-                    <th class="bat-hdr" onclick="sortTable('bf')">BF ↕</th>
-                    <th class="bat-hdr" onclick="sortTable('avg')">Avg ↕</th>
-                    <th class="bat-hdr" onclick="sortTable('sr')">SR ↕</th>
-                    <!-- 🔥 NEW: 100s and 50s -->
-                    <th class="bat-hdr" onclick="sortTable('hundreds')">100s ↕</th>
-                    <th class="bat-hdr" onclick="sortTable('fifties')">50s ↕</th>
-                    <th class="bat-hdr" onclick="sortTable('fours')">4s ↕</th>
-                    <th class="bat-hdr" onclick="sortTable('sixes')">6s ↕</th>
-                    <th class="bat-hdr" onclick="sortTable('no')">NO ↕</th>
-                    <!-- 🔥 Renamed 0s to Ducks for clarity -->
-                    <th class="bat-hdr" onclick="sortTable('ducks')">Ducks ↕</th>
+                    <th class="bat-hdr col-inn" onclick="sortTable('inn')">Inn ↕</th>
+                    <th class="bat-hdr col-runs" onclick="sortTable('runs')">Runs ↕</th>
+                    <th class="bat-hdr col-best" onclick="sortTable('best')">Best ↕</th>
+                    <th class="bat-hdr col-bf" onclick="sortTable('bf')">BF ↕</th>
+                    <th class="bat-hdr col-avg" onclick="sortTable('avg')">Avg ↕</th>
+                    <th class="bat-hdr col-sr" onclick="sortTable('sr')">SR ↕</th>
+                    <th class="bat-hdr col-hundreds" onclick="sortTable('hundreds')">100s ↕</th>
+                    <th class="bat-hdr col-fifties" onclick="sortTable('fifties')">50s ↕</th>
+                    <th class="bat-hdr col-fours" onclick="sortTable('fours')">4s ↕</th>
+                    <th class="bat-hdr col-sixes" onclick="sortTable('sixes')">6s ↕</th>
+                    <th class="bat-hdr col-no" onclick="sortTable('no')">NO ↕</th>
+                    <th class="bat-hdr col-ducks" onclick="sortTable('ducks')">Ducks ↕</th>
                     
                     <!-- BOWLING -->
-                    <th class="bowl-hdr" onclick="sortTable('overs')">Overs ↕</th>
-                    <th class="bowl-hdr" onclick="sortTable('mdn')">Mdn ↕</th>
-                    <th class="bowl-hdr" onclick="sortTable('rc')">RC ↕</th>
-                    <th class="bowl-hdr" onclick="sortTable('wkts')">Wkts ↕</th>
-                    <th class="bowl-hdr" onclick="sortTable('bbiW')">BBI ↕</th>
-                    <th class="bowl-hdr" onclick="sortTable('bAvg')">B.Avg ↕</th>
-                    <th class="bowl-hdr" onclick="sortTable('econ')">Econ ↕</th>
-                    <th class="bowl-hdr" onclick="sortTable('w4')">4W ↕</th>
-                    <th class="bowl-hdr" onclick="sortTable('w5')">5W ↕</th>
+                    <th class="bowl-hdr col-overs" onclick="sortTable('overs')">Overs ↕</th>
+                    <th class="bowl-hdr col-mdn" onclick="sortTable('mdn')">Mdn ↕</th>
+                    <th class="bowl-hdr col-rc" onclick="sortTable('rc')">RC ↕</th>
+                    <th class="bowl-hdr col-wkts" onclick="sortTable('wkts')">Wkts ↕</th>
+                    <th class="bowl-hdr col-bbi" onclick="sortTable('bbiW')">BBI ↕</th>
+                    <th class="bowl-hdr col-bavg" onclick="sortTable('bAvg')">B.Avg ↕</th>
+                    <th class="bowl-hdr col-econ" onclick="sortTable('econ')">Econ ↕</th>
+                    <th class="bowl-hdr col-w4" onclick="sortTable('w4')">4W ↕</th>
+                    <th class="bowl-hdr col-w5" onclick="sortTable('w5')">5W ↕</th>
                 </tr>
             </thead>
             <tbody id="career-tbody">
@@ -137,16 +204,26 @@
         
         let charts = {};
 
+        // 🔥 NEW: Toggle Function to apply classes to the table
+        function toggleCol(colName, isChecked) {
+            const table = document.getElementById('career-table');
+            if (isChecked) {
+                table.classList.remove('hide-' + colName);
+            } else {
+                table.classList.add('hide-' + colName);
+            }
+        }
+
         window.onload = async () => {
             Chart.defaults.color = '#94a3b8';
             Chart.defaults.borderColor = '#334155';
             await fetchMatches();
             
-            // Silently pull live data every 15 seconds to keep stats updated!
+            // Silently pull live data every 15 seconds
             setInterval(fetchMatches, 15000); 
         };
 
-        // 1. FETCH DATA (NOW INCLUDES LIVE MATCHES)
+        // 1. FETCH DATA (INCLUDES LIVE MATCHES)
         async function fetchMatches() {
             const { data, error } = await db.from('matches').select('created_at, full_state, tournaments(name)');
             if (error) { console.error("Cloud Error", error); return; }
@@ -169,7 +246,6 @@
 
                         let allInnings = fs.inningsSummaries ? [...fs.inningsSummaries] : [];
 
-                        // If the match is LIVE, instantly inject the ongoing inning into the math engine!
                         if (fs.match_status === 'live' && fs.current && (fs.current.balls > 0 || fs.current.runs > 0)) {
                             allInnings.push({
                                 batTeam: fs.teams?.[fs.battingKey]?.name || 'Team A',
@@ -246,7 +322,6 @@
                                 p.bestRuns = currentScore; p.bestNotOut = isNotOut;
                             }
                             
-                            // 🔥 NEW: 50s and 100s Logic
                             if (currentScore >= 100) {
                                 p.hundreds++;
                             } else if (currentScore >= 50) {
@@ -305,7 +380,7 @@
             obj[name] = { 
                 name: name, team: team, mat: 0, 
                 inn: 0, runs: 0, bf: 0, fours: 0, sixes: 0, dismissals: 0, ducks: 0, no: 0, bestRuns: 0, bestNotOut: false,
-                fifties: 0, hundreds: 0, // 🔥 Added 50s and 100s trackers
+                fifties: 0, hundreds: 0, 
                 bowlBalls: 0, rc: 0, wkts: 0, mdn: 0, bbiW: 0, bbiR: 999, w4: 0, w5: 0
             };
         }
@@ -333,6 +408,7 @@
             let tbody = document.getElementById('career-tbody');
             if(aggregatedData.length === 0) { tbody.innerHTML = `<tr><td colspan="24" style="text-align:center; color:#ef4444;">No players match the selected filters.</td></tr>`; return; }
 
+            // 🔥 FIX: Each <td> now has the correct column class assigned so the CSS rules can hide them!
             tbody.innerHTML = aggregatedData.map(p => {
                 let bestStr = p.bestRuns > 0 ? `${p.bestRuns}${p.bestNotOut ? '*' : ''}` : '-';
                 let bbiStr = p.bbiW > 0 ? `${p.bbiW}-${p.bbiR}` : '-';
@@ -340,9 +416,32 @@
                 let bAvgStr = p.wkts === 0 ? '-' : p.bAvg.toFixed(2);
 
                 return `<tr>
-                    <td>${p.name}</td><td style="color:#94a3b8;">${p.team}</td><td>${p.mat}</td>
-                    <td class="bat-col">${p.inn}</td><td class="bat-col">${p.runs}</td><td style="color:#ef4444; font-weight:bold;">${bestStr}</td><td>${p.bf}</td><td style="color:#38bdf8;">${avgStr}</td><td>${p.sr.toFixed(2)}</td><td>${p.hundreds}</td><td>${p.fifties}</td><td>${p.fours}</td><td>${p.sixes}</td><td>${p.no}</td><td>${p.ducks}</td>
-                    <td class="bowl-col">${p.overs.toFixed(1)}</td><td class="bowl-col">${p.mdn}</td><td>${p.rc}</td><td class="bowl-col" style="color:#10b981;">${p.wkts}</td><td style="color:#ef4444;">${bbiStr}</td><td style="color:#38bdf8;">${bAvgStr}</td><td>${p.econ.toFixed(2)}</td><td>${p.w4}</td><td>${p.w5}</td>
+                    <td>${p.name}</td>
+                    <td style="color:#94a3b8;">${p.team}</td>
+                    <td class="col-mat">${p.mat}</td>
+                    
+                    <td class="bat-col col-inn">${p.inn}</td>
+                    <td class="bat-col col-runs">${p.runs}</td>
+                    <td class="col-best" style="color:#ef4444; font-weight:bold;">${bestStr}</td>
+                    <td class="col-bf">${p.bf}</td>
+                    <td class="col-avg" style="color:#38bdf8;">${avgStr}</td>
+                    <td class="col-sr">${p.sr.toFixed(2)}</td>
+                    <td class="col-hundreds">${p.hundreds}</td>
+                    <td class="col-fifties">${p.fifties}</td>
+                    <td class="col-fours">${p.fours}</td>
+                    <td class="col-sixes">${p.sixes}</td>
+                    <td class="col-no">${p.no}</td>
+                    <td class="col-ducks">${p.ducks}</td>
+                    
+                    <td class="bowl-col col-overs">${p.overs.toFixed(1)}</td>
+                    <td class="bowl-col col-mdn">${p.mdn}</td>
+                    <td class="col-rc">${p.rc}</td>
+                    <td class="bowl-col col-wkts" style="color:#10b981;">${p.wkts}</td>
+                    <td class="col-bbi" style="color:#ef4444;">${bbiStr}</td>
+                    <td class="col-bavg" style="color:#38bdf8;">${bAvgStr}</td>
+                    <td class="col-econ">${p.econ.toFixed(2)}</td>
+                    <td class="col-w4">${p.w4}</td>
+                    <td class="col-w5">${p.w5}</td>
                 </tr>`;
             }).join('');
         }
