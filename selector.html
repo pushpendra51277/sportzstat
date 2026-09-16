@@ -197,41 +197,33 @@
         // DATA FETCHING & AGGREGATION
         // ==========================================
         async function fetchMasterData() {
-            const { data: compData, error: compErr } = await db.from('completed_matches').select('*');
-            if (compErr) { console.error(compErr); return; }
-
-            const { data: matchData, error: matchErr } = await db.from('matches').select('match_id, full_state, tournaments(name)');
+            // 🔥 FIX: Query ONLY the unified 'matches' table with the relational join. 
+            // No more 'completed_matches' table!
+            const { data, error } = await db.from('matches').select('match_id, full_state, tournaments(name)');
             
+            if (error) { console.error("Cloud Error:", error); return; }
+
             rawCompletedMatches = [];
             let tournaments = new Set();
 
-            if (compData) {
-                compData.forEach(comp => {
-                    try {
-                        let inningsArray = JSON.parse(comp.final_data);
-                        if (!inningsArray || inningsArray.length === 0) return;
-
-                        let tName = 'Independent Match';
-                        let meta = matchData ? matchData.find(m => m.match_id === comp.match_id) : null;
-                        
-                        // 🔥 FIX: Airtight Database Sync without the "undefined" label
-                        if (meta) {
-                            if (meta.tournaments && meta.tournaments.name) {
-                                tName = meta.tournaments.name;
-                            } else if (meta.full_state && meta.full_state.tournament && String(meta.full_state.tournament) !== 'undefined') {
-                                tName = meta.full_state.tournament;
-                            }
-                        }
-                        
-                        rawCompletedMatches.push({
-                            tournament: tName,
-                            inningsSummaries: inningsArray
-                        });
-                        
-                        tournaments.add(tName);
-                    } catch(e) { console.error("Parse error on match:", e); }
-                });
-            }
+            data.forEach(m => {
+                let fs = m.full_state;
+                
+                // Only process completed matches that actually have innings data
+                if (fs && fs.match_status === 'completed' && fs.inningsSummaries) {
+                    
+                    // Smart Fallback for Tournament Name
+                    let tName = (m.tournaments && m.tournaments.name) ? m.tournaments.name : (fs.tournament || 'Independent Match');
+                    if (tName === 'undefined') tName = 'Independent Match';
+                    
+                    rawCompletedMatches.push({
+                        tournament: tName,
+                        inningsSummaries: fs.inningsSummaries
+                    });
+                    
+                    tournaments.add(tName);
+                }
+            });
             
             let tSelect = document.getElementById('filter-tournament');
             tSelect.innerHTML = `<option value="ALL">All Tournaments</option>`;
