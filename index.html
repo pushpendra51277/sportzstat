@@ -54,7 +54,7 @@
         .table-responsive { width: 100%; overflow-x: auto; scrollbar-width: thin; }
         .directory-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 5px; min-width: 800px; }
         .directory-table th { background: #0f172a; color: #94a3b8; padding: 10px 12px; text-transform: uppercase; font-size: 0.75rem; border-bottom: 1px solid #334155; }
-        .directory-table td { padding: 12px; border-bottom: 1px solid #334155; }
+        .directory-table td { padding: 12px; border-bottom: 1px solid #334155; vertical-align: middle; }
         
         .pin-badge { background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #f59e0b; padding: 4px 8px; border-radius: 4px; font-weight: 900; letter-spacing: 2px; }
         .state-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; }
@@ -62,21 +62,22 @@
         .state-upcoming { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
         .state-completed { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
 
-        /* 🔥 MOBILE OPTIMIZATION: Table to Cards */
+        /* 🔥 NEW: Copy Button Styles */
+        .btn-copy { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #38bdf8; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; transition: 0.2s; white-space: nowrap; }
+        .btn-copy:hover { background: #38bdf8; color: #0f172a; }
+        .btn-copy.copied { background: #10b981; color: white; border-color: #10b981; }
+
+        /* MOBILE OPTIMIZATION: Table to Cards */
         @media (max-width: 768px) {
             .directory-box { padding: 15px; }
             .table-responsive { overflow-x: visible; }
             .directory-table { min-width: 100%; }
-            .directory-table thead { display: none; /* Hide headers on mobile */ }
+            .directory-table thead { display: none; }
             .directory-table, .directory-table tbody, .directory-table tr, .directory-table td { display: block; width: 100%; }
             .directory-table tr { margin-bottom: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #475569; overflow: hidden; }
-            
-            /* Converts TD into a Flex layout (Label on Left, Data on Right) */
             .directory-table td { display: flex; justify-content: space-between; align-items: center; text-align: right; padding: 12px 15px; border-bottom: 1px solid #1e293b; }
             .directory-table td::before { content: attr(data-label); font-weight: 800; color: #94a3b8; font-size: 0.7rem; text-transform: uppercase; text-align: left; flex-shrink: 0; margin-right: 10px; }
             .directory-table td:last-child { border-bottom: none; }
-            
-            /* Override centering for mobile cards */
             .directory-table td[style*="text-align: center"] { text-align: right !important; }
         }
     </style>
@@ -169,18 +170,20 @@
 
             <div class="table-responsive">
                 <table class="directory-table">
+                    <!-- 🔥 NEW: 7 Columns with a Share button -->
                     <thead>
                         <tr>
                             <th style="text-align: center; width: 5%;">#</th>
                             <th style="text-align: left; width: 20%;">Tournament</th>
-                            <th style="text-align: left; width: 35%;">Match details</th>
+                            <th style="text-align: left; width: 30%;">Match details</th>
                             <th style="text-align: left; width: 15%;">Match ID</th>
                             <th style="text-align: center; width: 10%;">Status</th>
-                            <th style="text-align: center; width: 15%;">Scorer PIN</th>
+                            <th style="text-align: center; width: 10%;">Scorer PIN</th>
+                            <th style="text-align: center; width: 10%;">Share</th>
                         </tr>
                     </thead>
                     <tbody id="directory-tbody">
-                        <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Loading fixtures from cloud...</td></tr>
+                        <tr><td colspan="7" style="text-align: center; color: #94a3b8;">Loading fixtures from cloud...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -351,7 +354,7 @@
             section.classList.remove('hidden'); section.scrollIntoView({ behavior: 'smooth' });
             
             const tbody = document.getElementById('directory-tbody');
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">Fetching records...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Fetching records...</td></tr>`;
             
             document.getElementById('directorySearchInput').value = "";
 
@@ -361,7 +364,7 @@
 
             const { data: matches, error } = await query;
             if (error || !matches || matches.length === 0) { 
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No active matches found for your account.</td></tr>`; 
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center;">No active matches found for your account.</td></tr>`; 
                 return; 
             }
 
@@ -389,11 +392,10 @@
             });
 
             if (filteredMatches.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ef4444; padding: 20px; font-weight:bold;">No matches found matching "${filterQuery}"</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #ef4444; padding: 20px; font-weight:bold;">No matches found matching "${filterQuery}"</td></tr>`;
                 return;
             }
 
-            // 🔥 Added data-label tags to inject field names dynamically on mobile cards
             tbody.innerHTML = filteredMatches.map((m, index) => {
                 let p = m.full_state || {};
                 let mStatus = p.match_status || 'upcoming';
@@ -405,6 +407,15 @@
                 
                 let seqNum = index + 1;
                 
+                // 🔥 NEW: WhatsApp Copy Button Logic (Uses data attributes to safely handle quotes in team names)
+                let btnHtml = `<button class="btn-copy" 
+                    data-id="${m.match_id}" 
+                    data-tourney="${tourney}" 
+                    data-t1="${t1}" 
+                    data-t2="${t2}" 
+                    data-pin="${m.scorer_pin}" 
+                    onclick="copyMatchDetails(this)">📋 Share</button>`;
+                
                 return `<tr>
                     <td data-label="#" style="text-align: center; color: #94a3b8; font-weight: bold;">${seqNum}</td>
                     <td data-label="Tournament" style="color: #cbd5e1; font-weight: bold; font-size: 0.8rem; text-transform: uppercase;">${tourney}</td>
@@ -412,8 +423,34 @@
                     <td data-label="Match ID" style="font-weight: bold; color: #38bdf8; letter-spacing: 1px;">${m.match_id}</td>
                     <td data-label="Status" style="text-align: center;"><span class="state-badge ${sClass}">${mStatus}</span></td>
                     <td data-label="Scorer PIN" style="text-align: center;"><span class="pin-badge">${m.scorer_pin || '----'}</span></td>
+                    <td data-label="Share" style="text-align: center;">${btnHtml}</td>
                 </tr>`;
             }).join('');
+        }
+
+        // 🔥 NEW: Function to format and copy match details to clipboard
+        function copyMatchDetails(btn) {
+            const matchId = btn.getAttribute('data-id');
+            const tourney = btn.getAttribute('data-tourney');
+            const t1 = btn.getAttribute('data-t1');
+            const t2 = btn.getAttribute('data-t2');
+            const pin = btn.getAttribute('data-pin') || 'N/A';
+            
+            const text = `🏏 *Sportzstat Match Assignment* 🏏\n\n🏆 *Tournament:* ${tourney}\n⚔️ *Match:* ${t1} vs ${t2}\n\n🆔 *Match ID:* ${matchId}\n🔑 *Scorer PIN:* ${pin}\n\n📱 Log in to the Official Scorer Portal to begin scoring.`;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btn.innerHTML;
+                btn.innerHTML = "✅ Copied!";
+                btn.classList.add('copied');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                alert("Clipboard copy failed. Please copy manually.");
+            });
         }
 
         async function signOut(event) {
