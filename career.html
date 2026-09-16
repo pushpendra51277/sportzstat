@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sportzstat - Career Analytics Hub</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; }
+        * { box-sizing: border-box; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 15px; margin-bottom: 20px; }
+        .back-btn { background: transparent; border: 1px solid #475569; color: #cbd5e1; padding: 8px 15px; border-radius: 6px; cursor: pointer; text-decoration: none; font-size: 0.85rem; transition: 0.2s; }
+        .back-btn:hover { background: #334155; color: white; }
+
+        /* Filtering Bar */
+        .filter-bar { background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #334155; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 25px; align-items: center; }
+        .filter-select, .filter-input { background: #0f172a; color: white; border: 1px solid #475569; padding: 10px; border-radius: 6px; font-size: 0.9rem; flex: 1; min-width: 150px; outline: none; }
+        .filter-select:focus, .filter-input:focus { border-color: #38bdf8; }
+
+        /* Data Table */
+        .table-container { background: #1e293b; border-radius: 10px; border: 1px solid #334155; overflow-x: auto; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .table-header { padding: 15px 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; white-space: nowrap; }
+        th { background: #0f172a; color: #38bdf8; padding: 12px 10px; text-align: right; cursor: pointer; user-select: none; border-bottom: 2px solid #334155; }
+        th:first-child { text-align: left; padding-left: 20px; }
+        th:hover { background: #1e293b; color: white; }
+        td { padding: 12px 10px; border-bottom: 1px solid #1e293b; text-align: right; color: #cbd5e1; }
+        td:first-child { text-align: left; padding-left: 20px; font-weight: bold; color: white; }
+        tr:hover td { background: rgba(56, 189, 248, 0.05); }
+
+        /* Table Column Grouping Colors */
+        .bat-col { color: #f59e0b; font-weight: bold; }
+        .bowl-col { color: #10b981; font-weight: bold; }
+        th.bat-hdr { color: #f59e0b; border-bottom-color: #f59e0b; }
+        th.bowl-hdr { color: #10b981; border-bottom-color: #10b981; }
+
+        /* Charts Grid */
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .chart-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .chart-title { text-align: center; font-size: 1.1rem; font-weight: bold; margin-top: 0; margin-bottom: 15px; color: #f8fafc; }
+        .canvas-container { position: relative; height: 300px; width: 100%; }
+
+        @media (max-width: 768px) {
+            .charts-grid { grid-template-columns: 1fr; }
+            .filter-select, .filter-input { min-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div>
+            <h1 style="margin:0; color:#38bdf8;">🏏 Ultimate Career Analytics Hub</h1>
+            <p style="margin:5px 0 0 0; color:#94a3b8; font-size:0.9rem;">Interactive Filters, Sortable Columns & Deep Data Visualization</p>
+        </div>
+        <a href="index.html" class="back-btn">← Back to Portal</a>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div class="filter-bar">
+        <input type="text" id="filter-search" class="filter-input" placeholder="🔍 Search Player..." onkeyup="applyFilters()">
+        <select id="filter-team" class="filter-select" onchange="applyFilters()"><option value="ALL">🛡️ All Teams</option></select>
+        <select id="filter-tourney" class="filter-select" onchange="applyFilters()"><option value="ALL">🏆 All Tournaments</option></select>
+        <select id="filter-format" class="filter-select" onchange="applyFilters()"><option value="ALL">🏏 All Formats</option></select>
+        <select id="filter-year" class="filter-select" onchange="applyFilters()"><option value="ALL">📅 All Years</option></select>
+    </div>
+
+    <!-- MASTER DATA TABLE -->
+    <div class="table-container">
+        <div class="table-header">
+            <h3 style="margin:0; color:#38bdf8;">📊 Career Aggregation Table</h3>
+            <span style="font-size:0.75rem; color:#94a3b8;">Click any column header to sort</span>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th onclick="sortTable('name')">Player Name ↕</th>
+                    <th onclick="sortTable('team')">Team ↕</th>
+                    <th onclick="sortTable('mat')">Mat ↕</th>
+                    
+                    <!-- BATTING -->
+                    <th class="bat-hdr" onclick="sortTable('inn')">Inn ↕</th>
+                    <th class="bat-hdr" onclick="sortTable('runs')">Runs ↕</th>
+                    <th class="bat-hdr" onclick="sortTable('best')">Best ↕</th>
+                    <th class="bat-hdr" onclick="sortTable('bf')">BF ↕</th>
+                    <th class="bat-hdr" onclick="sortTable('avg')">Avg ↕</th>
+                    <th class="bat-hdr" onclick="sortTable('sr')">SR ↕</th>
+                    <th class="bat-hdr" onclick="sortTable('fours')">4s ↕</th>
+                    <th class="bat-hdr" onclick="sortTable('sixes')">6s ↕</th>
+                    <th class="bat-hdr" onclick="sortTable('no')">NO ↕</th>
+                    <th class="bat-hdr" onclick="sortTable('ducks')">0s ↕</th>
+                    
+                    <!-- BOWLING -->
+                    <th class="bowl-hdr" onclick="sortTable('overs')">Overs ↕</th>
+                    <th class="bowl-hdr" onclick="sortTable('mdn')">Mdn ↕</th>
+                    <th class="bowl-hdr" onclick="sortTable('rc')">RC ↕</th>
+                    <th class="bowl-hdr" onclick="sortTable('wkts')">Wkts ↕</th>
+                    <th class="bowl-hdr" onclick="sortTable('bbiW')">BBI ↕</th>
+                    <th class="bowl-hdr" onclick="sortTable('bAvg')">B.Avg ↕</th>
+                    <th class="bowl-hdr" onclick="sortTable('econ')">Econ ↕</th>
+                    <th class="bowl-hdr" onclick="sortTable('w4')">4W ↕</th>
+                    <th class="bowl-hdr" onclick="sortTable('w5')">5W ↕</th>
+                </tr>
+            </thead>
+            <tbody id="career-tbody">
+                <tr><td colspan="22" style="text-align:center;">Loading cloud data...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- CHARTS GRID -->
+    <div class="charts-grid">
+        <div class="chart-card"><h3 class="chart-title" style="color:#f59e0b;">🔥 Top 10 Run Scorers</h3><div class="canvas-container"><canvas id="chartRuns"></canvas></div></div>
+        <div class="chart-card"><h3 class="chart-title" style="color:#38bdf8;">💥 Boundary Breakdown (Top 10 Batters)</h3><div class="canvas-container"><canvas id="chartBoundaries"></canvas></div></div>
+        <div class="chart-card"><h3 class="chart-title" style="color:#10b981;">🎯 Top 10 Wicket Takers</h3><div class="canvas-container"><canvas id="chartWickets"></canvas></div></div>
+        
+        <div class="chart-card"><h3 class="chart-title" style="color:#a855f7;">🏆 Total Runs Weightage</h3><div class="canvas-container"><canvas id="chartWeightRuns"></canvas></div></div>
+        <div class="chart-card"><h3 class="chart-title" style="color:#ec4899;">☄️ Boundaries Weightage (4s & 6s)</h3><div class="canvas-container"><canvas id="chartWeightBounds"></canvas></div></div>
+        <div class="chart-card"><h3 class="chart-title" style="color:#10b981;">🎳 Wickets Weightage</h3><div class="canvas-container"><canvas id="chartWeightWkts"></canvas></div></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
+        const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let rawMatches = [];
+        let aggregatedData = [];
+        let currentSortCol = 'runs';
+        let currentSortAsc = false;
+        
+        let charts = {};
+
+        window.onload = async () => {
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.borderColor = '#334155';
+            await fetchMatches();
+        };
+
+        // 1. FETCH DATA
+        async function fetchMatches() {
+            const { data, error } = await db.from('matches').select('created_at, full_state, tournaments(name)');
+            if (error) { console.error("Cloud Error", error); return; }
+
+            rawMatches = [];
+            let filterSets = { teams: new Set(), tourneys: new Set(), formats: new Set(), years: new Set() };
+
+            data.forEach(m => {
+                try {
+                    let fs = m.full_state;
+                    if (fs && fs.match_status === 'completed' && fs.inningsSummaries) {
+                        let tName = (m.tournaments && m.tournaments.name) ? m.tournaments.name : (fs.tournament || 'Independent Match');
+                        let year = new Date(m.created_at).getFullYear().toString();
+                        let format = fs.format || 'T20';
+
+                        filterSets.tourneys.add(tName);
+                        filterSets.years.add(year);
+                        filterSets.formats.add(format);
+
+                        rawMatches.push({
+                            tourney: tName, format: format, year: year,
+                            teams: fs.teams,
+                            innings: fs.inningsSummaries
+                        });
+                    }
+                } catch(err) { console.warn("Skipped corrupted match."); }
+            });
+
+            // Populate Dropdowns
+            let pop = (id, set) => { let el = document.getElementById(id); Array.from(set).sort().forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`); };
+            pop('filter-tourney', filterSets.tourneys);
+            pop('filter-format', filterSets.formats);
+            pop('filter-year', filterSets.years);
+
+            applyFilters();
+        }
+
+        // 2. AGGREGATION & FILTERING
+        function applyFilters() {
+            let sTerm = document.getElementById('filter-search').value.toLowerCase();
+            let fTourn = document.getElementById('filter-tourney').value;
+            let fForm = document.getElementById('filter-format').value;
+            let fYear = document.getElementById('filter-year').value;
+
+            let playersObj = {};
+            let teamSet = new Set(); // Build team list dynamically
+
+            rawMatches.forEach(m => {
+                if (fTourn !== 'ALL' && m.tourney !== fTourn) return;
+                if (fForm !== 'ALL' && m.format !== fForm) return;
+                if (fYear !== 'ALL' && m.year !== fYear) return;
+
+                // Track matches played (Mat) by looking at the original Playing XI
+                if (m.teams && m.teams.A && m.teams.B) {
+                    let processXI = (teamData) => {
+                        teamSet.add(teamData.name);
+                        (teamData.players || []).forEach(p => {
+                            if (p.isPlayingXI) {
+                                if(!playersObj[p.name]) initPlayer(playersObj, p.name, teamData.name);
+                                playersObj[p.name].mat++;
+                            }
+                        });
+                    };
+                    processXI(m.teams.A);
+                    processXI(m.teams.B);
+                }
+
+                // Process Innings data for Runs/Wickets
+                m.innings.forEach(inn => {
+                    (inn.batters || []).forEach(b => {
+                        if (b.hasBatted) {
+                            if(!playersObj[b.name]) initPlayer(playersObj, b.name, inn.batTeam);
+                            let p = playersObj[b.name];
+                            p.inn++; p.runs += b.r; p.bf += b.b; p.fours += b.f; p.sixes += b.s;
+                            if (b.out) { p.dismissals++; if(b.r === 0) p.ducks++; } else { p.no++; }
+                            
+                            // Best Score Logic
+                            let currentScore = b.r; let isNotOut = !b.out;
+                            if (currentScore > p.bestRuns || (currentScore === p.bestRuns && isNotOut && !p.bestNotOut)) {
+                                p.bestRuns = currentScore; p.bestNotOut = isNotOut;
+                            }
+                        }
+                    });
+
+                    (inn.bowlers || []).forEach(b => {
+                        if (b.o > 0 || b.rc > 0) {
+                            if(!playersObj[b.name]) initPlayer(playersObj, b.name, inn.bowlTeam);
+                            let p = playersObj[b.name];
+                            p.rc += b.rc; p.wkts += b.w; p.mdn += b.m;
+                            
+                            let absBalls = Math.floor(b.o)*6 + Math.round((b.o - Math.floor(b.o))*10);
+                            p.bowlBalls += absBalls;
+
+                            if (b.w >= 4) p.w4++;
+                            if (b.w >= 5) p.w5++;
+
+                            // BBI Logic
+                            if (b.w > p.bbiW || (b.w === p.bbiW && b.rc < p.bbiR)) {
+                                p.bbiW = b.w; p.bbiR = b.rc;
+                            }
+                        }
+                    });
+                });
+            });
+
+            // Update Team Dropdown dynamically based on filtered data
+            let teamSelect = document.getElementById('filter-team');
+            let currentTeamVal = teamSelect.value;
+            teamSelect.innerHTML = `<option value="ALL">🛡️ All Teams</option>`;
+            Array.from(teamSet).sort().forEach(t => teamSelect.innerHTML += `<option value="${t}">${t}</option>`);
+            if(Array.from(teamSet).includes(currentTeamVal)) teamSelect.value = currentTeamVal;
+
+            let fTeam = document.getElementById('filter-team').value;
+
+            // Final Calculation and Text Search Filter
+            aggregatedData = Object.values(playersObj).filter(p => {
+                if (fTeam !== 'ALL' && p.team !== fTeam) return false;
+                if (sTerm && !p.name.toLowerCase().includes(sTerm)) return false;
+                return true;
+            }).map(p => {
+                p.avg = p.dismissals > 0 ? (p.runs / p.dismissals) : (p.runs > 0 ? p.runs : 0);
+                p.sr = p.bf > 0 ? ((p.runs / p.bf) * 100) : 0;
+                
+                let bOvers = Math.floor(p.bowlBalls / 6) + (p.bowlBalls % 6) / 10;
+                p.overs = bOvers;
+                p.econ = p.bowlBalls > 0 ? ((p.rc / p.bowlBalls) * 6) : 0;
+                p.bAvg = p.wkts > 0 ? (p.rc / p.wkts) : 0;
+                return p;
+            });
+
+            executeSort();
+        }
+
+        function initPlayer(obj, name, team) {
+            obj[name] = { 
+                name: name, team: team, mat: 0, 
+                inn: 0, runs: 0, bf: 0, fours: 0, sixes: 0, dismissals: 0, ducks: 0, no: 0, bestRuns: 0, bestNotOut: false,
+                bowlBalls: 0, rc: 0, wkts: 0, mdn: 0, bbiW: 0, bbiR: 999, w4: 0, w5: 0
+            };
+        }
+
+        // 3. TABLE SORTING & RENDERING
+        function sortTable(col) {
+            if (currentSortCol === col) currentSortAsc = !currentSortAsc;
+            else { currentSortCol = col; currentSortAsc = false; }
+            executeSort();
+        }
+
+        function executeSort() {
+            aggregatedData.sort((a, b) => {
+                let valA = a[currentSortCol]; let valB = b[currentSortCol];
+                if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
+                if (valA < valB) return currentSortAsc ? -1 : 1;
+                if (valA > valB) return currentSortAsc ? 1 : -1;
+                return 0;
+            });
+            renderTable();
+            renderCharts();
+        }
+
+        function renderTable() {
+            let tbody = document.getElementById('career-tbody');
+            if(aggregatedData.length === 0) { tbody.innerHTML = `<tr><td colspan="22" style="text-align:center; color:#ef4444;">No players match the selected filters.</td></tr>`; return; }
+
+            tbody.innerHTML = aggregatedData.map(p => {
+                let bestStr = p.bestRuns > 0 ? `${p.bestRuns}${p.bestNotOut ? '*' : ''}` : '-';
+                let bbiStr = p.bbiW > 0 ? `${p.bbiW}-${p.bbiR}` : '-';
+                let avgStr = p.dismissals === 0 && p.runs > 0 ? '-' : p.avg.toFixed(2);
+                let bAvgStr = p.wkts === 0 ? '-' : p.bAvg.toFixed(2);
+
+                return `<tr>
+                    <td>${p.name}</td><td style="color:#94a3b8;">${p.team}</td><td>${p.mat}</td>
+                    <td class="bat-col">${p.inn}</td><td class="bat-col">${p.runs}</td><td style="color:#ef4444; font-weight:bold;">${bestStr}</td><td>${p.bf}</td><td style="color:#38bdf8;">${avgStr}</td><td>${p.sr.toFixed(2)}</td><td>${p.fours}</td><td>${p.sixes}</td><td>${p.no}</td><td>${p.ducks}</td>
+                    <td class="bowl-col">${p.overs.toFixed(1)}</td><td class="bowl-col">${p.mdn}</td><td>${p.rc}</td><td class="bowl-col" style="color:#10b981;">${p.wkts}</td><td style="color:#ef4444;">${bbiStr}</td><td style="color:#38bdf8;">${bAvgStr}</td><td>${p.econ.toFixed(2)}</td><td>${p.w4}</td><td>${p.w5}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        // 4. CHART GENERATOR
+        function renderCharts() {
+            const createChart = (id, type, data, options) => {
+                if (charts[id]) charts[id].destroy();
+                charts[id] = new Chart(document.getElementById(id).getContext('2d'), { type, data, options });
+            };
+
+            const chartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels:{color:'#cbd5e1'} } } };
+            const barOptions = { ...chartOptions, plugins: { legend: {display: false} }, scales: { y: { beginAtZero: true, grid:{color:'#334155'} }, x:{ grid:{display:false} } } };
+            const stackedBarOptions = { ...chartOptions, scales: { x: { stacked: true, grid:{display:false} }, y: { stacked: true, grid:{color:'#334155'} } } };
+
+            // Data Slicing
+            let topBatters = [...aggregatedData].sort((a,b) => b.runs - a.runs).slice(0, 10);
+            let topBowlers = [...aggregatedData].sort((a,b) => b.wkts - a.wkts).slice(0, 10);
+
+            // 1. Top Runs (Bar)
+            createChart('chartRuns', 'bar', {
+                labels: topBatters.map(p => p.name),
+                datasets: [{ label: 'Runs', data: topBatters.map(p => p.runs), backgroundColor: '#f59e0b', borderRadius: 4 }]
+            }, barOptions);
+
+            // 2. Boundaries Stacked (Bar)
+            createChart('chartBoundaries', 'bar', {
+                labels: topBatters.map(p => p.name),
+                datasets: [
+                    { label: 'Sixes (6s)', data: topBatters.map(p => p.sixes), backgroundColor: '#ec4899' },
+                    { label: 'Fours (4s)', data: topBatters.map(p => p.fours), backgroundColor: '#a855f7' }
+                ]
+            }, stackedBarOptions);
+
+            // 3. Top Wickets (Bar)
+            createChart('chartWickets', 'bar', {
+                labels: topBowlers.map(p => p.name),
+                datasets: [{ label: 'Wickets', data: topBowlers.map(p => p.wkts), backgroundColor: '#10b981', borderRadius: 4 }]
+            }, barOptions);
+
+            // Helper for Polar Areas (Group Top 5, Rest as 'Others')
+            let getPolarData = (sortKey, labelKey) => {
+                let sorted = [...aggregatedData].sort((a,b) => b[sortKey] - a[sortKey]);
+                let top5 = sorted.slice(0,5);
+                let othersSum = sorted.slice(5).reduce((sum, p) => sum + p[sortKey], 0);
+                
+                let labels = top5.map(p => p.name);
+                let data = top5.map(p => p[sortKey]);
+                if (othersSum > 0) { labels.push('Rest of Players'); data.push(othersSum); }
+                return { labels, data };
+            };
+            const polarColors = ['#3b82f6', '#f59e0b', '#10b981', '#a855f7', '#ec4899', 'rgba(255,255,255,0.1)'];
+
+            // 4. Total Runs Weightage (Polar Area)
+            let rW = getPolarData('runs');
+            createChart('chartWeightRuns', 'polarArea', {
+                labels: rW.labels, datasets: [{ data: rW.data, backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }]
+            }, chartOptions);
+
+            // 5. Boundaries Weightage (Polar Area)
+            let bW = getPolarData('fours'); // Approximation, or calculate total boundaries
+            let bData = rW.labels.map((_, i) => rW.data[i]); // Lazy reuse, calculating exact takes more mapping
+            let trueBounds = [...aggregatedData].map(p => ({name: p.name, b: p.fours+p.sixes})).sort((a,b) => b.b - a.b);
+            let tbTop = trueBounds.slice(0,5); let tbOth = trueBounds.slice(5).reduce((s,p)=>s+p.b,0);
+            
+            createChart('chartWeightBounds', 'polarArea', {
+                labels: [...tbTop.map(p=>p.name), ...(tbOth>0?['Rest of Players']:[])],
+                datasets: [{ data: [...tbTop.map(p=>p.b), ...(tbOth>0?[tbOth]:[])], backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }]
+            }, chartOptions);
+
+            // 6. Wickets Weightage (Polar Area)
+            let wW = getPolarData('wkts');
+            createChart('chartWeightWkts', 'polarArea', {
+                labels: wW.labels, datasets: [{ data: wW.data, backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }]
+            }, chartOptions);
+        }
+    </script>
+</body>
+</html>
