@@ -49,13 +49,9 @@ function calculateDurationMins(startStr, endStr) {
 let state = { matchId: "", inningsNum: 1, battingKey: 'A', bowlingKey: 'B', matchResult: "", matchSettings: { matchType: 't20', category: 'men', maxOvers: 20, originalMaxOvers: 20, customTarget: null, customTargetOvers: null, targetMethod: "", bowlerQuota: 4, matchSelectors: [] }, teams: { A: { name: "", players: [], pendingPenalties: 0 }, B: { name: "", players: [], pendingPenalties: 0 } }, current: { runs:0, wkts:0, balls:0, sIdx:null, nsIdx:null, bIdx:null, isFreeHit: false, penalties: 0, lastOverBowlers: new Set(), extras: {w:0, nb:0, b:0, lb:0}, recentBalls: [], currentOverLog: [], runsInThisOver: 0, bowlersInCurrentOver: new Set(), overHistory: [], currPartnership: { runs: 0, balls: 0 }, fow: [], activeBreak: null, activeBreakStartTime: null, activeBreakInsp: null, pendingBreakMins: 0, inningsStartTime: null, inningsEndTime: null, allowances: 0 }, inningsSummaries: [], matchBreaks: [] };
 let modalContext = {}, stateHistory = [], remarkLog = [];
 
-// ==========================================
-// CLOUD INITIALIZATION SYSTEM (PIN LOGIN)
-// ==========================================
 let activeMatch = null;
 
 window.onload = function() {
-    // 🔥 FIX: Prevent init crash if datalist doesn't exist
     if (el('savedTeamsList') && typeof teamRegistry !== 'undefined') {
         let opts = ''; for (let teamName in teamRegistry) { opts += `<option value="${teamName}">`; } el('savedTeamsList').innerHTML = opts; 
     }
@@ -97,7 +93,8 @@ async function authenticateMatch() {
 
         if (!supabaseClient) throw new Error("Database connection failed. Please check your internet connection.");
 
-        const { data, error } = await supabaseClient.from('matches').select('*').eq('match_id', matchId).eq('scorer_pin', pin).single();
+        // 🔥 FIX: Explicit tournaments(name) added here to grab the parent name!
+        const { data, error } = await supabaseClient.from('matches').select('*, tournaments(name)').eq('match_id', matchId).eq('scorer_pin', pin).single();
 
         if (error || !data) { errBox.style.color = "#ef4444"; errBox.innerText = "❌ Invalid Match ID or PIN."; return; }
 
@@ -112,7 +109,6 @@ async function authenticateMatch() {
         activeMatch = data;
         localStorage.setItem('cricStat_activeMatchMetadata', JSON.stringify(activeMatch));
 
-        // TRUE CLOUD DISASTER RECOVERY
         if (fullState.match_status === 'live') {
             showModal("☁️ Cloud Sync Found", "<div class='text-center mt-10 text-success font-bold'>Match is already in progress!</div><div class='text-center text-muted mt-5' style='font-size:0.85rem;'>Resuming from the latest cloud save...</div>", function() {
                 try {
@@ -145,7 +141,6 @@ async function authenticateMatch() {
 
         errBox.innerText = ""; 
 
-        // 🔥 FIX: Passed the team names into the squad loader for fallback generation
         await loadTournamentSquads(activeMatch.team_a_id, 'team-a', t1);
         await loadTournamentSquads(activeMatch.team_b_id, 'team-b', t2);
         
@@ -159,7 +154,6 @@ async function authenticateMatch() {
 async function loadTournamentSquads(teamId, containerPrefix, fallbackTeamName) {
     const container = el(`${containerPrefix}-squad`);
     
-    // 🔥 FIX: Smart Squad Fallback if no database roster is linked
     if (!activeMatch.tournament_id || !teamId) {
         let html = `<div style="color:#f59e0b; font-size:0.85rem; margin-bottom:10px; background:rgba(245,158,11,0.1); padding:8px; border-radius:4px;">No linked cloud roster found. Generating local squad.</div>`;
         for(let i=1; i<=15; i++) {
@@ -291,9 +285,6 @@ function startInnings() {
     updateUI();
 }
 
-// ==========================================
-// SCORING ENGINE LOGIC & CLOUD SYNC
-// ==========================================
 function toggleFullScreen() { let fsBtn = el('fsBtn'); if (!document.fullscreenElement) { document.documentElement.requestFullscreen().then(() => { fsBtn.innerText = '🔳 EXIT FULL SCREEN'; }).catch(err => alert("Fullscreen not supported.")); } else { if (document.exitFullscreen) { document.exitFullscreen().then(() => { fsBtn.innerText = '🔲 FULL'; }); } } }
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) { el('fsBtn').innerText = '🔲 FULL'; } });
 
@@ -323,8 +314,10 @@ async function restartCloudMatch() {
     let pin = prompt("To confirm, please enter the 4-Digit Scorer PIN for this match:");
     if (pin !== activeMatch.scorer_pin) { alert("❌ Incorrect PIN. Match restart aborted."); return; }
 
+    let tName = (activeMatch && activeMatch.tournaments && activeMatch.tournaments.name) ? activeMatch.tournaments.name : (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament ? activeMatch.full_state.tournament : "INDEPENDENT MATCH");
+    
     let resetState = {
-        tournament: activeMatch.full_state.tournament || "MATCH",
+        tournament: tName,
         format: activeMatch.full_state.format || "T20",
         team1: activeMatch.full_state.team1 || (activeMatch.full_state.teams ? activeMatch.full_state.teams.A.name : "Team A"),
         team2: activeMatch.full_state.team2 || (activeMatch.full_state.teams ? activeMatch.full_state.teams.B.name : "Team B"),
@@ -406,9 +399,10 @@ async function triggerCloudSync() {
     fullStatePayload.match_status = 'live'; 
     fullStatePayload.team1 = state.teams.A.name;
     fullStatePayload.team2 = state.teams.B.name;
-    if (activeMatch && activeMatch.full_state) {
-        fullStatePayload.tournament = activeMatch.full_state.tournament;
-    }
+    
+    // 🔥 FIX: Explicitly send relational parent to live_matches
+    let tName = (activeMatch && activeMatch.tournaments && activeMatch.tournaments.name) ? activeMatch.tournaments.name : (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament ? activeMatch.full_state.tournament : "Independent Match");
+    fullStatePayload.tournament = tName;
     
     try { await supabaseClient.from('matches').update({ full_state: fullStatePayload }).eq('match_id', state.matchId); } catch(e) {}
     
@@ -430,9 +424,10 @@ async function logCareerStats() {
     finalState.match_status = 'completed'; 
     finalState.team1 = state.teams.A.name;
     finalState.team2 = state.teams.B.name;
-    if (activeMatch && activeMatch.full_state) {
-        finalState.tournament = activeMatch.full_state.tournament;
-    }
+    
+    // 🔥 FIX: Ensures final payload saves the relational parent Name
+    let tName = (activeMatch && activeMatch.tournaments && activeMatch.tournaments.name) ? activeMatch.tournaments.name : (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament ? activeMatch.full_state.tournament : "Independent Match");
+    finalState.tournament = tName;
     
     try { await supabaseClient.from('matches').update({ full_state: finalState }).eq('match_id', state.matchId); } catch(e){}
 
@@ -614,7 +609,8 @@ function updateUI() {
     setTimeout(() => { localStorage.setItem('cricStat_activeMatch', JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value)); triggerCloudSync(); }, 0);
 
     if (activeMatch && activeMatch.full_state) {
-        el('displayTournament').innerText = activeMatch.full_state.tournament || "INDEPENDENT MATCH";
+        let tName = (activeMatch && activeMatch.tournaments && activeMatch.tournaments.name) ? activeMatch.tournaments.name : (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament ? activeMatch.full_state.tournament : "INDEPENDENT MATCH");
+        if (el('displayTournament')) el('displayTournament').innerText = tName;
     }
 
     el('inningsBadge').innerText = `INNINGS ${state.inningsNum}`; el('dispBatTeamName').innerText = state.teams[state.battingKey].name; el('dispBowlTeamName').innerText = state.teams[state.bowlingKey].name; el('dispBatTeamNameTop').innerText = state.teams[state.battingKey].name;
@@ -716,7 +712,10 @@ function generateReportHTML(isExcel) {
     else { html += `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Match Report PDF</title><style>${css}</style></head><body><div align="center">`; }
 
     let res = state.matchResult || calculateResultText() || "Match in Progress"; let mId = state.matchId || "N/A"; 
-    let tourn = activeMatch && activeMatch.full_state ? activeMatch.full_state.tournament : "Match"; let date = new Date().toLocaleDateString();
+    
+    // 🔥 FIX: Ensures PDF exports explicitly pull from Relational data instead of old JSON string
+    let tourn = (activeMatch && activeMatch.tournaments && activeMatch.tournaments.name) ? activeMatch.tournaments.name : (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament ? activeMatch.full_state.tournament : "Independent Match");
+    let date = new Date().toLocaleDateString();
     
     html += `<table><tr><th colspan="11" class="main-header">SPORTZSTAT OFFICIAL MATCH REPORT</th></tr><tr><td colspan="5" class="sub-header">🏆 Tournament: ${tourn}</td><td colspan="6" class="sub-header text-right">Match ID: ${mId}</td></tr><tr><td colspan="5" class="sub-header">📅 Date: ${date}</td><td colspan="6" class="sub-header text-right" style="color:#2563eb;">🏁 Result: ${res}</td></tr></table>`;
 
