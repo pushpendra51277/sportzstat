@@ -87,10 +87,14 @@
                     <th class="bat-hdr" onclick="sortTable('bf')">BF ↕</th>
                     <th class="bat-hdr" onclick="sortTable('avg')">Avg ↕</th>
                     <th class="bat-hdr" onclick="sortTable('sr')">SR ↕</th>
+                    <!-- 🔥 NEW: 100s and 50s -->
+                    <th class="bat-hdr" onclick="sortTable('hundreds')">100s ↕</th>
+                    <th class="bat-hdr" onclick="sortTable('fifties')">50s ↕</th>
                     <th class="bat-hdr" onclick="sortTable('fours')">4s ↕</th>
                     <th class="bat-hdr" onclick="sortTable('sixes')">6s ↕</th>
                     <th class="bat-hdr" onclick="sortTable('no')">NO ↕</th>
-                    <th class="bat-hdr" onclick="sortTable('ducks')">0s ↕</th>
+                    <!-- 🔥 Renamed 0s to Ducks for clarity -->
+                    <th class="bat-hdr" onclick="sortTable('ducks')">Ducks ↕</th>
                     
                     <!-- BOWLING -->
                     <th class="bowl-hdr" onclick="sortTable('overs')">Overs ↕</th>
@@ -105,7 +109,7 @@
                 </tr>
             </thead>
             <tbody id="career-tbody">
-                <tr><td colspan="22" style="text-align:center;">Loading cloud data...</td></tr>
+                <tr><td colspan="24" style="text-align:center;">Loading cloud data...</td></tr>
             </tbody>
         </table>
     </div>
@@ -122,7 +126,7 @@
     </div>
 
     <script>
-       const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
+        const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
         const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -138,7 +142,7 @@
             Chart.defaults.borderColor = '#334155';
             await fetchMatches();
             
-            // 🔥 NEW: Silently pull live data every 15 seconds to keep stats updated!
+            // Silently pull live data every 15 seconds to keep stats updated!
             setInterval(fetchMatches, 15000); 
         };
 
@@ -154,7 +158,6 @@
                 try {
                     let fs = m.full_state;
                     
-                    // 🔥 FIX: Now processes BOTH 'completed' and 'live' matches
                     if (fs && (fs.match_status === 'completed' || fs.match_status === 'live')) {
                         let tName = (m.tournaments && m.tournaments.name) ? m.tournaments.name : (fs.tournament || 'Independent Match');
                         let year = new Date(m.created_at).getFullYear().toString();
@@ -164,10 +167,9 @@
                         filterSets.years.add(year);
                         filterSets.formats.add(format);
 
-                        // Safely copy all completed innings so far
                         let allInnings = fs.inningsSummaries ? [...fs.inningsSummaries] : [];
 
-                        // 🔥 THE MAGIC: If the match is LIVE, instantly inject the ongoing inning into the math engine!
+                        // If the match is LIVE, instantly inject the ongoing inning into the math engine!
                         if (fs.match_status === 'live' && fs.current && (fs.current.balls > 0 || fs.current.runs > 0)) {
                             allInnings.push({
                                 batTeam: fs.teams?.[fs.battingKey]?.name || 'Team A',
@@ -186,7 +188,6 @@
                 } catch(err) { console.warn("Skipped corrupted match."); }
             });
 
-            // 🔥 FIX: Safely update dropdowns without deleting the user's current selection
             let updateDropdown = (id, set) => { 
                 let el = document.getElementById(id); 
                 let currentVal = el.value;
@@ -244,6 +245,13 @@
                             if (currentScore > p.bestRuns || (currentScore === p.bestRuns && isNotOut && !p.bestNotOut)) {
                                 p.bestRuns = currentScore; p.bestNotOut = isNotOut;
                             }
+                            
+                            // 🔥 NEW: 50s and 100s Logic
+                            if (currentScore >= 100) {
+                                p.hundreds++;
+                            } else if (currentScore >= 50) {
+                                p.fifties++;
+                            }
                         }
                     });
 
@@ -267,7 +275,6 @@
                 });
             });
 
-            // Safely update Team dropdown
             let teamSelect = document.getElementById('filter-team');
             let currentTeamVal = teamSelect.value;
             teamSelect.innerHTML = `<option value="ALL">🛡️ All Teams</option>`;
@@ -298,6 +305,7 @@
             obj[name] = { 
                 name: name, team: team, mat: 0, 
                 inn: 0, runs: 0, bf: 0, fours: 0, sixes: 0, dismissals: 0, ducks: 0, no: 0, bestRuns: 0, bestNotOut: false,
+                fifties: 0, hundreds: 0, // 🔥 Added 50s and 100s trackers
                 bowlBalls: 0, rc: 0, wkts: 0, mdn: 0, bbiW: 0, bbiR: 999, w4: 0, w5: 0
             };
         }
@@ -323,7 +331,7 @@
 
         function renderTable() {
             let tbody = document.getElementById('career-tbody');
-            if(aggregatedData.length === 0) { tbody.innerHTML = `<tr><td colspan="22" style="text-align:center; color:#ef4444;">No players match the selected filters.</td></tr>`; return; }
+            if(aggregatedData.length === 0) { tbody.innerHTML = `<tr><td colspan="24" style="text-align:center; color:#ef4444;">No players match the selected filters.</td></tr>`; return; }
 
             tbody.innerHTML = aggregatedData.map(p => {
                 let bestStr = p.bestRuns > 0 ? `${p.bestRuns}${p.bestNotOut ? '*' : ''}` : '-';
@@ -333,7 +341,7 @@
 
                 return `<tr>
                     <td>${p.name}</td><td style="color:#94a3b8;">${p.team}</td><td>${p.mat}</td>
-                    <td class="bat-col">${p.inn}</td><td class="bat-col">${p.runs}</td><td style="color:#ef4444; font-weight:bold;">${bestStr}</td><td>${p.bf}</td><td style="color:#38bdf8;">${avgStr}</td><td>${p.sr.toFixed(2)}</td><td>${p.fours}</td><td>${p.sixes}</td><td>${p.no}</td><td>${p.ducks}</td>
+                    <td class="bat-col">${p.inn}</td><td class="bat-col">${p.runs}</td><td style="color:#ef4444; font-weight:bold;">${bestStr}</td><td>${p.bf}</td><td style="color:#38bdf8;">${avgStr}</td><td>${p.sr.toFixed(2)}</td><td>${p.hundreds}</td><td>${p.fifties}</td><td>${p.fours}</td><td>${p.sixes}</td><td>${p.no}</td><td>${p.ducks}</td>
                     <td class="bowl-col">${p.overs.toFixed(1)}</td><td class="bowl-col">${p.mdn}</td><td>${p.rc}</td><td class="bowl-col" style="color:#10b981;">${p.wkts}</td><td style="color:#ef4444;">${bbiStr}</td><td style="color:#38bdf8;">${bAvgStr}</td><td>${p.econ.toFixed(2)}</td><td>${p.w4}</td><td>${p.w5}</td>
                 </tr>`;
             }).join('');
