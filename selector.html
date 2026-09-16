@@ -197,45 +197,30 @@
         // DATA FETCHING & AGGREGATION
         // ==========================================
         async function fetchMasterData() {
-            // 1. Fetch the actual stats from completed matches
-            const { data: compData, error: compErr } = await db.from('completed_matches').select('*');
-            if (compErr) { console.error(compErr); return; }
+            // 🔥 FIX: Query ONLY the unified 'matches' table to prevent 404 crashes
+            const { data, error } = await db.from('matches').select('match_id, full_state');
+            if (error) { console.error("Cloud Error:", error); return; }
 
-            // 🔥 FIX: Direct Relational Join! This asks Supabase to look up the official Tournament name directly.
-            const { data: matchData, error: matchErr } = await db.from('matches').select('match_id, full_state, tournaments(name)');
-            
             rawCompletedMatches = [];
             let tournaments = new Set();
 
-            if (compData) {
-                compData.forEach(comp => {
-                    try {
-                        let inningsArray = JSON.parse(comp.final_data);
-                        if (!inningsArray || inningsArray.length === 0) return;
-
-                        let tName = 'Independent Match';
-                        
-                        // Locate the parent match metadata
-                        let meta = matchData ? matchData.find(m => m.match_id === comp.match_id) : null;
-                        
-                        if (meta) {
-                            // Smart Priority: 1. Relational Database Name -> 2. JSON State Name -> 3. Fallback
-                            if (meta.tournaments && meta.tournaments.name) {
-                                tName = meta.tournaments.name;
-                            } else if (meta.full_state && meta.full_state.tournament) {
-                                tName = meta.full_state.tournament;
-                            }
-                        }
-                        
-                        rawCompletedMatches.push({
-                            tournament: tName,
-                            inningsSummaries: inningsArray
-                        });
-                        
-                        tournaments.add(tName);
-                    } catch(e) { console.error("Parse error on match:", e); }
-                });
-            }
+            data.forEach(m => {
+                let fs = m.full_state;
+                // Only process completed matches that actually have innings data
+                if (fs && fs.match_status === 'completed' && fs.inningsSummaries) {
+                    
+                    // Smart Fallback for Tournament Name
+                    let tName = fs.tournament;
+                    if (!tName || tName === 'undefined') tName = 'Independent Match';
+                    
+                    rawCompletedMatches.push({
+                        tournament: tName,
+                        inningsSummaries: fs.inningsSummaries
+                    });
+                    
+                    tournaments.add(tName);
+                }
+            });
             
             let tSelect = document.getElementById('filter-tournament');
             tSelect.innerHTML = `<option value="ALL">All Tournaments</option>`;
@@ -243,7 +228,6 @@
 
             processHistoricalData();
         }
-
         function processHistoricalData() {
             aggregatedPlayers = {};
             let total1s = 0, total4s = 0, total6s = 0;
