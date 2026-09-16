@@ -238,7 +238,24 @@
                     if (fs && (fs.match_status === 'completed' || fs.match_status === 'live')) {
                         let tName = (m.tournaments && m.tournaments.name) ? m.tournaments.name : (fs.tournament || 'Independent Match');
                         let year = new Date(m.created_at).getFullYear().toString();
-                        let format = fs.format || 'T20';
+                        // 🔥 SMART FORMAT DETECTOR
+                        let format = fs.format;
+                        if (!format || format === 'undefined' || format === '') {
+                            // Detect via internal engine settings
+                            if (fs.matchSettings && fs.matchSettings.matchType === 'multiday') {
+                                format = 'Multi-Day (Test)';
+                            } 
+                            // Auto-detect via mathematical impossibility (more than 2 innings)
+                            else if (fs.inningsSummaries && fs.inningsSummaries.length > 2) {
+                                format = 'Multi-Day (Test)';
+                            } 
+                            else if (fs.matchSettings && fs.matchSettings.matchType === 'oneday') {
+                                format = 'One Day (ODI)';
+                            } 
+                            else {
+                                format = 'T20';
+                            }
+                        }
 
                         filterSets.tourneys.add(tName);
                         filterSets.years.add(year);
