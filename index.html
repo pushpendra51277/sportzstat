@@ -62,7 +62,7 @@
         .state-upcoming { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
         .state-completed { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
 
-        /* 🔥 NEW: Copy Button Styles */
+        /* Copy Button Styles */
         .btn-copy { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #38bdf8; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; transition: 0.2s; white-space: nowrap; }
         .btn-copy:hover { background: #38bdf8; color: #0f172a; }
         .btn-copy.copied { background: #10b981; color: white; border-color: #10b981; }
@@ -161,11 +161,12 @@
                 <h3 style="color: #f43f5e;">🏆 Career Analytics Hub</h3>
                 <p>Global leaderboards, player filtering, and advanced data visualization.</p>
             </a>
-            <div class="portal-grid"><a href="commentator.html" class="portal-card" style="border-color: #eab308;">
+            <a href="commentator.html" class="portal-card" style="border-color: #eab308;">
                 <h3 style="color: #eab308;">🎙️ Broadcast & Commentary</h3>
                 <p>Live milestones, dynamic talking points, and in-depth crease context.</p>
             </a>
-        </div>
+        </div> 
+        <!-- 🔥 FIX: The closing tag above was missing, which caused the Directory table to break! -->
 
         <!-- DYNAMIC DIRECTORY TABLE WITH SEARCH -->
         <div id="directory-section" class="directory-box hidden">
@@ -178,7 +179,6 @@
 
             <div class="table-responsive">
                 <table class="directory-table">
-                    <!-- 🔥 NEW: 7 Columns with a Share button -->
                     <thead>
                         <tr>
                             <th style="text-align: center; width: 5%;">#</th>
@@ -415,7 +415,6 @@
                 
                 let seqNum = index + 1;
                 
-                // 🔥 NEW: WhatsApp Copy Button Logic (Uses data attributes to safely handle quotes in team names)
                 let btnHtml = `<button class="btn-copy" 
                     data-id="${m.match_id}" 
                     data-tourney="${tourney}" 
@@ -436,7 +435,6 @@
             }).join('');
         }
 
-        // 🔥 NEW: Function to format and copy match details to clipboard
         function copyMatchDetails(btn) {
             const matchId = btn.getAttribute('data-id');
             const tourney = btn.getAttribute('data-tourney');
