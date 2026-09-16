@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sportzstat - Commentator Studio</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background: #020617; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
+        * { box-sizing: border-box; }
+
+        /* Ticker Tape */
+        .ticker-wrap { width: 100%; background: #ef4444; border-bottom: 2px solid #b91c1c; padding: 8px 0; overflow: hidden; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .ticker { display: inline-block; white-space: nowrap; animation: ticker 25s linear infinite; font-weight: 900; font-size: 1rem; color: white; letter-spacing: 1px; text-transform: uppercase; padding-left: 100%; }
+        @keyframes ticker { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
+
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 20px; background: #0f172a; border-bottom: 1px solid #334155; }
+        .back-btn { background: transparent; border: 1px solid #475569; color: #cbd5e1; padding: 6px 15px; border-radius: 6px; cursor: pointer; text-decoration: none; font-size: 0.85rem; }
+        .live-badge { background: rgba(239,68,68,0.2); border: 1px solid #ef4444; color: #ef4444; padding: 5px 10px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+        
+        .match-context { text-align: center; margin-bottom: 30px; }
+        .big-score { font-size: 3rem; font-weight: 900; color: white; margin: 10px 0; line-height: 1; }
+        
+        .studio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .studio-grid { grid-template-columns: 1fr; } }
+
+        .studio-card { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 20px; position: relative; overflow: hidden; }
+        .studio-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
+        .card-bat::before { background: #38bdf8; }
+        .card-bowl::before { background: #10b981; }
+
+        .card-title { margin: 0 0 15px 0; color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; border-bottom: 1px solid #1e293b; padding-bottom: 8px; }
+        .player-name { font-size: 1.5rem; font-weight: 900; color: white; margin-bottom: 5px; }
+        
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .stat-box { background: #1e293b; padding: 10px; border-radius: 8px; border: 1px solid #334155; }
+        .stat-label { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; font-weight: bold; margin-bottom: 4px; }
+        .stat-value { font-size: 1.2rem; font-weight: bold; color: white; }
+        .stat-accent { color: #f59e0b; }
+
+        .talking-points { margin-top: 30px; background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; padding: 20px; border-radius: 12px; }
+        .point-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; font-size: 1.05rem; line-height: 1.4; color: #cbd5e1; }
+        .point-icon { font-size: 1.2rem; flex-shrink: 0; }
+    </style>
+</head>
+<body>
+
+    <!-- MILESTONE TICKER -->
+    <div class="ticker-wrap">
+        <div class="ticker" id="broadcast-ticker">
+            <span style="opacity:0.7;">SPORTZSTAT BROADCAST ENGINE INITIALIZING...</span>
+        </div>
+    </div>
+
+    <div class="header">
+        <div>
+            <h2 style="margin: 0; color: #eab308; letter-spacing: 1px;">🎙️ COMMENTARY STUDIO</h2>
+        </div>
+        <div style="display:flex; gap:15px; align-items:center;">
+            <div class="live-badge" id="live-indicator">SEARCHING FOR LIVE MATCH...</div>
+            <a href="index.html" class="back-btn">Exit Studio</a>
+        </div>
+    </div>
+
+    <div class="container" id="studio-content" style="display: none;">
+        
+        <div class="match-context">
+            <div style="color:#38bdf8; font-weight:bold; letter-spacing:1px; text-transform:uppercase; font-size:0.9rem;" id="match-tourney">Tournament Name</div>
+            <div class="big-score" id="match-score">TEAM A 0/0 <span style="font-size:1.5rem; color:#94a3b8;">(0.0)</span></div>
+            <div style="color:#f59e0b; font-weight:bold;" id="match-equation">Match Equation Here</div>
+        </div>
+
+        <div class="studio-grid">
+            
+            <!-- STRIKER CARD -->
+            <div class="studio-card card-bat" id="striker-card">
+                <div class="card-title">🏏 AT THE CREASE (STRIKER)</div>
+                <div class="player-name" id="s-name">Waiting...</div>
+                
+                <div style="background:#0f172a; border:1px dashed #38bdf8; padding:10px; border-radius:8px; display:inline-block; margin-bottom:10px;">
+                    <span style="color:#94a3b8; font-size:0.8rem; text-transform:uppercase; font-weight:bold;">LIVE TODAY:</span>
+                    <span style="color:white; font-size:1.2rem; font-weight:bold; margin-left:8px;" id="s-live">0 (0)</span>
+                </div>
+
+                <div class="stat-grid">
+                    <div class="stat-box"><div class="stat-label">Career Runs</div><div class="stat-value stat-accent" id="s-car-runs">-</div></div>
+                    <div class="stat-box"><div class="stat-label">Career Avg</div><div class="stat-value" id="s-car-avg">-</div></div>
+                    <div class="stat-box"><div class="stat-label">Career SR</div><div class="stat-value" id="s-car-sr">-</div></div>
+                    <div class="stat-box"><div class="stat-label">Boundaries (4s/6s)</div><div class="stat-value" id="s-car-bounds">-</div></div>
+                </div>
+            </div>
+
+            <!-- BOWLER CARD -->
+            <div class="studio-card card-bowl" id="bowler-card">
+                <div class="card-title">⚾ CURRENT ATTACK</div>
+                <div class="player-name" id="b-name">Waiting...</div>
+                
+                <div style="background:#0f172a; border:1px dashed #10b981; padding:10px; border-radius:8px; display:inline-block; margin-bottom:10px;">
+                    <span style="color:#94a3b8; font-size:0.8rem; text-transform:uppercase; font-weight:bold;">LIVE SPELL:</span>
+                    <span style="color:white; font-size:1.2rem; font-weight:bold; margin-left:8px;" id="b-live">0.0-0-0-0</span>
+                </div>
+
+                <div class="stat-grid">
+                    <div class="stat-box"><div class="stat-label">Career Wickets</div><div class="stat-value stat-accent" id="b-car-wkts">-</div></div>
+                    <div class="stat-box"><div class="stat-label">Career Econ</div><div class="stat-value" id="b-car-econ">-</div></div>
+                    <div class="stat-box"><div class="stat-label">Career B.Avg</div><div class="stat-value" id="b-car-avg">-</div></div>
+                    <div class="stat-box"><div class="stat-label">Best Bowling</div><div class="stat-value" id="b-car-best">-</div></div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- AUTO GENERATED TALKING POINTS -->
+        <div class="talking-points">
+            <h3 style="margin: 0 0 15px 0; color: #f59e0b; text-transform: uppercase; font-size: 1rem;">🧠 Auto-Generated Talking Points</h3>
+            <div id="talking-points-list">
+                <div style="color:#94a3b8; font-style:italic;">Analyzing player data...</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
+        const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let liveMatch = null;
+        let globalStats = {};
+
+        window.onload = async () => {
+            await fetchStudioData();
+            // Pulls live action every 5 seconds to keep commentators perfectly synced
+            setInterval(fetchStudioData, 5000); 
+        };
+
+        async function fetchStudioData() {
+            const { data, error } = await db.from('matches').select('match_id, full_state, tournaments(name)');
+            if (error || !data) return;
+
+            let liveCandidates = [];
+            globalStats = {};
+
+            data.forEach(m => {
+                let fs = m.full_state;
+                if(!fs) return;
+
+                if (fs.match_status === 'live') {
+                    m.tourneyName = (m.tournaments && m.tournaments.name) ? m.tournaments.name : (fs.tournament || 'Independent Match');
+                    liveCandidates.push(m);
+                }
+
+                // Aggregate Background Data
+                if (fs.inningsSummaries) {
+                    fs.inningsSummaries.forEach(inn => {
+                        (inn.batters || []).forEach(b => {
+                            if(b.hasBatted) {
+                                if(!globalStats[b.name]) initPlayer(b.name);
+                                let p = globalStats[b.name];
+                                p.runs += b.r; p.balls += b.b; p.fours += b.f; p.sixes += b.s;
+                                if(b.out) p.dismissals++;
+                            }
+                        });
+                        (inn.bowlers || []).forEach(b => {
+                            if(b.o > 0 || b.rc > 0) {
+                                if(!globalStats[b.name]) initPlayer(b.name);
+                                let p = globalStats[b.name];
+                                p.rc += b.rc; p.wkts += b.w;
+                                let absB = Math.floor(b.o)*6 + Math.round((b.o - Math.floor(b.o))*10);
+                                p.bowlBalls += absB;
+                                if (b.w > p.bbiW || (b.w === p.bbiW && b.rc < p.bbiR)) {
+                                    p.bbiW = b.w; p.bbiR = b.rc;
+                                }
+                            }
+                        });
+                    });
+                }
+            });
+
+            if (liveCandidates.length > 0) {
+                liveMatch = liveCandidates[0]; // Auto-focuses on the first active match
+                document.getElementById('studio-content').style.display = 'block';
+                document.getElementById('live-indicator').innerText = "🔴 LIVE BROADCAST ACTIVE";
+                renderStudio();
+            } else {
+                document.getElementById('studio-content').style.display = 'none';
+                document.getElementById('live-indicator').innerText = "NO LIVE MATCHES";
+                document.getElementById('broadcast-ticker').innerHTML = "WAITING FOR MATCH TO BEGIN... STANDBY...";
+            }
+        }
+
+        function initPlayer(name) {
+            globalStats[name] = { runs: 0, balls: 0, fours: 0, sixes: 0, dismissals: 0, bowlBalls: 0, rc: 0, wkts: 0, bbiW: 0, bbiR: 999 };
+        }
+
+        function renderStudio() {
+            let fs = liveMatch.full_state;
+            
+            // Match Context
+            let batTeam = fs.teams?.[fs.battingKey]?.name || "Batting Team";
+            let runs = fs.current?.runs || 0;
+            let wkts = fs.current?.wkts || 0;
+            let overs = Math.floor(fs.current.balls/6) + "." + (fs.current.balls%6);
+            
+            document.getElementById('match-tourney').innerText = liveMatch.tourneyName;
+            document.getElementById('match-score').innerHTML = `${batTeam} ${runs}/${wkts} <span style="font-size:1.5rem; color:#94a3b8;">(${overs})</span>`;
+            document.getElementById('match-equation').innerText = fs.matchResult || `Innings ${fs.inningsNum || 1} Ongoing`;
+
+            let alerts = [];
+            let talkingPoints = [];
+
+            // STRIKER LOGIC
+            let sIdx = fs.current?.sIdx ?? null;
+            if (sIdx !== null && fs.teams[fs.battingKey].players[sIdx]) {
+                let liveS = fs.teams[fs.battingKey].players[sIdx];
+                let pStat = globalStats[liveS.name] || initPlayer(liveS.name);
+                
+                let totalR = (pStat.runs || 0) + liveS.r;
+                let totalB = (pStat.balls || 0) + liveS.b;
+                let totalDiss = pStat.dismissals || 0;
+                
+                let avg = totalDiss > 0 ? (totalR / totalDiss).toFixed(1) : (totalR > 0 ? totalR : '-');
+                let sr = totalB > 0 ? ((totalR / totalB) * 100).toFixed(1) : "0.0";
+                
+                document.getElementById('s-name').innerText = liveS.name;
+                document.getElementById('s-live').innerText = `${liveS.r} (${liveS.b})`;
+                document.getElementById('s-car-runs').innerText = totalR;
+                document.getElementById('s-car-avg').innerText = avg;
+                document.getElementById('s-car-sr').innerText = sr;
+                document.getElementById('s-car-bounds').innerText = `${(pStat.fours || 0) + liveS.f} / ${(pStat.sixes || 0) + liveS.s}`;
+
+                // 🚨 MILESTONE DETECTORS
+                if (totalR >= 40 && totalR < 50) alerts.push(`🚨 ${liveS.name} needs ${50 - totalR} runs for a Career Half-Century!`);
+                if (totalR >= 90 && totalR < 100) alerts.push(`🚨 ${liveS.name} is closing in on a Career Century!`);
+                if (liveS.r >= 30 && liveS.b <= 15) talkingPoints.push(`<div class="point-item"><div class="point-icon">🔥</div><div><b>${liveS.name}</b> is on absolute fire today. They are striking at ${((liveS.r/liveS.b)*100).toFixed(1)} in this innings compared to their career SR of ${sr}.</div></div>`);
+            }
+
+            // BOWLER LOGIC
+            let bIdx = fs.current?.bIdx ?? null;
+            if (bIdx !== null && fs.teams[fs.bowlingKey].players[bIdx]) {
+                let liveB = fs.teams[fs.bowlingKey].players[bIdx];
+                let pStat = globalStats[liveB.name] || initPlayer(liveB.name);
+                
+                let bOvers = Math.floor(liveB.o) + "." + Math.round((liveB.o - Math.floor(liveB.o))*10);
+                let totalW = (pStat.wkts || 0) + liveB.w;
+                let totalRC = (pStat.rc || 0) + liveB.rc;
+                let absBallsHist = pStat.bowlBalls || 0;
+                let absBallsLive = Math.floor(liveB.o)*6 + Math.round((liveB.o - Math.floor(liveB.o))*10);
+                let totalBalls = absBallsHist + absBallsLive;
+                
+                let econ = totalBalls > 0 ? ((totalRC / totalBalls) * 6).toFixed(2) : "0.00";
+                let bAvg = totalW > 0 ? (totalRC / totalW).toFixed(1) : "-";
+                let bbi = pStat.bbiW > 0 ? `${pStat.bbiW}-${pStat.bbiR}` : "-";
+
+                document.getElementById('b-name').innerText = liveB.name;
+                document.getElementById('b-live').innerText = `${bOvers} - ${liveB.m} - ${liveB.rc} - ${liveB.w}`;
+                document.getElementById('b-car-wkts').innerText = totalW;
+                document.getElementById('b-car-econ').innerText = econ;
+                document.getElementById('b-car-avg').innerText = bAvg;
+                document.getElementById('b-car-best').innerText = bbi;
+
+                if (totalW === 9) alerts.push(`🚨 ${liveB.name} is 1 wicket away from 10 Career Wickets!`);
+                if (totalW === 49) alerts.push(`🚨 ${liveB.name} needs just 1 more wicket for 50 Career Wickets!`);
+                if (liveB.w >= 3) talkingPoints.push(`<div class="point-item"><div class="point-icon">🎯</div><div><b>${liveB.name}</b> is ripping through the lineup today with ${liveB.w} wickets. Their career best is ${bbi}.</div></div>`);
+            }
+
+            // Render Ticker
+            let tickerHtml = "";
+            if (alerts.length > 0) {
+                tickerHtml = alerts.join('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;⭐&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;');
+            } else {
+                tickerHtml = `LIVE BROADCAST • ${batTeam} is ${runs}/${wkts} • CURRENT RUN RATE: ${fs.current?.balls > 0 ? ((runs / fs.current.balls) * 6).toFixed(2) : '0.00'}`;
+            }
+            document.getElementById('broadcast-ticker').innerHTML = tickerHtml + '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;⭐&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + tickerHtml;
+
+            // Render Talking Points
+            if (talkingPoints.length === 0) {
+                talkingPoints.push(`<div class="point-item"><div class="point-icon">🏏</div><div>The current partnership is worth ${fs.current?.currPartnership?.runs || 0} runs off ${fs.current?.currPartnership?.balls || 0} deliveries.</div></div>`);
+            }
+            document.getElementById('talking-points-list').innerHTML = talkingPoints.join('');
+        }
+    </script>
+</body>
+</html>
