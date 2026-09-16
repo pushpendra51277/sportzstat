@@ -45,7 +45,12 @@
 
         /* Directory Modal / Table */
         .directory-box { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; text-align: left; margin-top: 20px; }
-        .directory-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 15px; }
+        
+        /* 🔥 NEW: Directory Search Bar Styles */
+        .directory-search { width: 100%; padding: 12px 15px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; font-size: 0.95rem; margin-bottom: 15px; outline: none; transition: border-color 0.2s; }
+        .directory-search:focus { border-color: #38bdf8; }
+
+        .directory-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 5px; }
         .directory-table th { background: #0f172a; color: #94a3b8; padding: 10px 12px; text-transform: uppercase; font-size: 0.75rem; border-bottom: 1px solid #334155; }
         .directory-table td { padding: 12px; border-bottom: 1px solid #334155; }
         .pin-badge { background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #f59e0b; padding: 4px 8px; border-radius: 4px; font-weight: 900; letter-spacing: 2px; }
@@ -70,11 +75,11 @@
             <div class="input-group"><label>Password</label><input type="password" id="auth-password" required></div>
             <div class="input-group hidden" id="role-group"><label>Request Role</label>
                <select id="auth-role">
-    <option value="fan">Fan (Default)</option>
-    <option value="scorer">Official Scorer</option>
-    <option value="selector">Team Selector / Coach</option>
-    <option value="admin">Tournament Admin</option>
-</select>
+                    <option value="fan">Fan (Default)</option>
+                    <option value="scorer">Official Scorer</option>
+                    <option value="selector">Team Selector / Coach</option>
+                    <option value="admin">Tournament Admin</option>
+                </select>
             </div>
             <button type="submit" class="btn-launch" id="auth-submit-btn">Sign In</button>
         </form>
@@ -133,16 +138,32 @@
             </a>
         </div>
 
-        <!-- DYNAMIC DIRECTORY TABLE -->
+        <!-- DYNAMIC DIRECTORY TABLE WITH SEARCH -->
         <div id="directory-section" class="directory-box hidden">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <div><h3 style="margin: 0; color: #f59e0b;" id="dir-heading">Match Master List</h3></div>
                 <button onclick="document.getElementById('directory-section').classList.add('hidden')" style="background: transparent; border: 1px solid #475569; color: #cbd5e1; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Close</button>
             </div>
+            
+            <!-- 🔥 NEW: Search Engine Input -->
+            <input type="text" id="directorySearchInput" class="directory-search" placeholder="🔍 Search by Team, Tournament, ID, or Status..." onkeyup="filterDirectory()">
+
             <div style="overflow-x: auto;">
                 <table class="directory-table">
-                    <thead><tr><th style="text-align: left;">Match details</th><th style="text-align: left;">Match ID</th><th style="text-align: center;">Status</th><th style="text-align: center;">Scorer PIN</th></tr></thead>
-                    <tbody id="directory-tbody"><tr><td colspan="4" style="text-align: center; color: #94a3b8;">Loading fixtures from cloud...</td></tr></tbody>
+                    <!-- 🔥 NEW: 6 Columns (Added # and explicit Tournament Column) -->
+                    <thead>
+                        <tr>
+                            <th style="text-align: center; width: 5%;">#</th>
+                            <th style="text-align: left; width: 20%;">Tournament</th>
+                            <th style="text-align: left; width: 35%;">Match details</th>
+                            <th style="text-align: left; width: 15%;">Match ID</th>
+                            <th style="text-align: center; width: 10%;">Status</th>
+                            <th style="text-align: center; width: 15%;">Scorer PIN</th>
+                        </tr>
+                    </thead>
+                    <tbody id="directory-tbody">
+                        <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Loading fixtures from cloud...</td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -155,6 +176,9 @@
 
         let currentUser = null; let currentUserProfile = null; let isSignUp = false;
         let hubMatches = { live: [], upcoming: [], completed: [] };
+        
+        // 🔥 NEW: Global variable to hold directory data for instant searching
+        let globalDirectoryMatches = [];
 
         window.onload = async () => {
             const { data: { session } } = await db.auth.getSession();
@@ -265,11 +289,10 @@
             carousel.innerHTML = matches.map(m => {
                 let p = m.full_state || {};
                 
-                // 🔥 AIRTIGHT FALLBACK
-                let t1 = (p.team1 && String(p.team1) !== 'undefined') ? p.team1 : ((p.teams && p.teams.A && p.teams.A.name && String(p.teams.A.name) !== 'undefined') ? p.teams.A.name : 'Team A');
-                let t2 = (p.team2 && String(p.team2) !== 'undefined') ? p.team2 : ((p.teams && p.teams.B && p.teams.B.name && String(p.teams.B.name) !== 'undefined') ? p.teams.B.name : 'Team B');
-                let tourney = (m.tournaments && m.tournaments.name) ? m.tournaments.name : ((p.tournament && String(p.tournament) !== 'undefined') ? p.tournament : 'Independent Match');
+                let t1 = (p.team1 && p.team1 !== 'undefined') ? p.team1 : (p.teams?.A?.name && p.teams.A.name !== 'undefined' ? p.teams.A.name : 'Team A');
+                let t2 = (p.team2 && p.team2 !== 'undefined') ? p.team2 : (p.teams?.B?.name && p.teams.B.name !== 'undefined' ? p.teams.B.name : 'Team B');
                 
+                let tourney = (m.tournaments && m.tournaments.name) ? m.tournaments.name : ((p.tournament && p.tournament !== 'undefined') ? p.tournament : 'Independent Match');
                 let adminId = m.tournaments ? m.tournaments.admin_id : 'none';
                 
                 return `
@@ -302,7 +325,8 @@
                 alert(`ADMIN ACTIONS FOR: ${matchId}\n\nStatus: ${tabCategory.toUpperCase()}\nScorer PIN: ${pin}\n\n(Edit/Delete functionality routing here in Phase 4)`);
             }
             else if (role === 'selector' && tabCategory === 'completed') {
-                window.location.href = 'selector.html';
+                alert(`Routing to deep analytics scorecard for match ${matchId}...`);
+                window.location.href = `selector.html`;
             } 
             else {
                 window.location.href = `fan.html`;
@@ -310,37 +334,82 @@
         }
 
         // ==========================================
-        // DIRECTORY LOGIC
+        // DIRECTORY LOGIC & SEARCH ENGINE
         // ==========================================
         async function toggleDirectoryView() {
             const section = document.getElementById('directory-section');
             section.classList.remove('hidden'); section.scrollIntoView({ behavior: 'smooth' });
             
             const tbody = document.getElementById('directory-tbody');
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8; padding: 20px;">Fetching records...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">Fetching records...</td></tr>`;
+            
+            // Clear search bar on open
+            document.getElementById('directorySearchInput').value = "";
 
             const isSuperAdmin = currentUserProfile.role.toLowerCase() === 'superadmin';
             
-            let query = db.from('matches').select('match_id, scorer_pin, full_state, tournaments!inner(admin_id, name)');
+            // Order by created_at so newest matches are at the top (Seq #1)
+            let query = db.from('matches').select('match_id, scorer_pin, full_state, tournaments!inner(admin_id, name)').order('created_at', { ascending: false });
             if (!isSuperAdmin) {
                 query = query.eq('tournaments.admin_id', currentUser.id);
             }
 
             const { data: matches, error } = await query;
-            if (error || !matches || matches.length === 0) { tbody.innerHTML = `<tr><td colspan="4" style="text-align: center;">No active matches found for your account.</td></tr>`; return; }
+            if (error || !matches || matches.length === 0) { 
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No active matches found for your account.</td></tr>`; 
+                return; 
+            }
 
-           tbody.innerHTML = matches.map(m => {
+            // Save to global array for instant search filtering
+            globalDirectoryMatches = matches;
+            renderDirectoryTable(); // Initial Render
+        }
+
+        // Keyup Event Handler
+        function filterDirectory() {
+            const query = document.getElementById('directorySearchInput').value.toLowerCase();
+            renderDirectoryTable(query);
+        }
+
+        // Renders HTML based on filtered array
+        function renderDirectoryTable(filterQuery = "") {
+            const tbody = document.getElementById('directory-tbody');
+            
+            let filteredMatches = globalDirectoryMatches.filter(m => {
+                let p = m.full_state || {};
+                let t1 = (p.team1 && p.team1 !== 'undefined') ? p.team1 : (p.teams?.A?.name && p.teams.A.name !== 'undefined' ? p.teams.A.name : 'Team A');
+                let t2 = (p.team2 && p.team2 !== 'undefined') ? p.team2 : (p.teams?.B?.name && p.teams.B.name !== 'undefined' ? p.teams.B.name : 'Team B');
+                let tourney = (m.tournaments && m.tournaments.name) ? m.tournaments.name : ((p.tournament && p.tournament !== 'undefined') ? p.tournament : 'Independent Match');
+                let mStatus = p.match_status || 'upcoming';
+
+                // Combine searchable fields into one master string
+                let searchableString = `${t1} ${t2} ${tourney} ${m.match_id} ${mStatus}`.toLowerCase();
+                
+                return searchableString.includes(filterQuery);
+            });
+
+            if (filteredMatches.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ef4444; padding: 20px; font-weight:bold;">No matches found matching "${filterQuery}"</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filteredMatches.map((m, index) => {
                 let p = m.full_state || {};
                 let mStatus = p.match_status || 'upcoming';
                 let sClass = mStatus === 'live' ? 'state-live' : (mStatus === 'completed' ? 'state-completed' : 'state-upcoming');
                 
-                // 🔥 AIRTIGHT FALLBACK
-                let t1 = (p.team1 && String(p.team1) !== 'undefined') ? p.team1 : ((p.teams && p.teams.A && p.teams.A.name && String(p.teams.A.name) !== 'undefined') ? p.teams.A.name : 'Team A');
-                let t2 = (p.team2 && String(p.team2) !== 'undefined') ? p.team2 : ((p.teams && p.teams.B && p.teams.B.name && String(p.teams.B.name) !== 'undefined') ? p.teams.B.name : 'Team B');
-                let tourney = (m.tournaments && m.tournaments.name) ? m.tournaments.name : ((p.tournament && String(p.tournament) !== 'undefined') ? p.tournament : 'Independent Match');
+                let t1 = (p.team1 && p.team1 !== 'undefined') ? p.team1 : (p.teams?.A?.name && p.teams.A.name !== 'undefined' ? p.teams.A.name : 'Team A');
+                let t2 = (p.team2 && p.team2 !== 'undefined') ? p.team2 : (p.teams?.B?.name && p.teams.B.name !== 'undefined' ? p.teams.B.name : 'Team B');
+                
+                let tourney = (m.tournaments && m.tournaments.name) ? m.tournaments.name : ((p.tournament && p.tournament !== 'undefined') ? p.tournament : 'Independent Match');
+                
+                // Sequence Number (1 to N)
+                let seqNum = index + 1;
                 
                 return `<tr>
-                    <td style="color: #cbd5e1; font-size:0.8rem;">${tourney}<br><b style="color:white; font-size:0.9rem;">${t1} vs ${t2}</b></td>
+                    <td style="text-align: center; color: #94a3b8; font-weight: bold;">${seqNum}</td>
+                    <td style="color: #cbd5e1; font-weight: bold; font-size: 0.8rem; text-transform: uppercase;">${tourney}</td>
+                    <td><b style="color:white; font-size:0.9rem;">${t1} <span style="color:#94a3b8; font-size:0.75rem;">vs</span> ${t2}</b></td>
                     <td style="font-weight: bold; color: #38bdf8; letter-spacing: 1px;">${m.match_id}</td>
                     <td style="text-align: center;"><span class="state-badge ${sClass}">${mStatus}</span></td>
                     <td style="text-align: center;"><span class="pin-badge">${m.scorer_pin || '----'}</span></td>
