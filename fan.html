@@ -165,7 +165,8 @@
         setInterval(fetchMatches, 3000); 
 
         async function fetchMatches() {
-            const { data, error } = await db.from('matches').select('*').order('created_at', { ascending: false });
+            // 🔥 FIX: Pull relational tournament name directly from DB!
+            const { data, error } = await db.from('matches').select('*, tournaments(name)').order('created_at', { ascending: false });
             if (error) { console.error("Cloud fetch error", error); return; }
             allMatches = data;
             
@@ -184,16 +185,16 @@
             let liveHtml = "";
             let compHtml = "";
 
-          allMatches.forEach(m => {
+            allMatches.forEach(m => {
                 let fs = m.full_state;
                 if (!fs) return;
 
-                // 🔥 AIRTIGHT FALLBACK: Blocks the literal string "undefined"
-                let t1 = (fs.team1 && fs.team1 !== 'undefined') ? fs.team1 : (fs.teams && fs.teams.A && fs.teams.A.name !== 'undefined' ? fs.teams.A.name : 'Team A');
-                let t2 = (fs.team2 && fs.team2 !== 'undefined') ? fs.team2 : (fs.teams && fs.teams.B && fs.teams.B.name !== 'undefined' ? fs.teams.B.name : 'Team B');
-                let tourney = (fs.tournament && fs.tournament !== 'undefined') ? fs.tournament : 'INDEPENDENT MATCH';
+                // 🔥 AIRTIGHT FALLBACK
+                let t1 = (fs.team1 && String(fs.team1) !== 'undefined') ? fs.team1 : ((fs.teams && fs.teams.A && fs.teams.A.name && String(fs.teams.A.name) !== 'undefined') ? fs.teams.A.name : 'Team A');
+                let t2 = (fs.team2 && String(fs.team2) !== 'undefined') ? fs.team2 : ((fs.teams && fs.teams.B && fs.teams.B.name && String(fs.teams.B.name) !== 'undefined') ? fs.teams.B.name : 'Team B');
+                let tourney = (m.tournaments && m.tournaments.name) ? m.tournaments.name : ((fs.tournament && String(fs.tournament) !== 'undefined') ? fs.tournament : 'Independent Match');
 
-                let batTeam = (fs.teams && fs.battingKey && fs.teams[fs.battingKey].name !== 'undefined') ? fs.teams[fs.battingKey].name : t1;
+                let batTeam = (fs.teams && fs.battingKey && fs.teams[fs.battingKey].name && String(fs.teams[fs.battingKey].name) !== 'undefined') ? fs.teams[fs.battingKey].name : t1;
                 
                 let runs = fs.current ? fs.current.runs : 0;
                 let wkts = fs.current ? fs.current.wkts : 0;
@@ -236,8 +237,10 @@
             if (!m || !m.full_state) return;
             let fs = m.full_state;
 
-            // Header Setup
-            document.getElementById('sc-header-tourney').innerText = fs.tournament || "MATCH";
+            // 🔥 FIX: Apply accurate tournament header mapping
+            let tourney = (m.tournaments && m.tournaments.name) ? m.tournaments.name : ((fs.tournament && String(fs.tournament) !== 'undefined') ? fs.tournament : 'Independent Match');
+            document.getElementById('sc-header-tourney').innerText = tourney;
+
             document.getElementById('sc-header-badge').innerHTML = fs.match_status === 'live' 
                 ? '<div class="live-pulse"><div class="pulse-dot"></div> LIVE</div>' 
                 : '<div class="comp-badge">COMPLETED</div>';
@@ -376,8 +379,10 @@
         }
 
         function renderInfoTab(fs, m) {
+            let tourney = (m.tournaments && m.tournaments.name) ? m.tournaments.name : ((fs.tournament && String(fs.tournament) !== 'undefined') ? fs.tournament : 'Independent Match');
+
             document.getElementById('info-container').innerHTML = `
-                <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Tournament:</span> <b style="color:white;">${fs.tournament || '-'}</b></div>
+                <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Tournament:</span> <b style="color:white;">${tourney}</b></div>
                 <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Format:</span> <b style="color:white;">${fs.format || '-'}</b></div>
                 <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Match ID:</span> <b style="color:#38bdf8;">${m.match_id}</b></div>
                 <div style="margin-bottom: 12px;"><span style="color:#94a3b8;">Status:</span> <b style="color:white; text-transform:uppercase;">${fs.match_status}</b></div>
