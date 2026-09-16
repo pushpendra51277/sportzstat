@@ -122,7 +122,7 @@
     </div>
 
     <script>
-        const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
+       const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
         const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -137,9 +137,12 @@
             Chart.defaults.color = '#94a3b8';
             Chart.defaults.borderColor = '#334155';
             await fetchMatches();
+            
+            // 🔥 NEW: Silently pull live data every 15 seconds to keep stats updated!
+            setInterval(fetchMatches, 15000); 
         };
 
-        // 1. FETCH DATA
+        // 1. FETCH DATA (NOW INCLUDES LIVE MATCHES)
         async function fetchMatches() {
             const { data, error } = await db.from('matches').select('created_at, full_state, tournaments(name)');
             if (error) { console.error("Cloud Error", error); return; }
@@ -150,7 +153,9 @@
             data.forEach(m => {
                 try {
                     let fs = m.full_state;
-                    if (fs && fs.match_status === 'completed' && fs.inningsSummaries) {
+                    
+                    // 🔥 FIX: Now processes BOTH 'completed' and 'live' matches
+                    if (fs && (fs.match_status === 'completed' || fs.match_status === 'live')) {
                         let tName = (m.tournaments && m.tournaments.name) ? m.tournaments.name : (fs.tournament || 'Independent Match');
                         let year = new Date(m.created_at).getFullYear().toString();
                         let format = fs.format || 'T20';
@@ -159,20 +164,41 @@
                         filterSets.years.add(year);
                         filterSets.formats.add(format);
 
+                        // Safely copy all completed innings so far
+                        let allInnings = fs.inningsSummaries ? [...fs.inningsSummaries] : [];
+
+                        // 🔥 THE MAGIC: If the match is LIVE, instantly inject the ongoing inning into the math engine!
+                        if (fs.match_status === 'live' && fs.current && (fs.current.balls > 0 || fs.current.runs > 0)) {
+                            allInnings.push({
+                                batTeam: fs.teams?.[fs.battingKey]?.name || 'Team A',
+                                bowlTeam: fs.teams?.[fs.bowlingKey]?.name || 'Team B',
+                                batters: fs.teams?.[fs.battingKey]?.players || [],
+                                bowlers: fs.teams?.[fs.bowlingKey]?.players || []
+                            });
+                        }
+
                         rawMatches.push({
                             tourney: tName, format: format, year: year,
                             teams: fs.teams,
-                            innings: fs.inningsSummaries
+                            innings: allInnings
                         });
                     }
                 } catch(err) { console.warn("Skipped corrupted match."); }
             });
 
-            // Populate Dropdowns
-            let pop = (id, set) => { let el = document.getElementById(id); Array.from(set).sort().forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`); };
-            pop('filter-tourney', filterSets.tourneys);
-            pop('filter-format', filterSets.formats);
-            pop('filter-year', filterSets.years);
+            // 🔥 FIX: Safely update dropdowns without deleting the user's current selection
+            let updateDropdown = (id, set) => { 
+                let el = document.getElementById(id); 
+                let currentVal = el.value;
+                let defaultTxt = el.options[0].text; 
+                el.innerHTML = `<option value="ALL">${defaultTxt}</option>`;
+                Array.from(set).sort().forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`); 
+                if (Array.from(set).includes(currentVal)) el.value = currentVal;
+            };
+
+            updateDropdown('filter-tourney', filterSets.tourneys);
+            updateDropdown('filter-format', filterSets.formats);
+            updateDropdown('filter-year', filterSets.years);
 
             applyFilters();
         }
@@ -185,14 +211,13 @@
             let fYear = document.getElementById('filter-year').value;
 
             let playersObj = {};
-            let teamSet = new Set(); // Build team list dynamically
+            let teamSet = new Set(); 
 
             rawMatches.forEach(m => {
                 if (fTourn !== 'ALL' && m.tourney !== fTourn) return;
                 if (fForm !== 'ALL' && m.format !== fForm) return;
                 if (fYear !== 'ALL' && m.year !== fYear) return;
 
-                // Track matches played (Mat) by looking at the original Playing XI
                 if (m.teams && m.teams.A && m.teams.B) {
                     let processXI = (teamData) => {
                         teamSet.add(teamData.name);
@@ -207,7 +232,6 @@
                     processXI(m.teams.B);
                 }
 
-                // Process Innings data for Runs/Wickets
                 m.innings.forEach(inn => {
                     (inn.batters || []).forEach(b => {
                         if (b.hasBatted) {
@@ -216,7 +240,6 @@
                             p.inn++; p.runs += b.r; p.bf += b.b; p.fours += b.f; p.sixes += b.s;
                             if (b.out) { p.dismissals++; if(b.r === 0) p.ducks++; } else { p.no++; }
                             
-                            // Best Score Logic
                             let currentScore = b.r; let isNotOut = !b.out;
                             if (currentScore > p.bestRuns || (currentScore === p.bestRuns && isNotOut && !p.bestNotOut)) {
                                 p.bestRuns = currentScore; p.bestNotOut = isNotOut;
@@ -236,7 +259,6 @@
                             if (b.w >= 4) p.w4++;
                             if (b.w >= 5) p.w5++;
 
-                            // BBI Logic
                             if (b.w > p.bbiW || (b.w === p.bbiW && b.rc < p.bbiR)) {
                                 p.bbiW = b.w; p.bbiR = b.rc;
                             }
@@ -245,7 +267,7 @@
                 });
             });
 
-            // Update Team Dropdown dynamically based on filtered data
+            // Safely update Team dropdown
             let teamSelect = document.getElementById('filter-team');
             let currentTeamVal = teamSelect.value;
             teamSelect.innerHTML = `<option value="ALL">🛡️ All Teams</option>`;
@@ -254,7 +276,6 @@
 
             let fTeam = document.getElementById('filter-team').value;
 
-            // Final Calculation and Text Search Filter
             aggregatedData = Object.values(playersObj).filter(p => {
                 if (fTeam !== 'ALL' && p.team !== fTeam) return false;
                 if (sTerm && !p.name.toLowerCase().includes(sTerm)) return false;
@@ -329,17 +350,14 @@
             const barOptions = { ...chartOptions, plugins: { legend: {display: false} }, scales: { y: { beginAtZero: true, grid:{color:'#334155'} }, x:{ grid:{display:false} } } };
             const stackedBarOptions = { ...chartOptions, scales: { x: { stacked: true, grid:{display:false} }, y: { stacked: true, grid:{color:'#334155'} } } };
 
-            // Data Slicing
             let topBatters = [...aggregatedData].sort((a,b) => b.runs - a.runs).slice(0, 10);
             let topBowlers = [...aggregatedData].sort((a,b) => b.wkts - a.wkts).slice(0, 10);
 
-            // 1. Top Runs (Bar)
             createChart('chartRuns', 'bar', {
                 labels: topBatters.map(p => p.name),
                 datasets: [{ label: 'Runs', data: topBatters.map(p => p.runs), backgroundColor: '#f59e0b', borderRadius: 4 }]
             }, barOptions);
 
-            // 2. Boundaries Stacked (Bar)
             createChart('chartBoundaries', 'bar', {
                 labels: topBatters.map(p => p.name),
                 datasets: [
@@ -348,14 +366,12 @@
                 ]
             }, stackedBarOptions);
 
-            // 3. Top Wickets (Bar)
             createChart('chartWickets', 'bar', {
                 labels: topBowlers.map(p => p.name),
                 datasets: [{ label: 'Wickets', data: topBowlers.map(p => p.wkts), backgroundColor: '#10b981', borderRadius: 4 }]
             }, barOptions);
 
-            // Helper for Polar Areas (Group Top 5, Rest as 'Others')
-            let getPolarData = (sortKey, labelKey) => {
+            let getPolarData = (sortKey) => {
                 let sorted = [...aggregatedData].sort((a,b) => b[sortKey] - a[sortKey]);
                 let top5 = sorted.slice(0,5);
                 let othersSum = sorted.slice(5).reduce((sum, p) => sum + p[sortKey], 0);
@@ -367,24 +383,18 @@
             };
             const polarColors = ['#3b82f6', '#f59e0b', '#10b981', '#a855f7', '#ec4899', 'rgba(255,255,255,0.1)'];
 
-            // 4. Total Runs Weightage (Polar Area)
             let rW = getPolarData('runs');
             createChart('chartWeightRuns', 'polarArea', {
                 labels: rW.labels, datasets: [{ data: rW.data, backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }]
             }, chartOptions);
 
-            // 5. Boundaries Weightage (Polar Area)
-            let bW = getPolarData('fours'); // Approximation, or calculate total boundaries
-            let bData = rW.labels.map((_, i) => rW.data[i]); // Lazy reuse, calculating exact takes more mapping
             let trueBounds = [...aggregatedData].map(p => ({name: p.name, b: p.fours+p.sixes})).sort((a,b) => b.b - a.b);
             let tbTop = trueBounds.slice(0,5); let tbOth = trueBounds.slice(5).reduce((s,p)=>s+p.b,0);
-            
             createChart('chartWeightBounds', 'polarArea', {
                 labels: [...tbTop.map(p=>p.name), ...(tbOth>0?['Rest of Players']:[])],
                 datasets: [{ data: [...tbTop.map(p=>p.b), ...(tbOth>0?[tbOth]:[])], backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }]
             }, chartOptions);
 
-            // 6. Wickets Weightage (Polar Area)
             let wW = getPolarData('wkts');
             createChart('chartWeightWkts', 'polarArea', {
                 labels: wW.labels, datasets: [{ data: wW.data, backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }]
