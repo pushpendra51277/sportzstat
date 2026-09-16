@@ -224,7 +224,7 @@
         async function fetchMatchHubData() {
             const { data: matches, error } = await db
                 .from('matches')
-                .select('match_id, scorer_pin, full_state, tournaments(admin_id)');
+                .select('match_id, scorer_pin, full_state, tournaments(admin_id, name)');
                 
             if (error || !matches) return;
 
@@ -265,10 +265,11 @@
             carousel.innerHTML = matches.map(m => {
                 let p = m.full_state || {};
                 
-                // 🔥 AIRTIGHT FALLBACK: Blocks the literal string "undefined"
-                let t1 = (p.team1 && p.team1 !== 'undefined') ? p.team1 : (p.teams && p.teams.A && p.teams.A.name !== 'undefined' ? p.teams.A.name : 'Team A');
-                let t2 = (p.team2 && p.team2 !== 'undefined') ? p.team2 : (p.teams && p.teams.B && p.teams.B.name !== 'undefined' ? p.teams.B.name : 'Team B');
-                let tourney = (p.tournament && p.tournament !== 'undefined') ? p.tournament : 'Independent Match';
+                // 🔥 AIRTIGHT FALLBACK
+                let t1 = (p.team1 && String(p.team1) !== 'undefined') ? p.team1 : ((p.teams && p.teams.A && p.teams.A.name && String(p.teams.A.name) !== 'undefined') ? p.teams.A.name : 'Team A');
+                let t2 = (p.team2 && String(p.team2) !== 'undefined') ? p.team2 : ((p.teams && p.teams.B && p.teams.B.name && String(p.teams.B.name) !== 'undefined') ? p.teams.B.name : 'Team B');
+                let tourney = (m.tournaments && m.tournaments.name) ? m.tournaments.name : ((p.tournament && String(p.tournament) !== 'undefined') ? p.tournament : 'Independent Match');
+                
                 let adminId = m.tournaments ? m.tournaments.admin_id : 'none';
                 
                 return `
@@ -301,7 +302,7 @@
                 alert(`ADMIN ACTIONS FOR: ${matchId}\n\nStatus: ${tabCategory.toUpperCase()}\nScorer PIN: ${pin}\n\n(Edit/Delete functionality routing here in Phase 4)`);
             }
             else if (role === 'selector' && tabCategory === 'completed') {
-                alert(`Routing to deep analytics scorecard for match ${matchId}...`);
+                window.location.href = 'selector.html';
             } 
             else {
                 window.location.href = `fan.html`;
@@ -320,7 +321,7 @@
 
             const isSuperAdmin = currentUserProfile.role.toLowerCase() === 'superadmin';
             
-            let query = db.from('matches').select('match_id, scorer_pin, full_state, tournaments!inner(admin_id)');
+            let query = db.from('matches').select('match_id, scorer_pin, full_state, tournaments!inner(admin_id, name)');
             if (!isSuperAdmin) {
                 query = query.eq('tournaments.admin_id', currentUser.id);
             }
@@ -333,10 +334,10 @@
                 let mStatus = p.match_status || 'upcoming';
                 let sClass = mStatus === 'live' ? 'state-live' : (mStatus === 'completed' ? 'state-completed' : 'state-upcoming');
                 
-                // 🔥 AIRTIGHT FALLBACK for the Directory Table
-                let t1 = (p.team1 && p.team1 !== 'undefined') ? p.team1 : (p.teams && p.teams.A && p.teams.A.name !== 'undefined' ? p.teams.A.name : 'Team A');
-                let t2 = (p.team2 && p.team2 !== 'undefined') ? p.team2 : (p.teams && p.teams.B && p.teams.B.name !== 'undefined' ? p.teams.B.name : 'Team B');
-                let tourney = (p.tournament && p.tournament !== 'undefined') ? p.tournament : 'Independent Match';
+                // 🔥 AIRTIGHT FALLBACK
+                let t1 = (p.team1 && String(p.team1) !== 'undefined') ? p.team1 : ((p.teams && p.teams.A && p.teams.A.name && String(p.teams.A.name) !== 'undefined') ? p.teams.A.name : 'Team A');
+                let t2 = (p.team2 && String(p.team2) !== 'undefined') ? p.team2 : ((p.teams && p.teams.B && p.teams.B.name && String(p.teams.B.name) !== 'undefined') ? p.teams.B.name : 'Team B');
+                let tourney = (m.tournaments && m.tournaments.name) ? m.tournaments.name : ((p.tournament && String(p.tournament) !== 'undefined') ? p.tournament : 'Independent Match');
                 
                 return `<tr>
                     <td style="color: #cbd5e1; font-size:0.8rem;">${tourney}<br><b style="color:white; font-size:0.9rem;">${t1} vs ${t2}</b></td>
