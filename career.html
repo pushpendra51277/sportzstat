@@ -16,19 +16,16 @@
         .action-btn { background: #1e293b; border: 1px solid #38bdf8; color: #38bdf8; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: 0.2s; }
         .action-btn:hover { background: #38bdf8; color: #0f172a; }
 
-        /* Filtering Bar */
         .filter-bar { background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #334155; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; align-items: center; }
         .filter-select, .filter-input { background: #0f172a; color: white; border: 1px solid #475569; padding: 10px; border-radius: 6px; font-size: 0.9rem; flex: 1; min-width: 150px; outline: none; }
         .filter-select:focus, .filter-input:focus { border-color: #38bdf8; }
 
-        /* 🔥 NEW: Column Toggle Panel */
         .toggle-panel { background: #0f172a; border: 1px solid #38bdf8; border-radius: 8px; padding: 15px; margin-bottom: 25px; display: flex; flex-wrap: wrap; gap: 10px; animation: fadeIn 0.3s ease; }
         .toggle-lbl { background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; cursor: pointer; display: flex; align-items: center; gap: 6px; border: 1px solid #334155; user-select: none; transition: 0.2s; font-weight: bold; }
         .toggle-lbl:hover { background: rgba(255,255,255,0.1); border-color: #475569; }
         .toggle-lbl input { cursor: pointer; margin: 0; width: 14px; height: 14px; accent-color: #38bdf8; }
         .hidden { display: none !important; }
 
-        /* Data Table */
         .table-container { background: #1e293b; border-radius: 10px; border: 1px solid #334155; overflow-x: auto; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .table-header { padding: 15px 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; white-space: nowrap; }
@@ -39,13 +36,11 @@
         td:first-child { text-align: left; padding-left: 20px; font-weight: bold; color: white; }
         tr:hover td { background: rgba(56, 189, 248, 0.05); }
 
-        /* Table Column Grouping Colors */
         .bat-col { color: #f59e0b !important; font-weight: bold; }
         .bowl-col { color: #10b981 !important; font-weight: bold; }
         th.bat-hdr { color: #f59e0b; border-bottom-color: #f59e0b; }
         th.bowl-hdr { color: #10b981; border-bottom-color: #10b981; }
 
-        /* 🔥 NEW: Dynamic Column Hiding Rules */
         table.hide-mat .col-mat { display: none !important; }
         table.hide-inn .col-inn { display: none !important; }
         table.hide-runs .col-runs { display: none !important; }
@@ -69,7 +64,6 @@
         table.hide-w4 .col-w4 { display: none !important; }
         table.hide-w5 .col-w5 { display: none !important; }
 
-        /* Charts Grid */
         .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .chart-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .chart-title { text-align: center; font-size: 1.1rem; font-weight: bold; margin-top: 0; margin-bottom: 15px; color: #f8fafc; }
@@ -105,7 +99,7 @@
         <select id="filter-year" class="filter-select" onchange="applyFilters()"><option value="ALL">📅 All Years</option></select>
     </div>
 
-    <!-- 🔥 NEW: COLUMN TOGGLE PANEL -->
+    <!-- COLUMN TOGGLE PANEL -->
     <div id="col-toggles" class="toggle-panel hidden">
         <div style="width: 100%; color: #38bdf8; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">GENERAL</div>
         <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('mat', this.checked)"> Matches</label>
@@ -149,7 +143,6 @@
                     <th onclick="sortTable('team')">Team ↕</th>
                     <th class="col-mat" onclick="sortTable('mat')">Mat ↕</th>
                     
-                    <!-- BATTING -->
                     <th class="bat-hdr col-inn" onclick="sortTable('inn')">Inn ↕</th>
                     <th class="bat-hdr col-runs" onclick="sortTable('runs')">Runs ↕</th>
                     <th class="bat-hdr col-best" onclick="sortTable('best')">Best ↕</th>
@@ -163,7 +156,6 @@
                     <th class="bat-hdr col-no" onclick="sortTable('no')">NO ↕</th>
                     <th class="bat-hdr col-ducks" onclick="sortTable('ducks')">Ducks ↕</th>
                     
-                    <!-- BOWLING -->
                     <th class="bowl-hdr col-overs" onclick="sortTable('overs')">Overs ↕</th>
                     <th class="bowl-hdr col-mdn" onclick="sortTable('mdn')">Mdn ↕</th>
                     <th class="bowl-hdr col-rc" onclick="sortTable('rc')">RC ↕</th>
@@ -204,7 +196,6 @@
         
         let charts = {};
 
-        // 🔥 NEW: Toggle Function to apply classes to the table
         function toggleCol(colName, isChecked) {
             const table = document.getElementById('career-table');
             if (isChecked) {
@@ -218,12 +209,9 @@
             Chart.defaults.color = '#94a3b8';
             Chart.defaults.borderColor = '#334155';
             await fetchMatches();
-            
-            // Silently pull live data every 15 seconds
             setInterval(fetchMatches, 15000); 
         };
 
-        // 1. FETCH DATA (INCLUDES LIVE MATCHES)
         async function fetchMatches() {
             const { data, error } = await db.from('matches').select('created_at, full_state, tournaments(name)');
             if (error) { console.error("Cloud Error", error); return; }
@@ -238,23 +226,13 @@
                     if (fs && (fs.match_status === 'completed' || fs.match_status === 'live')) {
                         let tName = (m.tournaments && m.tournaments.name) ? m.tournaments.name : (fs.tournament || 'Independent Match');
                         let year = new Date(m.created_at).getFullYear().toString();
-                        // 🔥 SMART FORMAT DETECTOR
+                        
                         let format = fs.format;
                         if (!format || format === 'undefined' || format === '') {
-                            // Detect via internal engine settings
-                            if (fs.matchSettings && fs.matchSettings.matchType === 'multiday') {
-                                format = 'Multi-Day (Test)';
-                            } 
-                            // Auto-detect via mathematical impossibility (more than 2 innings)
-                            else if (fs.inningsSummaries && fs.inningsSummaries.length > 2) {
-                                format = 'Multi-Day (Test)';
-                            } 
-                            else if (fs.matchSettings && fs.matchSettings.matchType === 'oneday') {
-                                format = 'One Day (ODI)';
-                            } 
-                            else {
-                                format = 'T20';
-                            }
+                            if (fs.matchSettings && fs.matchSettings.matchType === 'multiday') { format = 'Multi-Day (Test)'; } 
+                            else if (fs.inningsSummaries && fs.inningsSummaries.length > 2) { format = 'Multi-Day (Test)'; } 
+                            else if (fs.matchSettings && fs.matchSettings.matchType === 'oneday') { format = 'One Day (ODI)'; } 
+                            else { format = 'T20'; }
                         }
 
                         filterSets.tourneys.add(tName);
@@ -297,7 +275,6 @@
             applyFilters();
         }
 
-        // 2. AGGREGATION & FILTERING
         function applyFilters() {
             let sTerm = document.getElementById('filter-search').value.toLowerCase();
             let fTourn = document.getElementById('filter-tourney').value;
@@ -339,11 +316,7 @@
                                 p.bestRuns = currentScore; p.bestNotOut = isNotOut;
                             }
                             
-                            if (currentScore >= 100) {
-                                p.hundreds++;
-                            } else if (currentScore >= 50) {
-                                p.fifties++;
-                            }
+                            if (currentScore >= 100) { p.hundreds++; } else if (currentScore >= 50) { p.fifties++; }
                         }
                     });
 
@@ -353,7 +326,15 @@
                             let p = playersObj[b.name];
                             p.rc += b.rc; p.wkts += b.w; p.mdn += b.m;
                             
-                            let absBalls = Math.floor(b.o)*6 + Math.round((b.o - Math.floor(b.o))*10);
+                            // 🔥 THE FIX: SMART BALL DETECTOR
+                            let absBalls = 0;
+                            if (b.o % 1 !== 0) {
+                                // Decimal detected (e.g. 2.1), calculate overs to balls
+                                absBalls = Math.floor(b.o) * 6 + Math.round((b.o - Math.floor(b.o)) * 10);
+                            } else {
+                                // Integer detected (e.g. 37), treating strictly as balls!
+                                absBalls = b.o;
+                            }
                             p.bowlBalls += absBalls;
 
                             if (b.w >= 4) p.w4++;
@@ -402,7 +383,6 @@
             };
         }
 
-        // 3. TABLE SORTING & RENDERING
         function sortTable(col) {
             if (currentSortCol === col) currentSortAsc = !currentSortAsc;
             else { currentSortCol = col; currentSortAsc = false; }
@@ -425,7 +405,6 @@
             let tbody = document.getElementById('career-tbody');
             if(aggregatedData.length === 0) { tbody.innerHTML = `<tr><td colspan="24" style="text-align:center; color:#ef4444;">No players match the selected filters.</td></tr>`; return; }
 
-            // 🔥 FIX: Each <td> now has the correct column class assigned so the CSS rules can hide them!
             tbody.innerHTML = aggregatedData.map(p => {
                 let bestStr = p.bestRuns > 0 ? `${p.bestRuns}${p.bestNotOut ? '*' : ''}` : '-';
                 let bbiStr = p.bbiW > 0 ? `${p.bbiW}-${p.bbiR}` : '-';
@@ -463,7 +442,6 @@
             }).join('');
         }
 
-        // 4. CHART GENERATOR
         function renderCharts() {
             const createChart = (id, type, data, options) => {
                 if (charts[id]) charts[id].destroy();
@@ -477,52 +455,28 @@
             let topBatters = [...aggregatedData].sort((a,b) => b.runs - a.runs).slice(0, 10);
             let topBowlers = [...aggregatedData].sort((a,b) => b.wkts - a.wkts).slice(0, 10);
 
-            createChart('chartRuns', 'bar', {
-                labels: topBatters.map(p => p.name),
-                datasets: [{ label: 'Runs', data: topBatters.map(p => p.runs), backgroundColor: '#f59e0b', borderRadius: 4 }]
-            }, barOptions);
-
-            createChart('chartBoundaries', 'bar', {
-                labels: topBatters.map(p => p.name),
-                datasets: [
-                    { label: 'Sixes (6s)', data: topBatters.map(p => p.sixes), backgroundColor: '#ec4899' },
-                    { label: 'Fours (4s)', data: topBatters.map(p => p.fours), backgroundColor: '#a855f7' }
-                ]
-            }, stackedBarOptions);
-
-            createChart('chartWickets', 'bar', {
-                labels: topBowlers.map(p => p.name),
-                datasets: [{ label: 'Wickets', data: topBowlers.map(p => p.wkts), backgroundColor: '#10b981', borderRadius: 4 }]
-            }, barOptions);
+            createChart('chartRuns', 'bar', { labels: topBatters.map(p => p.name), datasets: [{ label: 'Runs', data: topBatters.map(p => p.runs), backgroundColor: '#f59e0b', borderRadius: 4 }] }, barOptions);
+            createChart('chartBoundaries', 'bar', { labels: topBatters.map(p => p.name), datasets: [{ label: 'Sixes (6s)', data: topBatters.map(p => p.sixes), backgroundColor: '#ec4899' }, { label: 'Fours (4s)', data: topBatters.map(p => p.fours), backgroundColor: '#a855f7' }] }, stackedBarOptions);
+            createChart('chartWickets', 'bar', { labels: topBowlers.map(p => p.name), datasets: [{ label: 'Wickets', data: topBowlers.map(p => p.wkts), backgroundColor: '#10b981', borderRadius: 4 }] }, barOptions);
 
             let getPolarData = (sortKey) => {
                 let sorted = [...aggregatedData].sort((a,b) => b[sortKey] - a[sortKey]);
-                let top5 = sorted.slice(0,5);
-                let othersSum = sorted.slice(5).reduce((sum, p) => sum + p[sortKey], 0);
-                
-                let labels = top5.map(p => p.name);
-                let data = top5.map(p => p[sortKey]);
+                let top5 = sorted.slice(0,5); let othersSum = sorted.slice(5).reduce((sum, p) => sum + p[sortKey], 0);
+                let labels = top5.map(p => p.name); let data = top5.map(p => p[sortKey]);
                 if (othersSum > 0) { labels.push('Rest of Players'); data.push(othersSum); }
                 return { labels, data };
             };
             const polarColors = ['#3b82f6', '#f59e0b', '#10b981', '#a855f7', '#ec4899', 'rgba(255,255,255,0.1)'];
 
             let rW = getPolarData('runs');
-            createChart('chartWeightRuns', 'polarArea', {
-                labels: rW.labels, datasets: [{ data: rW.data, backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }]
-            }, chartOptions);
+            createChart('chartWeightRuns', 'polarArea', { labels: rW.labels, datasets: [{ data: rW.data, backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, chartOptions);
 
             let trueBounds = [...aggregatedData].map(p => ({name: p.name, b: p.fours+p.sixes})).sort((a,b) => b.b - a.b);
             let tbTop = trueBounds.slice(0,5); let tbOth = trueBounds.slice(5).reduce((s,p)=>s+p.b,0);
-            createChart('chartWeightBounds', 'polarArea', {
-                labels: [...tbTop.map(p=>p.name), ...(tbOth>0?['Rest of Players']:[])],
-                datasets: [{ data: [...tbTop.map(p=>p.b), ...(tbOth>0?[tbOth]:[])], backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }]
-            }, chartOptions);
+            createChart('chartWeightBounds', 'polarArea', { labels: [...tbTop.map(p=>p.name), ...(tbOth>0?['Rest of Players']:[])], datasets: [{ data: [...tbTop.map(p=>p.b), ...(tbOth>0?[tbOth]:[])], backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, chartOptions);
 
             let wW = getPolarData('wkts');
-            createChart('chartWeightWkts', 'polarArea', {
-                labels: wW.labels, datasets: [{ data: wW.data, backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }]
-            }, chartOptions);
+            createChart('chartWeightWkts', 'polarArea', { labels: wW.labels, datasets: [{ data: wW.data, backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, chartOptions);
         }
     </script>
 </body>
