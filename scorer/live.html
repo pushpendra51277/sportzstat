@@ -16,16 +16,31 @@
         
         .setup-box { background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #3b82f6; max-width: 1000px; margin: 20px auto; text-align: left; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .squad-list { background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; max-height: 500px; overflow-y: auto; }
-        .player-row { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #334155; }
         
-        .role-select { background: #020617; color: white; border: 1px solid #475569; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer; }
-        .role-select.xi { border-color: #10b981; color: #10b981; }
-        .role-select.sub { border-color: #f59e0b; color: #f59e0b; }
+        /* 🔥 NEW: Match Officials Grid */
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        @media(max-width: 768px) { .grid-4 { grid-template-columns: 1fr 1fr; } }
+        .input-group label { display: block; font-size: 0.75rem; color: #38bdf8; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
+        .combo-input { width: 100%; padding: 10px; background: #020617; border: 1px solid #475569; color: white; border-radius: 6px; font-size: 0.9rem; }
+        .combo-input:focus { border-color: #38bdf8; outline: none; }
+
+        /* 🔥 NEW: Tap-and-Fly UI */
+        .pane-container { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+        .pane { flex: 1; min-width: 200px; background: #020617; border: 1px solid #334155; border-radius: 8px; padding: 10px; min-height: 350px; display: flex; flex-direction: column; gap: 5px; }
+        .pane-header { font-size: 0.75rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid #1e293b; padding-bottom: 5px; letter-spacing: 1px; display: flex; justify-content: space-between; }
         
-        .counter-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 5px; }
-        .bg-xi { background: #064e3b; color: #34d399; border: 1px solid #10b981; }
-        .bg-sub { background: #78350f; color: #fbbf24; border: 1px solid #f59e0b; }
+        .tf-player { background: #1e293b; border: 1px solid #334155; padding: 10px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.15s ease; font-size: 0.85rem; font-weight: bold; user-select: none; }
+        .tf-player:hover { border-color: #10b981; transform: scale(1.02); background: rgba(16, 185, 129, 0.1); }
+        .tf-bench { border-color: #475569; color: #cbd5e1; }
+        .tf-xi { border-left: 4px solid #10b981; color: white; }
+        .tf-sub { border-left: 4px solid #f59e0b; color: #cbd5e1; }
+        
+        .role-badges { display: flex; gap: 5px; }
+        .r-badge { font-size: 0.65rem; padding: 3px 6px; border-radius: 4px; border: 1px solid #475569; color: #64748b; font-weight: 900; cursor: pointer; transition: 0.2s;}
+        .r-badge:hover { color: white; border-color: white; }
+        .r-badge.active.c { background: #f59e0b; color: black; border-color: #f59e0b; }
+        .r-badge.active.vc { background: #8b5cf6; color: white; border-color: #8b5cf6; }
+        .r-badge.active.wk { background: #38bdf8; color: black; border-color: #38bdf8; }
     </style>
 </head>
 <body>
@@ -48,42 +63,77 @@
         <div id="login-error" style="color: #ef4444; margin-top: 15px; font-weight: bold;"></div>
     </div>
 
+    <!-- DATALISTS FOR MEMORY COMBOBOXES -->
+    <datalist id="db-venues"></datalist>
+    <datalist id="db-officials"></datalist>
+
     <!-- TOSS & XI SCREEN -->
     <div id="toss-screen" class="setup-box hidden">
-        <h3 style="border-bottom: 1px solid #334155; padding-bottom: 10px; margin-top:0; color:#38bdf8;">Toss & Playing XI Selection</h3>
+        <h3 style="border-bottom: 1px solid #334155; padding-bottom: 10px; margin-top:0; color:#38bdf8;">Pre-Match Setup & Squads</h3>
         
+        <!-- 🔥 NEW: OFFICIALS & VENUE COMBOBOXES -->
+        <div style="background:rgba(56, 189, 248, 0.05); border:1px solid #38bdf8; padding:15px; border-radius:8px; margin-bottom:20px;">
+            <h4 style="color:#38bdf8; margin-top:0; border-bottom:1px solid #334155; padding-bottom:5px;">📍 Match Officials & Venue <span style="font-size:0.7rem; color:#94a3b8; font-weight:normal; text-transform:none;">(Select from list or type to auto-save)</span></h4>
+            <div class="grid-4">
+                <div class="input-group"><label>Ground / Venue</label><input type="text" id="match-venue" list="db-venues" class="combo-input" placeholder="Select or Type..."></div>
+                <div class="input-group"><label>Match Referee</label><input type="text" id="match-referee" list="db-officials" class="combo-input" placeholder="Select or Type..."></div>
+                <div class="input-group"><label>Scorer 1</label><input type="text" id="scorer-1" list="db-officials" class="combo-input" placeholder="Select or Type..."></div>
+                <div class="input-group"><label>Scorer 2</label><input type="text" id="scorer-2" list="db-officials" class="combo-input" placeholder="Select or Type..."></div>
+                <div class="input-group"><label>Umpire 1 (On-Field)</label><input type="text" id="umpire-1" list="db-officials" class="combo-input" placeholder="Select or Type..."></div>
+                <div class="input-group"><label>Umpire 2 (On-Field)</label><input type="text" id="umpire-2" list="db-officials" class="combo-input" placeholder="Select or Type..."></div>
+                <div class="input-group"><label>Umpire 3 (TV)</label><input type="text" id="umpire-3" list="db-officials" class="combo-input" placeholder="Select or Type..."></div>
+                <div class="input-group"><label>Umpire 4 (Reserve)</label><input type="text" id="umpire-4" list="db-officials" class="combo-input" placeholder="Select or Type..."></div>
+            </div>
+        </div>
+
         <div style="background:rgba(245, 158, 11, 0.1); border:1px solid #f59e0b; padding:15px; border-radius:8px; margin-bottom:20px;">
             <label style="color:#f59e0b; font-weight:bold; display:block; margin-bottom:10px;">Who won the toss and what did they choose?</label>
             <div style="display:flex; gap:10px;">
-                <select id="tossWinner" class="input-dark" style="margin-bottom:0;"></select>
-                <select id="tossDecision" class="input-dark" style="margin-bottom:0;">
+                <select id="tossWinner" class="input-dark" style="margin-bottom:0; flex:1;"></select>
+                <select id="tossDecision" class="input-dark" style="margin-bottom:0; flex:1;">
                     <option value="bat">Bat First</option>
                     <option value="bowl">Bowl First</option>
                 </select>
             </div>
         </div>
-
-        <p style="color: #94a3b8; font-size: 0.9rem;">Assign players to the Playing XI (can bat/bowl) or Substitutes (fielding only).</p>
         
         <div class="grid-2">
-            <div>
-                <h4 id="team-a-name" style="color: #38bdf8; text-align: center; margin-bottom: 10px;">Team A</h4>
-                <div style="text-align: center; margin-bottom: 15px;">
-                    <span id="count-xi-team-a" class="counter-badge bg-xi">XI: 0/11</span>
-                    <span id="count-sub-team-a" class="counter-badge bg-sub">Subs: 0/4</span>
+            <!-- TEAM A SQUADS -->
+            <div style="background:#0f172a; border: 1px solid #334155; border-radius:8px; padding:15px;">
+                <h4 id="team-a-name" style="color: #10b981; text-align: center; margin-top:0; border-bottom:1px solid #1e293b; padding-bottom:10px;">Team A</h4>
+                <div class="pane-container">
+                    <div class="pane">
+                        <div class="pane-header">Bench <span style="color:#64748b;">(Tap ➡)</span></div>
+                        <div id="bench-A"></div>
+                    </div>
+                    <div class="pane" style="background:#1e293b;">
+                        <div class="pane-header"><span style="color:#10b981;">Playing XI</span> <span id="count-A-xi">0/11</span></div>
+                        <div id="xi-A" style="min-height:80px; border-bottom:1px dashed #475569; margin-bottom:10px; padding-bottom:10px;"></div>
+                        <div class="pane-header"><span style="color:#f59e0b;">Substitutes</span> <span id="count-A-subs">0/4</span></div>
+                        <div id="subs-A"></div>
+                    </div>
                 </div>
-                <div id="team-a-squad" class="squad-list">Loading...</div>
             </div>
-            <div>
-                <h4 id="team-b-name" style="color: #38bdf8; text-align: center; margin-bottom: 10px;">Team B</h4>
-                <div style="text-align: center; margin-bottom: 15px;">
-                    <span id="count-xi-team-b" class="counter-badge bg-xi">XI: 0/11</span>
-                    <span id="count-sub-team-b" class="counter-badge bg-sub">Subs: 0/4</span>
+            
+            <!-- TEAM B SQUADS -->
+            <div style="background:#0f172a; border: 1px solid #334155; border-radius:8px; padding:15px;">
+                <h4 id="team-b-name" style="color: #10b981; text-align: center; margin-top:0; border-bottom:1px solid #1e293b; padding-bottom:10px;">Team B</h4>
+                <div class="pane-container">
+                    <div class="pane">
+                        <div class="pane-header">Bench <span style="color:#64748b;">(Tap ➡)</span></div>
+                        <div id="bench-B"></div>
+                    </div>
+                    <div class="pane" style="background:#1e293b;">
+                        <div class="pane-header"><span style="color:#10b981;">Playing XI</span> <span id="count-B-xi">0/11</span></div>
+                        <div id="xi-B" style="min-height:80px; border-bottom:1px dashed #475569; margin-bottom:10px; padding-bottom:10px;"></div>
+                        <div class="pane-header"><span style="color:#f59e0b;">Substitutes</span> <span id="count-B-subs">0/4</span></div>
+                        <div id="subs-B"></div>
+                    </div>
                 </div>
-                <div id="team-b-squad" class="squad-list">Loading...</div>
             </div>
         </div>
-        <button type="button" class="btn-green" style="margin-top: 25px;" onclick="lockPlayingXI()">Lock Squads & Initialize Engine</button>
+
+        <button type="button" class="btn-green" style="margin-top: 25px;" onclick="lockPlayingXI()">Lock Match Setup & Initialize Engine</button>
     </div>
 
     <!-- INITIALIZATION SCREEN -->
@@ -108,7 +158,7 @@
         <button type="button" class="btn-green" style="margin-top: 25px;" onclick="startInnings()">▶ START INNINGS & LAUNCH SCOREBOARD</button>
     </div>
 
-    <!-- FULL LIVE SCOREBOARD -->
+    <!-- FULL LIVE SCOREBOARD (Unchanged) -->
     <div class="container">
         <div id="scoringView" class="scoring-screen hidden">
             <aside>
