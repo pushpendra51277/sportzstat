@@ -17,14 +17,13 @@
         .setup-box { background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #3b82f6; max-width: 1000px; margin: 20px auto; text-align: left; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         
-        /* 🔥 NEW: Match Officials Grid */
+        /* 🔥 Match Officials & Tap-and-Fly UI */
         .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
         @media(max-width: 768px) { .grid-4 { grid-template-columns: 1fr 1fr; } }
         .input-group label { display: block; font-size: 0.75rem; color: #38bdf8; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
         .combo-input { width: 100%; padding: 10px; background: #020617; border: 1px solid #475569; color: white; border-radius: 6px; font-size: 0.9rem; }
         .combo-input:focus { border-color: #38bdf8; outline: none; }
 
-        /* 🔥 NEW: Tap-and-Fly UI */
         .pane-container { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
         .pane { flex: 1; min-width: 200px; background: #020617; border: 1px solid #334155; border-radius: 8px; padding: 10px; min-height: 350px; display: flex; flex-direction: column; gap: 5px; }
         .pane-header { font-size: 0.75rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid #1e293b; padding-bottom: 5px; letter-spacing: 1px; display: flex; justify-content: space-between; }
@@ -52,13 +51,10 @@
     <div id="login-screen" class="auth-box">
         <h3 style="margin-top: 0; color: #38bdf8;">Match Authentication</h3>
         <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 25px;">Enter the Match ID and PIN provided by the Tournament Admin.</p>
-        
         <label style="display: block; text-align: left; color: #cbd5e1; font-size: 0.85rem; margin-bottom: 5px; font-weight:bold;">Match ID</label>
         <input type="text" id="login-match-id" class="input-dark" placeholder="e.g. M-A1B2C" style="text-transform: uppercase;">
-        
         <label style="display: block; text-align: left; color: #cbd5e1; font-size: 0.85rem; margin-bottom: 5px; font-weight:bold;">Scorer PIN</label>
         <input type="password" id="login-pin" class="input-dark" placeholder="****">
-        
         <button type="button" class="btn-green" onclick="authenticateMatch()">Unlock Match</button>
         <div id="login-error" style="color: #ef4444; margin-top: 15px; font-weight: bold;"></div>
     </div>
@@ -71,7 +67,6 @@
     <div id="toss-screen" class="setup-box hidden">
         <h3 style="border-bottom: 1px solid #334155; padding-bottom: 10px; margin-top:0; color:#38bdf8;">Pre-Match Setup & Squads</h3>
         
-        <!-- 🔥 NEW: OFFICIALS & VENUE COMBOBOXES -->
         <div style="background:rgba(56, 189, 248, 0.05); border:1px solid #38bdf8; padding:15px; border-radius:8px; margin-bottom:20px;">
             <h4 style="color:#38bdf8; margin-top:0; border-bottom:1px solid #334155; padding-bottom:5px;">📍 Match Officials & Venue <span style="font-size:0.7rem; color:#94a3b8; font-weight:normal; text-transform:none;">(Select from list or type to auto-save)</span></h4>
             <div class="grid-4">
@@ -98,7 +93,6 @@
         </div>
         
         <div class="grid-2">
-            <!-- TEAM A SQUADS -->
             <div style="background:#0f172a; border: 1px solid #334155; border-radius:8px; padding:15px;">
                 <h4 id="team-a-name" style="color: #10b981; text-align: center; margin-top:0; border-bottom:1px solid #1e293b; padding-bottom:10px;">Team A</h4>
                 <div class="pane-container">
@@ -115,7 +109,6 @@
                 </div>
             </div>
             
-            <!-- TEAM B SQUADS -->
             <div style="background:#0f172a; border: 1px solid #334155; border-radius:8px; padding:15px;">
                 <h4 id="team-b-name" style="color: #10b981; text-align: center; margin-top:0; border-bottom:1px solid #1e293b; padding-bottom:10px;">Team B</h4>
                 <div class="pane-container">
@@ -140,7 +133,6 @@
     <div id="initialization-screen" class="setup-box hidden">
         <h3 style="color:#38bdf8; margin-top:0;">Openers & First Bowler</h3>
         <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:20px;">Substitutes have been successfully filtered out. Select your starting players to launch the scoreboard.</p>
-        
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
             <div style="background:#020617; padding:15px; border-radius:8px; border:1px solid #10b981;">
                 <h4 id="init-bat-title" style="color:#10b981; margin-top:0; text-align:center;">Batting Openers</h4>
@@ -158,7 +150,7 @@
         <button type="button" class="btn-green" style="margin-top: 25px;" onclick="startInnings()">▶ START INNINGS & LAUNCH SCOREBOARD</button>
     </div>
 
-    <!-- FULL LIVE SCOREBOARD (Unchanged) -->
+    <!-- FULL LIVE SCOREBOARD -->
     <div class="container">
         <div id="scoringView" class="scoring-screen hidden">
             <aside>
