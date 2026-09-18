@@ -46,7 +46,6 @@
 
         .empty-msg { color: #64748b; font-style: italic; font-size: 0.95rem; background: #0f172a; padding: 20px; border-radius: 8px; border: 1px dashed #334155; text-align: center;}
         
-        /* 🔥 NEW: Scorecard Details Expansion */
         .match-details { display: none; margin-top: 15px; border-top: 1px solid #334155; padding-top: 15px; animation: fadeIn 0.3s ease; cursor: default; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
         .details-table { width: 100%; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 20px; border-collapse: collapse; }
@@ -88,19 +87,22 @@
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let allFanMatches = [];
+        let expandedMatches = new Set(); // 🔥 NEW: Memory tracker for opened cards
 
         window.onload = async () => {
             await fetchMatches();
             setInterval(fetchMatches, 10000); 
         };
 
-        // Toggle Details Function
+        // Toggle Details Function (Now with memory)
         function toggleDetails(matchId, event) {
             const detailsDiv = document.getElementById('details-' + matchId);
             if (detailsDiv.style.display === 'none' || detailsDiv.style.display === '') {
                 detailsDiv.style.display = 'block';
+                expandedMatches.add(matchId); // Remember this is open
             } else {
                 detailsDiv.style.display = 'none';
+                expandedMatches.delete(matchId); // Remember this is closed
             }
         }
 
@@ -186,8 +188,9 @@
                     scoreText = `<div class="score-line" style="${scoreColor}">${batTeam}: ${runs}/${wkts} <span class="overs">(${overs} ov)</span></div>`;
                 }
 
-                // 🔥 Build the Expanded Innings Summaries
-                let detailsHtml = `<div class="match-details" id="details-${m.match_id}" onclick="event.stopPropagation()">`;
+                // 🔥 Check Memory: If it was open, force it to stay open!
+                let isExpanded = expandedMatches.has(m.match_id) ? 'style="display: block;"' : '';
+                let detailsHtml = `<div class="match-details" id="details-${m.match_id}" ${isExpanded} onclick="event.stopPropagation()">`;
                 
                 if (fs.inningsSummaries && fs.inningsSummaries.length > 0) {
                     fs.inningsSummaries.forEach((inn, idx) => {
@@ -214,7 +217,6 @@
                             let oversStr = "";
                             let absBalls = 0;
                             
-                            // Smart Ball Detector for old vs new data
                             if (oVal % 1 !== 0) {
                                 oversStr = Math.floor(oVal) + "." + Math.round((oVal - Math.floor(oVal)) * 10);
                                 absBalls = Math.floor(oVal) * 6 + Math.round((oVal - Math.floor(oVal)) * 10);
@@ -237,7 +239,6 @@
                 }
                 detailsHtml += `</div>`;
 
-                // 🔥 Update Card HTML to toggle details instead of alerting
                 let createCard = (num, badgeClass, badgeText) => `
                     <div class="match-card" onclick="toggleDetails('${m.match_id}', event)">
                         <div class="card-header">
