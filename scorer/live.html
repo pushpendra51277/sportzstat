@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sportzstat - Live Scorer</title>
     <link rel="stylesheet" href="../style.css">
+    <!-- Required SDKs -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body { background-color: #020617; color: white; font-family: sans-serif; padding: 20px; text-align: center; }
         .auth-box { background: #0f172a; padding: 30px; border-radius: 12px; border: 1px solid #334155; max-width: 400px; margin: 50px auto; }
@@ -17,25 +19,26 @@
         .setup-box { background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #3b82f6; max-width: 1000px; margin: 20px auto; text-align: left; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         
-        /* 🔥 Match Officials & Tap-and-Fly UI */
-        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
-        @media(max-width: 768px) { .grid-4 { grid-template-columns: 1fr 1fr; } }
-        .input-group label { display: block; font-size: 0.75rem; color: #38bdf8; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
-        .combo-input { width: 100%; padding: 10px; background: #020617; border: 1px solid #475569; color: white; border-radius: 6px; font-size: 0.9rem; }
+        /* Match Officials Grid */
+        .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+        @media(max-width: 900px) { .grid-5 { grid-template-columns: 1fr 1fr; } }
+        .input-group label { display: block; font-size: 0.7rem; color: #38bdf8; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }
+        .combo-input { width: 100%; padding: 8px; background: #020617; border: 1px solid #475569; color: white; border-radius: 6px; font-size: 0.85rem; }
         .combo-input:focus { border-color: #38bdf8; outline: none; }
 
+        /* Tap-and-Fly UI */
         .pane-container { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
         .pane { flex: 1; min-width: 200px; background: #020617; border: 1px solid #334155; border-radius: 8px; padding: 10px; min-height: 350px; display: flex; flex-direction: column; gap: 5px; }
         .pane-header { font-size: 0.75rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid #1e293b; padding-bottom: 5px; letter-spacing: 1px; display: flex; justify-content: space-between; }
         
-        .tf-player { background: #1e293b; border: 1px solid #334155; padding: 10px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.15s ease; font-size: 0.85rem; font-weight: bold; user-select: none; }
+        .tf-player { background: #1e293b; border: 1px solid #334155; padding: 8px 10px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.15s ease; font-size: 0.85rem; font-weight: bold; user-select: none; }
         .tf-player:hover { border-color: #10b981; transform: scale(1.02); background: rgba(16, 185, 129, 0.1); }
         .tf-bench { border-color: #475569; color: #cbd5e1; }
         .tf-xi { border-left: 4px solid #10b981; color: white; }
         .tf-sub { border-left: 4px solid #f59e0b; color: #cbd5e1; }
         
-        .role-badges { display: flex; gap: 5px; }
-        .r-badge { font-size: 0.65rem; padding: 3px 6px; border-radius: 4px; border: 1px solid #475569; color: #64748b; font-weight: 900; cursor: pointer; transition: 0.2s;}
+        .role-badges { display: flex; gap: 4px; }
+        .r-badge { font-size: 0.6rem; padding: 3px 6px; border-radius: 4px; border: 1px solid #475569; color: #64748b; font-weight: 900; cursor: pointer; transition: 0.2s;}
         .r-badge:hover { color: white; border-color: white; }
         .r-badge.active.c { background: #f59e0b; color: black; border-color: #f59e0b; }
         .r-badge.active.vc { background: #8b5cf6; color: white; border-color: #8b5cf6; }
@@ -67,17 +70,20 @@
     <div id="toss-screen" class="setup-box hidden">
         <h3 style="border-bottom: 1px solid #334155; padding-bottom: 10px; margin-top:0; color:#38bdf8;">Pre-Match Setup & Squads</h3>
         
+        <!-- OFFICIALS & VENUE COMBOBOXES -->
         <div style="background:rgba(56, 189, 248, 0.05); border:1px solid #38bdf8; padding:15px; border-radius:8px; margin-bottom:20px;">
             <h4 style="color:#38bdf8; margin-top:0; border-bottom:1px solid #334155; padding-bottom:5px;">📍 Match Officials & Venue <span style="font-size:0.7rem; color:#94a3b8; font-weight:normal; text-transform:none;">(Select from list or type to auto-save)</span></h4>
-            <div class="grid-4">
-                <div class="input-group"><label>Ground / Venue</label><input type="text" id="match-venue" list="db-venues" class="combo-input" placeholder="Select or Type..."></div>
-                <div class="input-group"><label>Match Referee</label><input type="text" id="match-referee" list="db-officials" class="combo-input" placeholder="Select or Type..."></div>
-                <div class="input-group"><label>Scorer 1</label><input type="text" id="scorer-1" list="db-officials" class="combo-input" placeholder="Select or Type..."></div>
-                <div class="input-group"><label>Scorer 2</label><input type="text" id="scorer-2" list="db-officials" class="combo-input" placeholder="Select or Type..."></div>
-                <div class="input-group"><label>Umpire 1 (On-Field)</label><input type="text" id="umpire-1" list="db-officials" class="combo-input" placeholder="Select or Type..."></div>
-                <div class="input-group"><label>Umpire 2 (On-Field)</label><input type="text" id="umpire-2" list="db-officials" class="combo-input" placeholder="Select or Type..."></div>
-                <div class="input-group"><label>Umpire 3 (TV)</label><input type="text" id="umpire-3" list="db-officials" class="combo-input" placeholder="Select or Type..."></div>
-                <div class="input-group"><label>Umpire 4 (Reserve)</label><input type="text" id="umpire-4" list="db-officials" class="combo-input" placeholder="Select or Type..."></div>
+            <div class="grid-5">
+                <div class="input-group"><label>Ground / Venue</label><input type="text" id="match-venue" list="db-venues" class="combo-input" placeholder="Type or select..."></div>
+                <div class="input-group"><label>Match Referee</label><input type="text" id="match-referee" list="db-officials" class="combo-input" placeholder="Type or select..."></div>
+                <div class="input-group"><label>Coach</label><input type="text" id="match-coach" list="db-officials" class="combo-input" placeholder="Type or select..."></div>
+                <div class="input-group"><label>Manager</label><input type="text" id="match-manager" list="db-officials" class="combo-input" placeholder="Type or select..."></div>
+                <div class="input-group"><label>Scorer 1</label><input type="text" id="scorer-1" list="db-officials" class="combo-input" placeholder="Type or select..."></div>
+                <div class="input-group"><label>Scorer 2</label><input type="text" id="scorer-2" list="db-officials" class="combo-input" placeholder="Type or select..."></div>
+                <div class="input-group"><label>Umpire 1 (On-Field)</label><input type="text" id="umpire-1" list="db-officials" class="combo-input" placeholder="Type or select..."></div>
+                <div class="input-group"><label>Umpire 2 (On-Field)</label><input type="text" id="umpire-2" list="db-officials" class="combo-input" placeholder="Type or select..."></div>
+                <div class="input-group"><label>Umpire 3 (TV)</label><input type="text" id="umpire-3" list="db-officials" class="combo-input" placeholder="Type or select..."></div>
+                <div class="input-group"><label>Umpire 4 (Reserve)</label><input type="text" id="umpire-4" list="db-officials" class="combo-input" placeholder="Type or select..."></div>
             </div>
         </div>
 
@@ -93,6 +99,7 @@
         </div>
         
         <div class="grid-2">
+            <!-- TEAM A SQUADS -->
             <div style="background:#0f172a; border: 1px solid #334155; border-radius:8px; padding:15px;">
                 <h4 id="team-a-name" style="color: #10b981; text-align: center; margin-top:0; border-bottom:1px solid #1e293b; padding-bottom:10px;">Team A</h4>
                 <div class="pane-container">
@@ -109,6 +116,7 @@
                 </div>
             </div>
             
+            <!-- TEAM B SQUADS -->
             <div style="background:#0f172a; border: 1px solid #334155; border-radius:8px; padding:15px;">
                 <h4 id="team-b-name" style="color: #10b981; text-align: center; margin-top:0; border-bottom:1px solid #1e293b; padding-bottom:10px;">Team B</h4>
                 <div class="pane-container">
@@ -150,7 +158,7 @@
         <button type="button" class="btn-green" style="margin-top: 25px;" onclick="startInnings()">▶ START INNINGS & LAUNCH SCOREBOARD</button>
     </div>
 
-    <!-- FULL LIVE SCOREBOARD -->
+    <!-- FULL LIVE SCOREBOARD (Unchanged layout) -->
     <div class="container">
         <div id="scoringView" class="scoring-screen hidden">
             <aside>
