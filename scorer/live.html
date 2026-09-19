@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sportzstat - Live Scorer</title>
     <link rel="stylesheet" href="../style.css">
-    <!-- Required SDKs -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -19,14 +18,14 @@
         .setup-box { background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #3b82f6; max-width: 1000px; margin: 20px auto; text-align: left; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         
-        /* Match Officials Grid */
+        /* 🔥 Match Officials Grid */
         .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
         @media(max-width: 900px) { .grid-5 { grid-template-columns: 1fr 1fr; } }
         .input-group label { display: block; font-size: 0.7rem; color: #38bdf8; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }
         .combo-input { width: 100%; padding: 8px; background: #020617; border: 1px solid #475569; color: white; border-radius: 6px; font-size: 0.85rem; }
         .combo-input:focus { border-color: #38bdf8; outline: none; }
 
-        /* Tap-and-Fly UI */
+        /* 🔥 Tap-and-Fly UI */
         .pane-container { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
         .pane { flex: 1; min-width: 200px; background: #020617; border: 1px solid #334155; border-radius: 8px; padding: 10px; min-height: 350px; display: flex; flex-direction: column; gap: 5px; }
         .pane-header { font-size: 0.75rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid #1e293b; padding-bottom: 5px; letter-spacing: 1px; display: flex; justify-content: space-between; }
@@ -158,7 +157,7 @@
         <button type="button" class="btn-green" style="margin-top: 25px;" onclick="startInnings()">▶ START INNINGS & LAUNCH SCOREBOARD</button>
     </div>
 
-    <!-- FULL LIVE SCOREBOARD (Unchanged layout) -->
+    <!-- FULL LIVE SCOREBOARD -->
     <div class="container">
         <div id="scoringView" class="scoring-screen hidden">
             <aside>
