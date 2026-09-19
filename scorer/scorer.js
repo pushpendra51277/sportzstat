@@ -91,17 +91,67 @@ function finalizeOver(isPartialTerminal = false) {
     cur.lastOverBowlers = new Set(cur.bowlersInCurrentOver); cur.runsInThisOver = 0; cur.bowlersInCurrentOver.clear(); cur.recentBalls.push(...cur.currentOverLog, {label: '/', type: 'divider'}); if(cur.recentBalls.length > 14) cur.recentBalls = cur.recentBalls.slice(-14); cur.currentOverLog = []; 
 }
 
+// ==========================================
+// CLOUD SYNC & FAN PORTAL GENERATOR
+// ==========================================
+
+function buildFanPortalSummary() {
+    let allInn = [...state.inningsSummaries];
+    if ((state.current.balls > 0 || state.current.runs > 0) && state.inningsNum > state.inningsSummaries.length) {
+        allInn.push({ innNum: state.inningsNum, batTeam: getBatTeam().name, runs: state.current.runs, wkts: state.current.wkts, overs: getTeamOversDisplay() });
+    }
+    
+    // Safely fetch top performers from reports.js
+    let perfs = (typeof getTopPerformers === 'function') ? getTopPerformers() : { batters: [], bowlers: [] };
+    
+    return {
+        match_id: state.matchId,
+        tournament: (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament) ? activeMatch.full_state.tournament : "Independent Match",
+        venue: state.matchSettings.venue || "Unknown Venue",
+        match_type: state.matchSettings.matchType,
+        officials: state.matchSettings.officials,
+        result: state.matchResult || calculateResultText() || "Match in Progress",
+        innings: allInn.map(i => ({ team: i.batTeam || i.team, score: `${i.runs}/${i.wkts}`, overs: i.overs })),
+        top_batters: perfs.batters.slice(0, 3).map(b => ({ name: b.name, runs: b.r, balls: b.b })),
+        top_bowlers: perfs.bowlers.slice(0, 3).map(b => ({ name: b.name, wkts: b.w, runs: b.rc, overs: formatOver(b.o) }))
+    };
+}
+
 async function triggerCloudSync() {
     if (!supabaseClient || !state.matchId) return;
+    
     let fullStatePayload = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
-    fullStatePayload.match_status = 'live'; fullStatePayload.team1 = state.teams.A.name; fullStatePayload.team2 = state.teams.B.name;
-    let tName = (activeMatch && activeMatch.tournaments && activeMatch.tournaments.name) ? activeMatch.tournaments.name : (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament ? activeMatch.full_state.tournament : "Independent Match");
-    fullStatePayload.tournament = tName;
+    fullStatePayload.match_status = 'live'; 
+    fullStatePayload.team1 = state.teams.A.name; 
+    fullStatePayload.team2 = state.teams.B.name;
+    fullStatePayload.tournament = (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament) ? activeMatch.full_state.tournament : "Independent Match";
+    
+    // 🔥 INJECT THE LIVE FAN PORTAL SUMMARY
+    fullStatePayload.fan_portal_summary = buildFanPortalSummary();
+    
     try { await supabaseClient.from('matches').update({ full_state: fullStatePayload }).eq('match_id', state.matchId); } catch(e) {}
     
     let cur = state.current; let effBalls = getEffectiveBalls(cur); let crrVal = effBalls > 0 ? ((cur.runs / effBalls) * 6).toFixed(2) : "0.00";
     let lightWeightLiveData = { matchId: state.matchId, batTeam: getBatTeam() ? getBatTeam().name : "", bowlTeam: getBowlTeam() ? getBowlTeam().name : "", runs: cur.runs, wkts: cur.wkts, overs: formatOver(cur.balls), crr: crrVal, target: el('dispTargetText') ? el('dispTargetText').innerText : "", batters: [ cur.sIdx !== null ? { name: getBatTeam().players[cur.sIdx].name, r: getBatTeam().players[cur.sIdx].r, b: getBatTeam().players[cur.sIdx].b, isStriker: true } : null, cur.nsIdx !== null ? { name: getBatTeam().players[cur.nsIdx].name, r: getBatTeam().players[cur.nsIdx].r, b: getBatTeam().players[cur.nsIdx].b, isStriker: false } : null ], bowler: cur.bIdx !== null ? { name: getBowlTeam().players[cur.bIdx].name, o: formatOver(getBowlTeam().players[cur.bIdx].o), r: getBowlTeam().players[cur.bIdx].rc, w: getBowlTeam().players[cur.bIdx].w } : null, recentBalls: cur.recentBalls };
     try { await supabaseClient.from('live_matches').upsert({ match_id: state.matchId, live_data: lightWeightLiveData }, { onConflict: 'match_id' }); } catch(e) {}
+}
+
+async function logCareerStats() {
+    if (!supabaseClient || !state.matchId) return;
+    
+    let finalState = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
+    finalState.match_status = 'completed'; 
+    finalState.team1 = state.teams.A.name; 
+    finalState.team2 = state.teams.B.name;
+    finalState.tournament = (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament) ? activeMatch.full_state.tournament : "Independent Match";
+    
+    // 🔥 INJECT THE FINAL FAN PORTAL SUMMARY
+    finalState.fan_portal_summary = buildFanPortalSummary();
+    
+    try { await supabaseClient.from('matches').update({ full_state: finalState }).eq('match_id', state.matchId); } catch(e){}
+
+    let payloadStr = JSON.stringify(state.inningsSummaries);
+    try { await supabaseClient.from('completed_matches').upsert({ match_id: state.matchId, final_data: payloadStr }, { onConflict: 'match_id' }); } catch (e) {}
 }
 
 async function logBallEvent(batterObj, bowlerObj, runsBat, runsExtra, extraType, isWicket, wicketType, dismissedObj) {
@@ -110,16 +160,7 @@ async function logBallEvent(batterObj, bowlerObj, runsBat, runsExtra, extraType,
     try { await supabaseClient.from('ball_by_ball').insert([ballData]); } catch(e) {}
 }
 
-async function logCareerStats() {
-    if (!supabaseClient || !state.matchId) return;
-    let finalState = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
-    finalState.match_status = 'completed'; finalState.team1 = state.teams.A.name; finalState.team2 = state.teams.B.name;
-    let tName = (activeMatch && activeMatch.tournaments && activeMatch.tournaments.name) ? activeMatch.tournaments.name : (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament ? activeMatch.full_state.tournament : "Independent Match");
-    finalState.tournament = tName;
-    try { await supabaseClient.from('matches').update({ full_state: finalState }).eq('match_id', state.matchId); } catch(e){}
-    let payloadStr = JSON.stringify(state.inningsSummaries);
-    try { await supabaseClient.from('completed_matches').upsert({ match_id: state.matchId, final_data: payloadStr }, { onConflict: 'match_id' }); } catch (e) {}
-}
+
 
 function ballScored(runs, isB) {
     saveState(); markOpenerTimes(); let cur = state.current; if(cur.bIdx === null) return openSelector('bowler', "Select Bowler");
