@@ -147,6 +147,129 @@ function resetMatch() {
     window.location.reload();
 }
 
+function calculateResultText() { 
+    let allInn = [...state.inningsSummaries]; 
+    if ((state.current.balls > 0 || state.current.runs > 0) && state.inningsNum > state.inningsSummaries.length) { allInn.push({ innNum: state.inningsNum, batTeam: getBatTeam().name, bowlTeam: getBowlTeam().name, runs: state.current.runs, wkts: state.current.wkts }); }
+    if (allInn.length < 2) return ""; 
+    if (state.matchSettings.matchType !== 'multiday') { 
+        let t1 = allInn[0], t2 = allInn[1];
+        if (allInn.length === 2 && (state.current.balls >= getTargetBalls() || state.current.wkts >= 10 || state.current.runs > t1.runs)) { let currentTeamScore = state.current.runs; if (currentTeamScore > t1.runs) return `${t2.batTeam} won by ${10 - state.current.wkts} wickets`; if (t1.runs > currentTeamScore) return `${t1.batTeam} won by ${t1.runs - currentTeamScore} runs`; return "MATCH TIED"; }
+        return ""; 
+    }
+    let t1Name = allInn[0].batTeam, t2Name = allInn[0].bowlTeam; let s = {}, fI = {}; s[t1Name] = 0; s[t2Name] = 0; fI[t1Name] = null; fI[t2Name] = null; allInn.forEach(i => { s[i.batTeam] += i.runs; if(fI[i.batTeam] === null) fI[i.batTeam] = i.runs; });
+    let lInn = allInn[allInn.length - 1], batL = lInn.batTeam, bowlL = lInn.bowlTeam; let t1C = allInn.filter(i => i.batTeam === t1Name).length, t2C = allInn.filter(i => i.batTeam === t2Name).length;
+    if (t1C + t2C < 3) return "";
+    if (lInn.wkts >= 10 || state.inningsNum > state.matchSettings.maxInnings) { if (s[batL] > s[bowlL]) return `${batL} won by ${s[batL] - s[bowlL]} runs`; if (s[bowlL] > s[batL] && t1C+t2C===4) return `${bowlL} won by ${10 - lInn.wkts} wickets`; }
+    return ""; 
+}
+
+function enableSummaryConfirm() { let cBtn = el('modalConfirmBtn'); if (cBtn.disabled) { cBtn.disabled = false; cBtn.style.opacity = '1'; cBtn.style.cursor = 'pointer'; cBtn.innerText = cBtn.dataset.origText || "Confirm"; } }
+
+function showMatchSummary() {
+    let autoRes = calculateResultText();
+    let isGameOver = (state.inningsNum >= state.matchSettings.maxInnings || state.matchResult !== "" || autoRes !== "");
+    let isTransition = (!isGameOver && state.inningsSummaries.length === state.inningsNum);
+    
+    let confirmBtnText = "Confirm"; let hideCancel = false; let requiresDownload = false;
+    if (isGameOver) { confirmBtnText = "🏁 End Match & Reset"; requiresDownload = true; } else if (isTransition) { confirmBtnText = "▶️ Start Next Innings"; requiresDownload = true; } else { confirmBtnText = "🔙 Continue Scoring"; hideCancel = true; }
+
+    let html = `<div class="custom-scroll" style="max-height: 45vh; overflow-y: auto; padding-right:10px; margin-bottom:10px;">`;
+    if (state.inningsSummaries.length === 0 && state.current.balls === 0) {
+        html += `<p class="text-center text-muted">No data available yet.</p>`;
+    } else {
+        let displayInnings = [...state.inningsSummaries];
+        if (!isGameOver && !isTransition && (state.current.balls > 0 || state.current.runs > 0)) {
+            let fF = JSON.parse(JSON.stringify(state.current.fow || [])); 
+            if(state.current.sIdx !== null && state.current.nsIdx !== null && state.current.wkts < 10) { let sBName = getBatTeam().players[state.current.sIdx] ? getBatTeam().players[state.current.sIdx].name : "Unknown"; let nsBName = getBatTeam().players[state.current.nsIdx] ? getBatTeam().players[state.current.nsIdx].name : "Unknown"; fF.push({ wktNum: "Unbroken", runs: state.current.runs, overs: formatOver(state.current.balls), outBatter: "-", partner: sBName + " & " + nsBName, pRuns: state.current.currPartnership.runs, pBalls: state.current.currPartnership.balls }); }
+            displayInnings.push({ innNum: state.inningsNum, batTeam: getBatTeam().name, bowlTeam: getBowlTeam().name, runs: state.current.runs, wkts: state.current.wkts, overs: formatOver(state.current.balls), penalties: state.current.penalties || 0, batters: getBatTeam().players, bowlers: getBowlTeam().players, fow: fF, extras: JSON.parse(JSON.stringify(state.current.extras)), isOngoing: true, allowances: state.current.allowances || 0 });
+        }
+
+        displayInnings.reverse().forEach(inn => {
+            html += `<div style="background:rgba(0,0,0,0.3); padding:15px; margin-bottom:15px; border-top:4px solid ${inn.isOngoing ? 'var(--danger)' : 'var(--primary)'}; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3);"><div class="flex-row" style="justify-content:space-between; margin-bottom:12px;"><div><div class="${inn.isOngoing ? 'text-danger' : 'text-primary'} font-bold" style="font-size:0.75rem; letter-spacing:1px;">INNINGS ${inn.innNum} ${inn.isOngoing ? '(ONGOING)' : ''}</div><div class="font-bold" style="font-size:1.3rem; color:white;">${inn.batTeam}</div></div><div class="text-right"><div class="text-success font-bold" style="font-size:1.6rem;">${inn.runs}<span style="color:#94a3b8; font-size:1.2rem;">/${inn.wkts}</span></div><div class="text-muted" style="font-size:0.85rem;">(${inn.overs} Overs)</div></div></div>`;
+            
+            html += `<table class="scorecard-table"><thead class="bat-hdr" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border-bottom: 1px solid #64748b;"><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>`;
+            inn.batters.forEach(b => { if(b.hasBatted) { let isOut = b.out ? `<span style="color:#ef4444; font-size:0.65rem; display:block; margin-top:2px;">${b.dismissalInfo}</span>` : `<span style="color:#10b981; font-size:0.65rem; display:block; margin-top:2px;">Not Out</span>`; let sr = b.b > 0 ? ((b.r/b.b)*100).toFixed(2) : "0.00"; let nameStr = `<div style="max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${b.name}"><b style="font-size:0.85rem; color:white;">${b.name}</b>` + (b.desig==='C' || b.desig==='C/WK' || b.desig.includes('C') ? ' <span style="color:var(--accent);">(C)</span>' : '') + (b.skill && b.skill.includes('WK') ? ' 🧤' : '') + `</div>`; html += `<tr><td>${nameStr}${isOut}</td><td style="font-weight:bold; font-size:1rem; color:white;">${b.r}</td><td style="color:white;">${b.b}</td><td style="color:white;">${b.f}</td><td style="color:white;">${b.s}</td><td style="color:var(--accent);">${sr}</td></tr>`; } });
+            let ex = inn.extras || {w:0, nb:0, b:0, lb:0}; let extrasTotal = ex.w + ex.nb + ex.b + ex.lb; let pen = inn.penalties || 0;
+            html += `<tr style="background:rgba(255,255,255,0.05); font-weight:bold;"><td style="color:var(--accent); text-transform:uppercase;">Extras</td><td colspan="5" style="text-align:right; color:white;">${extrasTotal} <span style="font-weight:normal; font-size:0.7rem; color:white;">(W:${ex.w}, NB:${ex.nb}, B:${ex.b}, LB:${ex.lb})</span></td></tr>`;
+            if (pen > 0) html += `<tr style="background:rgba(255,255,255,0.05); font-weight:bold;"><td style="color:var(--danger); text-transform:uppercase;">Penalties</td><td colspan="5" style="text-align:right; color:white;">${pen}</td></tr>`;
+            html += `</tbody></table><table class="scorecard-table">`;
+            
+            html += `<thead class="bwl-hdr" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border-bottom: 1px solid #64748b;"><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Econ</th><th>Extras</th><th>NB</th><th>WD</th></tr></thead><tbody>`;
+            
+            inn.bowlers.forEach(b => { if(b.o > 0 || b.rc > 0) { let totalRuns = b.rc || 0; let econ = b.o > 0 ? ((totalRuns/b.o)*6).toFixed(2) : "0.00"; let nameStr = `<div style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${b.name}"><b style="color:white;">${b.name}</b></div>`; let exStr = `${b.byes||0}b, ${b.legbyes||0}lb`; let nb = b.nb || 0; let wd = b.wd || 0; html += `<tr><td>${nameStr}</td><td style="color:white;">${formatOver(b.o)}</td><td style="color:white;">${b.m}</td><td style="color:white;">${totalRuns}</td><td style="font-weight:bold; font-size:1rem; color:var(--danger);">${b.w}</td><td style="color:var(--accent);">${econ}</td><td style="font-size:0.75rem; color:white;">${exStr}</td><td style="color:white;">${nb}</td><td style="color:white;">${wd}</td></tr>`; } });
+            html += `</tbody></table>`;
+            if(inn.fow && inn.fow.length > 0) { let fowStr = inn.fow.map(f => `<b style="color:white;">${f.runs}/${f.wktNum==='Unbroken'?'*':f.wktNum}</b> <span style="font-size:0.65rem; color:white;">(${f.outBatter}, ${f.overs} ov)</span>`).join(', '); html += `<div style="font-size:0.75rem; color:#94a3b8; background:rgba(0,0,0,0.3); padding:8px; border-radius:6px; border-left:3px solid var(--accent);"><b style="color:white;">Fall of Wickets:</b><br><div style="margin-top:4px; line-height:1.4;">${fowStr}</div></div>`; }
+            html += `</div>`;
+        });
+    }
+    
+    let currentAllowances = state.current.allowances || 0; if (state.inningsSummaries.length > 0 && state.inningsNum === state.inningsSummaries.length) { currentAllowances = state.inningsSummaries[state.inningsSummaries.length - 1].allowances || 0; }
+    html += `</div><div style="border-top:1px solid var(--border); padding-top:10px;"><label class="text-accent">Official Match Result / Status</label><input type="text" id="finalMatchResult" class="modal-input w-100" value="${state.matchResult || autoRes}" placeholder="e.g., Match Awarded, Follow-on, etc."><label class="text-accent mt-5">Allowances for Inning (Mins)</label><input type="number" id="inningAllowancesInput" class="modal-input w-100" placeholder="e.g. 15" value="${currentAllowances}">`;
+    
+    html += `<div class="flex-row gap-10 mt-10 mb-10">
+                <button type="button" onclick="if(typeof downloadSummaryExcel==='function')downloadSummaryExcel(); enableSummaryConfirm();" class="btn-action w-100" style="background:#0284c7; padding:12px; font-size:1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">📥 EXCEL</button>
+                <button type="button" onclick="if(typeof downloadSummaryPDF==='function')downloadSummaryPDF(); enableSummaryConfirm();" class="btn-action w-100" style="background:#be123c; padding:12px; font-size:1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">🖨️ PDF / PRINT</button>
+             </div>
+             <button type="button" onclick="if(typeof openCardStudio==='function')openCardStudio()" class="btn-action w-100 mb-10" style="background: linear-gradient(90deg, #f59e0b, #d97706); padding:15px; font-size:1.1rem; color:black; font-weight:900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">🌟 OPEN PLAYER CARD STUDIO</button>
+             </div>`;
+             
+    showModal(isGameOver ? "🏁 MATCH COMPLETE" : (isTransition ? `🛑 END OF INNINGS ${state.inningsNum}` : "📋 DETAILED MATCH SCORECARD"), html, () => { 
+        state.matchResult = el('finalMatchResult') ? el('finalMatchResult').value : autoRes; 
+        if(el('inningAllowancesInput')) { let val = parseInt(el('inningAllowancesInput').value) || 0; state.current.allowances = val; if (state.inningsSummaries.length > 0 && state.inningsNum === state.inningsSummaries.length) { state.inningsSummaries[state.inningsSummaries.length - 1].allowances = val; } }
+        closeModal(); 
+        setTimeout(() => { if (isGameOver) { logCareerStats(); setTimeout(() => { resetMatch(); }, 1000); } else if (isTransition) { openTransitionManager(); } }, 300);
+    }, hideCancel, "700px", confirmBtnText, requiresDownload);
+    el('modalCancelBtn').innerText = "🔙 Go Back & Edit";
+}
+
+function endInnings() { 
+    try {
+        saveState(); 
+        if (state.current.bIdx !== null) finalizeOver(true); 
+        state.current.inningsEndTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); 
+        
+        let fF = JSON.parse(JSON.stringify(state.current.fow || [])); 
+        if(state.current.sIdx !== null && state.current.nsIdx !== null && state.current.wkts < 10) {
+            let sBName = getBatTeam().players[state.current.sIdx] ? getBatTeam().players[state.current.sIdx].name : "Unknown"; let nsBName = getBatTeam().players[state.current.nsIdx] ? getBatTeam().players[state.current.nsIdx].name : "Unknown"; let pRuns = state.current.currPartnership ? state.current.currPartnership.runs : 0; let pBalls = state.current.currPartnership ? state.current.currPartnership.balls : 0; fF.push({ wktNum: "Unbroken", runs: state.current.runs, overs: formatOver(state.current.balls), outBatter: "-", partner: sBName + " & " + nsBName, pRuns: pRuns, pBalls: pBalls }); 
+        }
+        
+        state.inningsSummaries.push({ innNum: state.inningsNum, batTeam: getBatTeam().name, bowlTeam: getBowlTeam().name, runs: state.current.runs, wkts: state.current.wkts, overs: formatOver(state.current.balls), penalties: state.current.penalties || 0, overHistory: JSON.parse(JSON.stringify(state.current.overHistory || [])), batters: JSON.parse(JSON.stringify(getBatTeam().players || [])), bowlers: JSON.parse(JSON.stringify(getBowlTeam().players || [])), fow: fF, extras: JSON.parse(JSON.stringify(state.current.extras)), startTime: state.current.inningsStartTime || "-", endTime: state.current.inningsEndTime, allowances: state.current.allowances || 0 }); 
+        showMatchSummary(); 
+    } catch(e) { console.error("End Innings Error:", e); alert("Error saving Innings Summary. Check console."); }
+}
+
+function openTransitionManager() {
+    let nextInn = state.inningsNum + 1; let defaultBat = state.bowlingKey; let enforceBat = state.battingKey; let disableFollowOn = (state.matchSettings.matchType === 't20' || state.matchSettings.matchType === 'oneday') ? 'disabled' : '';
+    let html = `<div class="mb-10 text-primary font-bold" style="text-align:center; font-size:1.2rem;">Setup Innings ${nextInn}</div><label class="text-accent">Who will Bat Next?</label><select id="nextBatTeam" class="modal-input w-100"><option value="${defaultBat}">Standard Rotation (${state.teams[defaultBat].name})</option><option value="${enforceBat}" ${disableFollowOn}>Follow-On / Bat Again (${state.teams[enforceBat].name})</option></select><label class="mt-10 text-danger">Special Actions</label><select id="specialAction" class="modal-input w-100"><option value="none">Normal Play</option><option value="forfeit">Forfeit Innings ${nextInn}</option></select>`;
+    showModal("🔄 Innings Transition", html, function() { let nBat = el('nextBatTeam').value; let nBowl = (nBat === 'A') ? 'B' : 'A'; let action = el('specialAction').value; closeModal(); setTimeout(() => { executeTransition(nBat, nBowl, action); }, 300); }, true);
+}
+
+function executeTransition(nBat, nBowl, action) { 
+    state.inningsNum++; state.battingKey = nBat; state.bowlingKey = nBowl; 
+    if (action === 'forfeit') { state.inningsSummaries.push({ innNum: state.inningsNum, batTeam: state.teams[nBat].name, bowlTeam: state.teams[nBowl].name, runs: 0, wkts: 0, overs: "0.0", penalties: 0, overHistory: [], batters: JSON.parse(JSON.stringify(state.teams[nBat].players)), bowlers: JSON.parse(JSON.stringify(state.teams[nBowl].players)), fow: [], extras: {w:0, nb:0, b:0, lb:0}, startTime: "-", endTime: "-", allowances: 0 }); remarkLog.push({ over: "0.0", time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), batters: "-", bowler: "-", fielder: "-", remark: `Innings ${state.inningsNum} Forfeited by ${state.teams[nBat].name}` }); showMatchSummary(); return; }
+    
+    state.current = { runs: state.teams[state.battingKey].pendingPenalties || 0, wkts:0, balls:0, sIdx:null, nsIdx:null, bIdx:null, isFreeHit: false, penalties: state.teams[state.battingKey].pendingPenalties || 0, lastOverBowlers: new Set(), extras: {w:0, nb:0, b:0, lb:0}, recentBalls: [], currentOverLog: [], runsInThisOver: 0, bowlersInCurrentOver: new Set(), overHistory: [], currPartnership: { runs: 0, balls: 0 }, fow: [], activeBreak: null, activeBreakStartTime: null, activeBreakInsp: null, pendingBreakMins: 0, inningsStartTime: null, inningsEndTime: null, allowances: 0 }; 
+    state.teams[state.battingKey].pendingPenalties = 0; 
+    ['A', 'B'].forEach(t => state.teams[t].players.forEach(p => { p.r = p.b = p.f = p.s = p.o = p.rc = p.w = p.m = p.ex = p.wd = p.nb = p.cw = p.catches = p.stumpings = p.runouts = p.byes = p.legbyes = p.quotaOvers = p.breakMins = 0; p.out = p.hasBatted = false; p.outOnDuck = 0; p.dismissalInfo = ""; p.inTime = p.outTime = null; })); 
+    updateUI(); setTimeout(() => { openMatchStartModal(); }, 100); 
+}
+
+function openMatchStartModal() {
+    let bI = []; getBatTeam().players.forEach((p, i) => { if(p.isPlayingXI) bI.push(i); });
+    let sO = getBatTeam().players.map((p, i) => p.isPlayingXI ? `<option value="${i}" ${i===bI[0]?'selected':''}>${p.name}</option>` : '').join('');
+    let nsO = getBatTeam().players.map((p, i) => p.isPlayingXI ? `<option value="${i}" ${i===bI[1]?'selected':''}>${p.name}</option>` : '').join('');
+    let bowlOpts = getBowlTeam().players.map((p, i) => p.isPlayingXI ? `<option value="${i}">${p.name}</option>` : '').join('');
+    let html = `<div class="modal-grid-3 mt-10"><div class="modal-player-card"><label class="text-success mb-5">🏏 STRIKER</label><select id="sStr" class="modal-input w-100">${sO}</select></div><div class="modal-player-card"><label class="text-success mb-5">🏃 NON-STRIKER</label><select id="sNStr" class="modal-input w-100">${nsO}</select></div><div class="modal-player-card"><label class="text-danger mb-5">⚾ BOWLER</label><select id="sBwl" class="modal-input w-100">${bowlOpts}</select></div></div><div id="startError" class="text-danger font-bold text-center mt-15"></div>`;
+    showModal(`INNINGS ${state.inningsNum} SETUP`, html, () => { 
+        let s1 = parseInt(el('sStr').value), s2 = parseInt(el('sNStr').value), b1 = parseInt(el('sBwl').value); 
+        if (s1 === s2) { el('startError').innerText = "🚨 Striker and Non-Striker must be different players!"; return; } 
+        saveState(); state.current.sIdx = s1; state.current.nsIdx = s2; state.current.bIdx = b1; 
+        getBatTeam().players[s1].hasBatted = true; getBatTeam().players[s2].hasBatted = true; 
+        state.current.bowlersInCurrentOver.add(b1); state.current.currPartnership = { runs: 0, balls: 0 }; 
+        state.current.inningsStartTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); 
+        closeModal(); updateUI(); 
+    }, false, "500px", "Start Innings"); 
+}
 function openManualRun() { showModal("Manual Runs", `<label class="text-primary">Enter Runs Scored</label><input type="number" id="mRunVal" value="5" min="0" class="modal-input w-100">`, () => { let r = parseInt(el('mRunVal').value) || 0; closeModal(); ballScored(r, false); }); }
 
 function openExtra(type) { 
