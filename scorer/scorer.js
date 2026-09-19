@@ -143,21 +143,31 @@ async function triggerCloudSync() {
 async function logCareerStats() {
     if (!supabaseClient || !state.matchId) return;
     
+    // 1. Generate the absolute final summary (Toss, Points, Final Result)
+    let fps = buildFanPortalSummary(); 
+    
+    // 2. Update the main matches table metadata
     let finalState = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
     finalState.match_status = 'completed'; 
     finalState.team1 = state.teams.A.name; 
     finalState.team2 = state.teams.B.name;
     finalState.tournament = (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament) ? activeMatch.full_state.tournament : "Independent Match";
-    
-    // 🔥 INJECT THE FINAL FAN PORTAL SUMMARY
-    finalState.fan_portal_summary = buildFanPortalSummary();
+    finalState.fan_portal_summary = fps;
     
     try { await supabaseClient.from('matches').update({ full_state: finalState }).eq('match_id', state.matchId); } catch(e){}
 
-    let payloadStr = JSON.stringify(state.inningsSummaries);
+    // 3. 🔥 NEW: Inject fan_portal_summary into the completed_matches table!
+    let completedPayload = {
+        inningsSummaries: state.inningsSummaries,
+        fan_portal_summary: fps
+    };
+    let payloadStr = JSON.stringify(completedPayload);
+    
     try { await supabaseClient.from('completed_matches').upsert({ match_id: state.matchId, final_data: payloadStr }, { onConflict: 'match_id' }); } catch (e) {}
+    
+    // 4. 🔥 NEW: Clean up the live_matches table so it drops off the Live banner tab
+    try { await supabaseClient.from('live_matches').delete().eq('match_id', state.matchId); } catch(e) {}
 }
-
 async function logBallEvent(batterObj, bowlerObj, runsBat, runsExtra, extraType, isWicket, wicketType, dismissedObj) {
     if (!supabaseClient || !state.matchId) return;
     let ballData = { match_id: state.matchId, innings_no: state.inningsNum, over_no: Math.floor(state.current.balls / 6), ball_no: (state.current.balls % 6) + 1, batter_name: batterObj ? batterObj.name : "Unknown", bowler_name: bowlerObj ? bowlerObj.name : "Unknown", runs_batter: runsBat, runs_extra: runsExtra, is_valid_ball: (extraType !== 'Wide' && extraType !== 'No-Ball'), extra_type: extraType, is_wicket: isWicket, wicket_type: wicketType || null, dismissed_player_name: dismissedObj ? dismissedObj.name : null };
