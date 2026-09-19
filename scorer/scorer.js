@@ -206,16 +206,26 @@ function showMatchSummary() {
     let currentAllowances = state.current.allowances || 0; if (state.inningsSummaries.length > 0 && state.inningsNum === state.inningsSummaries.length) { currentAllowances = state.inningsSummaries[state.inningsSummaries.length - 1].allowances || 0; }
     html += `</div><div style="border-top:1px solid var(--border); padding-top:10px;"><label class="text-accent">Official Match Result / Status</label><input type="text" id="finalMatchResult" class="modal-input w-100" value="${state.matchResult || autoRes}" placeholder="e.g., Match Awarded, Follow-on, etc."><label class="text-accent mt-5">Allowances for Inning (Mins)</label><input type="number" id="inningAllowancesInput" class="modal-input w-100" placeholder="e.g. 15" value="${currentAllowances}">`;
     
-    html += `<div class="flex-row gap-10 mt-10 mb-10">
-                <button type="button" onclick="if(typeof downloadSummaryExcel==='function')downloadSummaryExcel(); enableSummaryConfirm();" class="btn-action w-100" style="background:#0284c7; padding:12px; font-size:1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">📥 EXCEL</button>
-                <button type="button" onclick="if(typeof downloadSummaryPDF==='function')downloadSummaryPDF(); enableSummaryConfirm();" class="btn-action w-100" style="background:#be123c; padding:12px; font-size:1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">🖨️ PDF / PRINT</button>
-             </div>
-             <button type="button" onclick="if(typeof openCardStudio==='function')openCardStudio()" class="btn-action w-100 mb-10" style="background: linear-gradient(90deg, #f59e0b, #d97706); padding:15px; font-size:1.1rem; color:black; font-weight:900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">🌟 OPEN PLAYER CARD STUDIO</button>
-             </div>`;
+    // 🔥 NEW: Inject Points Allocation Fields when the match is over
+    let pointsHtml = "";
+    if (isGameOver) {
+        let ptsA = state.teams.A.points || 0; let ptsB = state.teams.B.points || 0;
+        pointsHtml = `<div style="background:rgba(16, 185, 129, 0.1); border:1px solid #10b981; padding:15px; border-radius:8px; margin-top:15px;"><h4 style="color:#10b981; margin-top:0; text-align:center;">🏆 Tournament Points</h4><div style="display:flex; gap:15px;"><div style="flex:1;"><label class="text-primary" style="font-size:0.8rem; font-weight:bold;">${state.teams.A.name}</label><input type="number" id="teamAPoints" class="modal-input w-100" value="${ptsA}" step="0.5"></div><div style="flex:1;"><label class="text-primary" style="font-size:0.8rem; font-weight:bold;">${state.teams.B.name}</label><input type="number" id="teamBPoints" class="modal-input w-100" value="${ptsB}" step="0.5"></div></div></div>`;
+    }
+    html += pointsHtml;
+
+    html += `<div class="flex-row gap-10 mt-10 mb-10"><button type="button" onclick="if(typeof downloadSummaryExcel==='function')downloadSummaryExcel(); enableSummaryConfirm();" class="btn-action w-100" style="background:#0284c7; padding:12px; font-size:1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">📥 EXCEL</button><button type="button" onclick="if(typeof downloadSummaryPDF==='function')downloadSummaryPDF(); enableSummaryConfirm();" class="btn-action w-100" style="background:#be123c; padding:12px; font-size:1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">🖨️ PDF / PRINT</button></div><button type="button" onclick="if(typeof openCardStudio==='function')openCardStudio()" class="btn-action w-100 mb-10" style="background: linear-gradient(90deg, #f59e0b, #d97706); padding:15px; font-size:1.1rem; color:black; font-weight:900; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">🌟 OPEN PLAYER CARD STUDIO</button></div>`;
              
     showModal(isGameOver ? "🏁 MATCH COMPLETE" : (isTransition ? `🛑 END OF INNINGS ${state.inningsNum}` : "📋 DETAILED MATCH SCORECARD"), html, () => { 
         state.matchResult = el('finalMatchResult') ? el('finalMatchResult').value : autoRes; 
         if(el('inningAllowancesInput')) { let val = parseInt(el('inningAllowancesInput').value) || 0; state.current.allowances = val; if (state.inningsSummaries.length > 0 && state.inningsNum === state.inningsSummaries.length) { state.inningsSummaries[state.inningsSummaries.length - 1].allowances = val; } }
+        
+        // 🔥 NEW: Capture the points and save them to the state before ending the match
+        if(isGameOver && el('teamAPoints') && el('teamBPoints')) { 
+            state.teams.A.points = parseFloat(el('teamAPoints').value) || 0; 
+            state.teams.B.points = parseFloat(el('teamBPoints').value) || 0; 
+        }
+        
         closeModal(); 
         setTimeout(() => { if (isGameOver) { logCareerStats(); setTimeout(() => { resetMatch(); }, 1000); } else if (isTransition) { openTransitionManager(); } }, 300);
     }, hideCancel, "700px", confirmBtnText, requiresDownload);
