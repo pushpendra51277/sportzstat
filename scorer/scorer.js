@@ -110,7 +110,10 @@ let state = {
 let modalContext = {}, stateHistory = [], remarkLog = [];
 let activeMatch = null;
 
-window.onload = async function() {
+window.onload = function() {
+    if (typeof fetchRegistry === 'function') fetchRegistry();
+    // ... keep the resume match logic ...
+};
     await fetchRegistry();
 
     let activeMatchStr = localStorage.getItem('cricStat_activeMatch');
@@ -165,110 +168,9 @@ async function saveToRegistry(venue, officials) {
     catch(e) { }
 }
 
-async function authenticateMatch() {
-    try {
-        const matchId = el('login-match-id').value.trim().toUpperCase();
-        const pin = el('login-pin').value.trim();
-        const errBox = el('login-error');
 
-        if(!matchId || !pin) { errBox.innerText = "Please enter both Match ID and PIN."; return; }
-        errBox.style.color = "#38bdf8"; errBox.innerText = "⏳ Authenticating with Cloud...";
 
-        if (!supabaseClient) throw new Error("Database connection failed. Please check your internet connection.");
 
-        const { data, error } = await supabaseClient.from('matches').select('*, tournaments(name)').eq('match_id', matchId).eq('scorer_pin', pin).single();
-
-        if (error || !data) { errBox.style.color = "#ef4444"; errBox.innerText = "❌ Invalid Match ID or PIN."; return; }
-
-        let fullState = data.full_state || {};
-
-        if (fullState.match_status === 'completed') {
-            errBox.style.color = "#f59e0b";
-            errBox.innerHTML = "🏁 <b>Match Locked</b><br><span style='font-size:0.85rem; color:#94a3b8;'>This match has already been completed.</span>";
-            return;
-        }
-
-        activeMatch = data;
-        localStorage.setItem('cricStat_activeMatchMetadata', JSON.stringify(activeMatch));
-
-        if (fullState.match_status === 'live') {
-            showModal("☁️ Cloud Sync Found", "<div class='text-center mt-10 text-success font-bold'>Match is already in progress!</div><div class='text-center text-muted mt-5' style='font-size:0.85rem;'>Resuming from the latest cloud save...</div>", function() {
-                try {
-                    let parsedState = fullState;
-                    parsedState.current.lastOverBowlers = new Set(parsedState.current.lastOverBowlers || []); 
-                    parsedState.current.bowlersInCurrentOver = new Set(parsedState.current.bowlersInCurrentOver || []); 
-                    state = parsedState;
-                    el('login-screen').classList.add('hidden'); 
-                    el('top-title').classList.add('hidden');
-                    el('scoringView').classList.remove('hidden'); 
-                    if (state.matchSettings.matchType === 'multiday') { el('breakBtn').classList.remove('hidden'); }
-                    updateUI(); closeModal();
-                } catch(e) { console.error("Cloud Resume Error", e); alert("Error loading cloud state."); }
-            }, true, "360px", "Resume Match");
-            return;
-        }
-
-        // 🔥 RESET SQUADS ON FRESH AUTHENTICATION
-        setupSquads = {
-            A: { bench: [], xi: [], subs: [], roles: { c: null, vc: null, wk: null } },
-            B: { bench: [], xi: [], subs: [], roles: { c: null, vc: null, wk: null } }
-        };
-
-        el('login-screen').classList.add('hidden');
-        el('toss-screen').classList.remove('hidden');
-        
-        let t1 = fullState.team1 || (fullState.teams && fullState.teams.A ? fullState.teams.A.name : 'Team A');
-        let t2 = fullState.team2 || (fullState.teams && fullState.teams.B ? fullState.teams.B.name : 'Team B');
-
-        el('tossWinner').innerHTML = `<option value="A">${t1}</option><option value="B">${t2}</option>`;
-        el('team-a-name').innerText = t1;
-        el('team-b-name').innerText = t2;
-        errBox.innerText = ""; 
-
-        await loadTournamentSquads(activeMatch.team_a_id, 'A', t1);
-        await loadTournamentSquads(activeMatch.team_b_id, 'B', t2);
-        
-    } catch(e) {
-        let errBox = el('login-error');
-        if(errBox) { errBox.style.color = "#ef4444"; errBox.innerText = "❌ System Error: " + e.message; }
-    }
-}
-
-async function loadTournamentSquads(teamId, teamKey, fallbackTeamName) {
-    // 1. Check if Admin already saved players into the match state
-    let savedPlayers = activeMatch.full_state?.teams?.[teamKey]?.players;
-    if (savedPlayers && savedPlayers.length > 0) {
-        savedPlayers.forEach(p => setupSquads[teamKey].bench.push({ id: p.id || p.regNo, name: p.name }));
-        renderTapAndFly(teamKey);
-        return;
-    }
-
-    // 2. Fallback to dummies if no team ID exists
-    if (!activeMatch.tournament_id || !teamId) {
-        for(let i=1; i<=15; i++) { setupSquads[teamKey].bench.push({ id: `dummy_${teamKey}_${i}`, name: `${fallbackTeamName} Player ${i}` }); }
-        renderTapAndFly(teamKey); 
-        return; 
-    }
-
-    // 3. Fetch from Cloud
-    const { data, error } = await supabaseClient.from('tournament_squads').select('player_id, players(full_name)').eq('tournament_id', activeMatch.tournament_id).eq('team_id', teamId);
-
-    // 4. Fallback if cloud fails or returns empty
-    if(error || !data || data.length === 0) { 
-        for(let i=1; i<=15; i++) { setupSquads[teamKey].bench.push({ id: `dummy_${teamKey}_${i}`, name: `${fallbackTeamName} Player ${i}` }); }
-        renderTapAndFly(teamKey); 
-        return; 
-    }
-
-    // 5. Safe Mapping (Fixes the silent failure)
-    data.forEach((row, index) => { 
-        let pName = (row.players && row.players.full_name) ? row.players.full_name : `${fallbackTeamName} Player ${index + 1}`;
-        let pId = row.player_id || `dummy_${teamKey}_${index + 1}`;
-        setupSquads[teamKey].bench.push({ id: pId, name: pName }); 
-    });
-    
-    renderTapAndFly(teamKey);
-}
 
 function renderTapAndFly(tKey) {
     let sq = setupSquads[tKey];
@@ -356,53 +258,7 @@ function buildPlayerFromSetup(p, isXi, tKey) {
     };
 }
 
-async function lockPlayingXI() {
-    if(setupSquads.A.xi.length === 0 || setupSquads.B.xi.length === 0) { alert("Select at least 1 player in the Playing XI for both teams!"); return; }
 
-    state.matchId = activeMatch.match_id;
-    state.teams.A.name = el('team-a-name').innerText;
-    state.teams.B.name = el('team-b-name').innerText;
-    
-    state.teams.A.players = [...setupSquads.A.xi.map(p => buildPlayerFromSetup(p, true, 'A')), ...setupSquads.A.subs.map(p => buildPlayerFromSetup(p, false, 'A'))];
-    state.teams.B.players = [...setupSquads.B.xi.map(p => buildPlayerFromSetup(p, true, 'B')), ...setupSquads.B.subs.map(p => buildPlayerFromSetup(p, false, 'B'))];
-
-    state.matchSettings.venue = el('match-venue').value.trim();
-    state.matchSettings.officials = {
-        referee: el('match-referee').value.trim(),
-        coach: el('match-coach').value.trim(),
-        manager: el('match-manager').value.trim(),
-        umpire1: el('umpire-1').value.trim(),
-        umpire2: el('umpire-2').value.trim(),
-        umpire3: el('umpire-3').value.trim(),
-        umpire4: el('umpire-4').value.trim(),
-        scorer1: el('scorer-1').value.trim(),
-        scorer2: el('scorer-2').value.trim()
-    };
-    saveToRegistry(state.matchSettings.venue, state.matchSettings.officials);
-
-    let win = el('tossWinner').value, dec = el('tossDecision').value;
-    state.battingKey = ((win === 'A' && dec === 'bat') || (win === 'B' && dec === 'bowl')) ? 'A' : 'B';
-    state.bowlingKey = state.battingKey === 'A' ? 'B' : 'A';
-
-    let updatedFullState = activeMatch.full_state || {};
-    updatedFullState.match_status = 'live';
-    const { error } = await supabaseClient.from('matches').update({ full_state: updatedFullState }).eq('match_id', activeMatch.match_id);
-    if(error) { alert("Error connecting to cloud: " + error.message); return; }
-
-    el('toss-screen').classList.add('hidden');
-    el('initialization-screen').classList.remove('hidden');
-    
-    el('init-bat-title').innerText = `${state.teams[state.battingKey].name} Openers`;
-    el('init-bowl-title').innerText = `${state.teams[state.bowlingKey].name} Bowler`;
-
-    let batOpts = '<option value="">-- Select Batter --</option>';
-    state.teams[state.battingKey].players.forEach((p, index) => { if(p.isPlayingXI) batOpts += `<option value="${index}">${p.name}</option>`; });
-    
-    let bowlOpts = '<option value="">-- Select Bowler --</option>';
-    state.teams[state.bowlingKey].players.forEach((p, index) => { if(p.isPlayingXI) bowlOpts += `<option value="${index}">${p.name}</option>`; });
-
-    el('sel-striker').innerHTML = batOpts; el('sel-nonstriker').innerHTML = batOpts; el('sel-bowler').innerHTML = bowlOpts;
-}
 
 function startInnings() {
     const s = el('sel-striker').value, ns = el('sel-nonstriker').value, b = el('sel-bowler').value;
