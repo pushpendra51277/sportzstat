@@ -100,8 +100,6 @@ function buildFanPortalSummary() {
     if ((state.current.balls > 0 || state.current.runs > 0) && state.inningsNum > state.inningsSummaries.length) {
         allInn.push({ innNum: state.inningsNum, batTeam: getBatTeam().name, runs: state.current.runs, wkts: state.current.wkts, overs: getTeamOversDisplay() });
     }
-    
-    // Safely fetch top performers from reports.js
     let perfs = (typeof getTopPerformers === 'function') ? getTopPerformers() : { batters: [], bowlers: [] };
     
     return {
@@ -110,8 +108,8 @@ function buildFanPortalSummary() {
         venue: state.matchSettings.venue || "Unknown Venue",
         match_type: state.matchSettings.matchType,
         officials: state.matchSettings.officials,
+        toss: state.matchSettings.tossStr || "Toss not recorded", // 🔥 Added Toss
         result: state.matchResult || calculateResultText() || "Match in Progress",
-        // 🔥 NEW: Attach the assigned points to the team names natively!
         team_points: {
             [state.teams.A.name]: state.teams.A.points || 0,
             [state.teams.B.name]: state.teams.B.points || 0
@@ -121,22 +119,24 @@ function buildFanPortalSummary() {
         top_bowlers: perfs.bowlers.slice(0, 3).map(b => ({ name: b.name, wkts: b.w, runs: b.rc, overs: formatOver(b.o) }))
     };
 }
+
 async function triggerCloudSync() {
     if (!supabaseClient || !state.matchId) return;
     
-    let fullStatePayload = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
-    fullStatePayload.match_status = 'live'; 
-    fullStatePayload.team1 = state.teams.A.name; 
-    fullStatePayload.team2 = state.teams.B.name;
-    fullStatePayload.tournament = (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament) ? activeMatch.full_state.tournament : "Independent Match";
+    let fps = buildFanPortalSummary(); // Generate once to use in both tables
     
-    // 🔥 INJECT THE LIVE FAN PORTAL SUMMARY
-    fullStatePayload.fan_portal_summary = buildFanPortalSummary();
+    let fullStatePayload = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
+    fullStatePayload.match_status = 'live'; fullStatePayload.team1 = state.teams.A.name; fullStatePayload.team2 = state.teams.B.name;
+    fullStatePayload.tournament = (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament) ? activeMatch.full_state.tournament : "Independent Match";
+    fullStatePayload.fan_portal_summary = fps;
     
     try { await supabaseClient.from('matches').update({ full_state: fullStatePayload }).eq('match_id', state.matchId); } catch(e) {}
     
     let cur = state.current; let effBalls = getEffectiveBalls(cur); let crrVal = effBalls > 0 ? ((cur.runs / effBalls) * 6).toFixed(2) : "0.00";
-    let lightWeightLiveData = { matchId: state.matchId, batTeam: getBatTeam() ? getBatTeam().name : "", bowlTeam: getBowlTeam() ? getBowlTeam().name : "", runs: cur.runs, wkts: cur.wkts, overs: formatOver(cur.balls), crr: crrVal, target: el('dispTargetText') ? el('dispTargetText').innerText : "", batters: [ cur.sIdx !== null ? { name: getBatTeam().players[cur.sIdx].name, r: getBatTeam().players[cur.sIdx].r, b: getBatTeam().players[cur.sIdx].b, isStriker: true } : null, cur.nsIdx !== null ? { name: getBatTeam().players[cur.nsIdx].name, r: getBatTeam().players[cur.nsIdx].r, b: getBatTeam().players[cur.nsIdx].b, isStriker: false } : null ], bowler: cur.bIdx !== null ? { name: getBowlTeam().players[cur.bIdx].name, o: formatOver(getBowlTeam().players[cur.bIdx].o), r: getBowlTeam().players[cur.bIdx].rc, w: getBowlTeam().players[cur.bIdx].w } : null, recentBalls: cur.recentBalls };
+    
+    // 🔥 NEW: Inject fan_portal_summary directly into the live_matches table
+    let lightWeightLiveData = { matchId: state.matchId, batTeam: getBatTeam() ? getBatTeam().name : "", bowlTeam: getBowlTeam() ? getBowlTeam().name : "", runs: cur.runs, wkts: cur.wkts, overs: formatOver(cur.balls), crr: crrVal, target: el('dispTargetText') ? el('dispTargetText').innerText : "", batters: [ cur.sIdx !== null ? { name: getBatTeam().players[cur.sIdx].name, r: getBatTeam().players[cur.sIdx].r, b: getBatTeam().players[cur.sIdx].b, isStriker: true } : null, cur.nsIdx !== null ? { name: getBatTeam().players[cur.nsIdx].name, r: getBatTeam().players[cur.nsIdx].r, b: getBatTeam().players[cur.nsIdx].b, isStriker: false } : null ], bowler: cur.bIdx !== null ? { name: getBowlTeam().players[cur.bIdx].name, o: formatOver(getBowlTeam().players[cur.bIdx].o), r: getBowlTeam().players[cur.bIdx].rc, w: getBowlTeam().players[cur.bIdx].w } : null, recentBalls: cur.recentBalls, fan_portal_summary: fps };
+    
     try { await supabaseClient.from('live_matches').upsert({ match_id: state.matchId, live_data: lightWeightLiveData }, { onConflict: 'match_id' }); } catch(e) {}
 }
 
