@@ -53,6 +53,12 @@
         .details-table th:first-child { text-align: left; }
         .details-table td { padding: 6px 4px; border-bottom: 1px solid #1e293b; text-align: right; }
         .details-table td:first-child { text-align: left; }
+        
+        /* NEW: Styles for the Meta Box (Toss, Points, Result) */
+        .meta-box { margin-top: 8px; margin-bottom: 12px; font-size: 0.85rem; line-height: 1.5; background: rgba(0,0,0,0.25); padding: 10px 15px; border-radius: 6px; border-left: 3px solid #38bdf8; }
+        .meta-toss { color: #cbd5e1; }
+        .meta-result { color: #10b981; font-weight: bold; margin-top: 4px; font-size: 0.9rem; }
+        .meta-points { color: #f59e0b; margin-top: 4px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -87,22 +93,21 @@
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let allFanMatches = [];
-        let expandedMatches = new Set(); // 🔥 NEW: Memory tracker for opened cards
+        let expandedMatches = new Set();
 
         window.onload = async () => {
             await fetchMatches();
             setInterval(fetchMatches, 10000); 
         };
 
-        // Toggle Details Function (Now with memory)
         function toggleDetails(matchId, event) {
             const detailsDiv = document.getElementById('details-' + matchId);
             if (detailsDiv.style.display === 'none' || detailsDiv.style.display === '') {
                 detailsDiv.style.display = 'block';
-                expandedMatches.add(matchId); // Remember this is open
+                expandedMatches.add(matchId);
             } else {
                 detailsDiv.style.display = 'none';
-                expandedMatches.delete(matchId); // Remember this is closed
+                expandedMatches.delete(matchId);
             }
         }
 
@@ -188,7 +193,38 @@
                     scoreText = `<div class="score-line" style="${scoreColor}">${batTeam}: ${runs}/${wkts} <span class="overs">(${overs} ov)</span></div>`;
                 }
 
-                // 🔥 Check Memory: If it was open, force it to stay open!
+                // 🔥 NEW: Extract Toss, Result, and Points from fan_portal_summary
+                let fps = fs.fan_portal_summary || {};
+                let tossStr = fps.toss && fps.toss !== "Toss not recorded" ? `🪙 ${fps.toss}` : '';
+                let resultStr = '';
+                let pointsStr = '';
+
+                // Only show Result and Points if match is actually completed
+                if (status === 'completed') {
+                    if (fps.result && fps.result !== "Match in Progress") {
+                        resultStr = `🏆 ${fps.result}`;
+                    }
+                    if (fps.team_points) {
+                        let ptsArr = [];
+                        for (const [tName, pts] of Object.entries(fps.team_points)) {
+                            ptsArr.push(`${tName}: ${pts}`);
+                        }
+                        if (ptsArr.length > 0) {
+                            pointsStr = `📊 Points: ${ptsArr.join(' | ')}`;
+                        }
+                    }
+                }
+
+                // 🔥 NEW: Build the Meta Box HTML
+                let metaHtml = '';
+                if (tossStr || resultStr || pointsStr) {
+                    metaHtml += `<div class="meta-box">`;
+                    if (tossStr) metaHtml += `<div class="meta-toss">${tossStr}</div>`;
+                    if (resultStr) metaHtml += `<div class="meta-result">${resultStr}</div>`;
+                    if (pointsStr) metaHtml += `<div class="meta-points">${pointsStr}</div>`;
+                    metaHtml += `</div>`;
+                }
+
                 let isExpanded = expandedMatches.has(m.match_id) ? 'style="display: block;"' : '';
                 let detailsHtml = `<div class="match-details" id="details-${m.match_id}" ${isExpanded} onclick="event.stopPropagation()">`;
                 
@@ -239,6 +275,7 @@
                 }
                 detailsHtml += `</div>`;
 
+                // 🔥 NEW: Injecting the metaHtml into the card
                 let createCard = (num, badgeClass, badgeText) => `
                     <div class="match-card" onclick="toggleDetails('${m.match_id}', event)">
                         <div class="card-header">
@@ -247,6 +284,7 @@
                         </div>
                         <div class="teams">${t1} <span style="color:#64748b; font-size:0.85em; font-weight:normal; margin: 0 5px;">vs</span> ${t2}</div>
                         ${scoreText}
+                        ${metaHtml}
                         <div class="tap-details">Tap card to expand scorecard ↓</div>
                         ${detailsHtml}
                     </div>
