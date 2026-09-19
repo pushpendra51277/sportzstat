@@ -151,28 +151,41 @@ async function authenticateMatch() {
     }
 }
 
-async function loadTournamentSquads(teamId, containerPrefix, fallbackTeamName) {
-    const container = el(`${containerPrefix}-squad`);
-    
-    if (!activeMatch.tournament_id || !teamId) {
-        let html = `<div style="color:#f59e0b; font-size:0.85rem; margin-bottom:10px; background:rgba(245,158,11,0.1); padding:8px; border-radius:4px;">No linked cloud roster found. Generating local squad.</div>`;
-        for(let i=1; i<=15; i++) {
-            let isXI = i <= 11 ? "xi" : "none";
-            let selXI = i <= 11 ? "selected" : "";
-            let selSub = "";
-            let selNone = i > 11 ? "selected" : "";
-            
-            html += `<div class="player-row"><span style="font-weight:bold; font-size:0.95rem;">${i}. ${fallbackTeamName} Player ${i}</span><select class="role-select role-${containerPrefix} ${isXI}" data-pid="dummy_${i}" data-pname="${fallbackTeamName} Player ${i}" onchange="updateSquadCounters('${containerPrefix}', this)">
-                <option value="none" ${selNone}>Not Playing</option>
-                <option value="xi" ${selXI}>Playing XI</option>
-                <option value="sub" ${selSub}>Substitute</option>
-            </select></div>`;
-        }
-        container.innerHTML = html;
-        let dummySelect = container.querySelector('select');
-        if (dummySelect) updateSquadCounters(containerPrefix, dummySelect);
+async function loadTournamentSquads(teamId, teamKey, fallbackTeamName) {
+    // 1. Check if the Admin already saved players into the match state
+    let savedPlayers = activeMatch.full_state?.teams?.[teamKey]?.players;
+    if (savedPlayers && savedPlayers.length > 0) {
+        savedPlayers.forEach(p => setupSquads[teamKey].bench.push({ id: p.id || p.regNo, name: p.name }));
+        renderTapAndFly(teamKey);
         return;
     }
+
+    // 2. Fallback to dummies if no team ID exists
+    if (!activeMatch.tournament_id || !teamId) {
+        for(let i=1; i<=15; i++) { setupSquads[teamKey].bench.push({ id: `dummy_${teamKey}_${i}`, name: `${fallbackTeamName} Player ${i}` }); }
+        renderTapAndFly(teamKey); 
+        return; 
+    }
+
+    // 3. Fetch from Cloud
+    const { data, error } = await supabaseClient.from('tournament_squads').select('player_id, players(full_name)').eq('tournament_id', activeMatch.tournament_id).eq('team_id', teamId);
+
+    // 4. Fallback if cloud fails or returns empty
+    if(error || !data || data.length === 0) { 
+        for(let i=1; i<=15; i++) { setupSquads[teamKey].bench.push({ id: `dummy_${teamKey}_${i}`, name: `${fallbackTeamName} Player ${i}` }); }
+        renderTapAndFly(teamKey); 
+        return; 
+    }
+
+    // 5. Safe Mapping (Fixes the silent failure)
+    data.forEach((row, index) => { 
+        let pName = (row.players && row.players.full_name) ? row.players.full_name : `${fallbackTeamName} Player ${index + 1}`;
+        let pId = row.player_id || `dummy_${teamKey}_${index + 1}`;
+        setupSquads[teamKey].bench.push({ id: pId, name: pName }); 
+    });
+    
+    renderTapAndFly(teamKey);
+}
 
     const { data, error } = await supabaseClient.from('tournament_squads').select('player_id, players(full_name)').eq('tournament_id', activeMatch.tournament_id).eq('team_id', teamId);
 
