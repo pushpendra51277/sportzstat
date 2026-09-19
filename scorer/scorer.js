@@ -1,258 +1,367 @@
 // ==========================================
-// GLOBALS & SUPABASE CONFIG
+// SCORING ENGINE & UI REFRESH (scorer.js)
 // ==========================================
-const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co";   
-const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
-const supabaseClient = (typeof window.supabase !== 'undefined') ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-const el = id => document.getElementById(id); 
-
-let activeMatch = null;
-let setupSquads = { A: { bench: [], xi: [], subs: [], roles: { c: null, vc: null, wk: null } }, B: { bench: [], xi: [], subs: [], roles: { c: null, vc: null, wk: null } } };
-let modalContext = {}, stateHistory = [], remarkLog = [];
-let state = { matchId: "", inningsNum: 1, battingKey: 'A', bowlingKey: 'B', matchResult: "", matchSettings: { matchType: 't20', category: 'men', maxOvers: 20, originalMaxOvers: 20, customTarget: null, customTargetOvers: null, targetMethod: "", bowlerQuota: 4, matchSelectors: [], venue: "", officials: {} }, teams: { A: { name: "", players: [], pendingPenalties: 0 }, B: { name: "", players: [], pendingPenalties: 0 } }, current: { runs:0, wkts:0, balls:0, sIdx:null, nsIdx:null, bIdx:null, isFreeHit: false, penalties: 0, lastOverBowlers: new Set(), extras: {w:0, nb:0, b:0, lb:0}, recentBalls: [], currentOverLog: [], runsInThisOver: 0, bowlersInCurrentOver: new Set(), overHistory: [], currPartnership: { runs: 0, balls: 0 }, fow: [], activeBreak: null, activeBreakStartTime: null, activeBreakInsp: null, pendingBreakMins: 0, inningsStartTime: null, inningsEndTime: null, allowances: 0 }, inningsSummaries: [], matchBreaks: [] };
-
-// ==========================================
-// TIME & MODAL HELPERS
-// ==========================================
-function getTimeDropdownsHtml(prefix, allowNA = false) {
-    let d = new Date(); let curH = d.getHours(); let curM = d.getMinutes(); let ampm = curH >= 12 ? 'PM' : 'AM'; curH = curH % 12; if(curH === 0) curH = 12;
-    let h = allowNA ? '<option value="">--</option>' : ''; let m = allowNA ? '<option value="">--</option>' : '';
-    for(let i=1; i<=12; i++) { let val = i.toString().padStart(2,'0'); let sel = (!allowNA && i === curH) ? 'selected' : ''; h += `<option value="${val}" ${sel}>${val}</option>`; }
-    for(let i=0; i<60; i++) { let val = i.toString().padStart(2,'0'); let sel = (!allowNA && i === curM) ? 'selected' : ''; m += `<option value="${val}" ${sel}>${val}</option>`; }
-    let amSel = (!allowNA && ampm === 'AM') ? 'selected' : ''; let pmSel = (!allowNA && ampm === 'PM') ? 'selected' : '';
-    return `<div class="flex-row gap-5"><select id="${prefix}Hr" class="modal-input" style="width:33%; margin-bottom:0;">${h}</select><select id="${prefix}Min" class="modal-input" style="width:33%; margin-bottom:0;">${m}</select><select id="${prefix}AmPm" class="modal-input" style="width:33%; margin-bottom:0;">${allowNA ? '<option value="">--</option>' : ''}<option value="AM" ${amSel}>AM</option><option value="PM" ${pmSel}>PM</option></select></div>`;
+function getEffectiveBalls(cur) {
+    let effective = 0; let prevActual = 0;
+    for (let i = 0; i < cur.overHistory.length; i++) {
+        let actualBallsInOver = cur.overHistory[i].totalBallsAtEnd - prevActual;
+        if (cur.overHistory[i].isPartialTerminal) { effective += actualBallsInOver; } else { effective += 6; }
+        prevActual = cur.overHistory[i].totalBallsAtEnd;
+    }
+    let currentOverBalls = Math.max(0, cur.balls - prevActual);
+    effective += currentOverBalls; return effective;
 }
 
-function parseTimeDropdowns(prefix) {
-    let hrVal = el(`${prefix}Hr`).value; if(!hrVal) return null; 
-    let hr = parseInt(hrVal), min = el(`${prefix}Min`).value || "00", ampm = el(`${prefix}AmPm`).value || "AM";
-    if(ampm === 'PM' && hr !== 12) hr += 12; if(ampm === 'AM' && hr === 12) hr = 0;
-    return `${hr.toString().padStart(2,'0')}:${min}`;
+function toggleFullScreen() { let fsBtn = el('fsBtn'); if (!document.fullscreenElement) { document.documentElement.requestFullscreen().then(() => { fsBtn.innerText = '🔳 EXIT FULL SCREEN'; }).catch(err => alert("Fullscreen not supported.")); } else { if (document.exitFullscreen) { document.exitFullscreen().then(() => { fsBtn.innerText = '🔲 FULL'; }); } } }
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) { if(el('fsBtn')) el('fsBtn').innerText = '🔲 FULL'; } });
+
+function saveState() { 
+    try { stateHistory.push(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value)); if (stateHistory.length > 100) stateHistory.shift(); localStorage.setItem('cricStat_stateHistory', JSON.stringify(stateHistory)); } 
+    catch(e) { console.warn("State save failed"); } 
 }
 
-function calculateDurationMins(startStr, endStr) {
-    if(!startStr || !endStr) return 0;
-    let [sh, sm] = startStr.split(':').map(Number), [eh, em] = endStr.split(':').map(Number);
-    let startMins = sh * 60 + sm, endMins = eh * 60 + em;
-    if (endMins < startMins) endMins += 24 * 60; return endMins - startMins;
+function undoLastAction() { 
+    if (stateHistory.length > 0) { 
+        let prevState = JSON.parse(stateHistory.pop()); prevState.current.lastOverBowlers = new Set(prevState.current.lastOverBowlers); prevState.current.bowlersInCurrentOver = new Set(prevState.current.bowlersInCurrentOver); state = prevState; 
+        localStorage.setItem('cricStat_stateHistory', JSON.stringify(stateHistory)); updateUI(); 
+    } else { alert("Nothing to undo!"); } 
 }
 
-function showModal(title, html, cb, hideCancel = false, customWidth = "360px", confirmBtnText = "Confirm", requiresDownload = false) { 
-    el('modalHeading').innerText = title; el('modalBody').innerHTML = html; 
-    let cBtn = el('modalConfirmBtn'); cBtn.style.display = ''; cBtn.onclick = cb; 
-    el('modalBoxElement').style.maxWidth = customWidth; 
-    let cancelBtn = el('modalCancelBtn'); cancelBtn.innerText = "Cancel"; cancelBtn.onclick = closeModal;
-    if (requiresDownload) { cBtn.disabled = true; cBtn.style.opacity = '0.5'; cBtn.style.cursor = 'not-allowed'; cBtn.dataset.origText = confirmBtnText; cBtn.innerText = "🔒 Download Report First"; cancelBtn.style.display = ''; cancelBtn.innerText = "🔙 Go Back & Edit"; } else { cBtn.disabled = false; cBtn.style.opacity = '1'; cBtn.style.cursor = 'pointer'; cBtn.innerText = confirmBtnText; cancelBtn.style.display = hideCancel ? 'none' : ''; } 
-    el('dynamicModal').classList.remove('hidden'); 
+async function restartCloudMatch() {
+    let conf = confirm("🚨 DANGER 🚨\nAre you sure you want to RESTART this entire match?\nAll runs, wickets, and history will be permanently wiped from the cloud."); if (!conf) return;
+    let pin = prompt("To confirm, please enter the 4-Digit Scorer PIN for this match:"); if (pin !== activeMatch.scorer_pin) { alert("❌ Incorrect PIN. Match restart aborted."); return; }
+    let tName = (activeMatch && activeMatch.tournaments && activeMatch.tournaments.name) ? activeMatch.tournaments.name : (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament ? activeMatch.full_state.tournament : "INDEPENDENT MATCH");
+    let resetState = { tournament: tName, format: activeMatch.full_state.format || "T20", team1: activeMatch.full_state.team1 || (activeMatch.full_state.teams ? activeMatch.full_state.teams.A.name : "Team A"), team2: activeMatch.full_state.team2 || (activeMatch.full_state.teams ? activeMatch.full_state.teams.B.name : "Team B"), matchName: activeMatch.full_state.matchName || "", match_status: 'upcoming' };
+    try { await supabaseClient.from('matches').update({ full_state: resetState }).eq('match_id', state.matchId); await supabaseClient.from('live_matches').delete().eq('match_id', state.matchId); await supabaseClient.from('ball_by_ball').delete().eq('match_id', state.matchId); } catch(e) { console.error(e); }
+    localStorage.removeItem('cricStat_activeMatch'); localStorage.removeItem('cricStat_activeMatchMetadata'); localStorage.removeItem('cricStat_stateHistory');
+    alert("✅ Match has been wiped and reset to Upcoming. Returning to login..."); window.location.reload();
 }
 
-function closeModal() { 
-    el('dynamicModal').classList.add('hidden'); 
-    let scoringBox = el('scoringEventsBox');
-    if (scoringBox) { scoringBox.style.pointerEvents = 'auto'; scoringBox.style.opacity = '1'; }
+function syncMetadataToHistory(syncPlayingXI) { stateHistory = stateHistory.map(hStr => { let h = JSON.parse(hStr); ['A', 'B'].forEach(t => { for(let i=0; i<h.teams[t].players.length; i++) { h.teams[t].players[i].name = state.teams[t].players[i].name; h.teams[t].players[i].regNo = state.teams[t].players[i].regNo; h.teams[t].players[i].skill = state.teams[t].players[i].skill; if (syncPlayingXI) { h.teams[t].players[i].isPlayingXI = state.teams[t].players[i].isPlayingXI; } } }); return JSON.stringify(h, (k, v) => v instanceof Set ? [...v] : v); }); }
+
+function openRemarkModal() { 
+    let cur = state.current, s = cur.sIdx !== null ? getBatTeam().players[cur.sIdx].name : "N/A", ns = cur.nsIdx !== null ? getBatTeam().players[cur.nsIdx].name : "N/A", b = cur.bIdx !== null ? getBowlTeam().players[cur.bIdx].name : "N/A";
+    let fOpts = `<option value="">-- No Fielder / N/A --</option>`; getBowlTeam().players.forEach(p => { if(p.name) fOpts += `<option value="${p.name}">${p.name}</option>`; }); 
+    let remarkHtml = `<div class="mb-10 text-muted" style="font-size:0.8rem;">Over: <b class="text-accent">${formatOver(cur.balls)}</b> | Local Time: <b class="text-accent">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</b></div><div class="mb-10" style="font-size:0.85rem; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px;"><span class="text-primary font-bold">Striker:</span> ${s}<br><span class="text-primary font-bold">Non-Striker:</span> ${ns}<br><span class="text-primary font-bold">Bowler:</span> ${b}</div><label class="text-primary mt-10">Fielder Involved (Optional)</label><select id="remFielder" class="modal-input w-100">${fOpts}</select><label class="text-primary mt-10">Remark / Incident</label><input type="text" id="remText" class="modal-input w-100" placeholder="e.g., Warning...">`;
+    showModal("📝 Match Remark", remarkHtml, () => { let txt = el('remText').value.trim(); if(!txt) return; remarkLog.push({ over: formatOver(cur.balls), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), batters: `${s} / ${ns}`, bowler: b, fielder: el('remFielder').value || "-", remark: txt }); closeModal(); }); 
 }
 
-// ==========================================
-// BOOTSTRAP & RESUME
-// ==========================================
-window.onload = async function() {
-    if (typeof Chart !== 'undefined') { Chart.defaults.color = '#cbd5e1'; Chart.defaults.borderColor = '#334155'; }
-    window.matchChart = null; 
-    await fetchRegistry();
+function openEditTarget() {
+    if (state.inningsNum === 1) { alert("Target can only be edited in the 2nd innings!"); return; }
+    let curT = state.matchSettings.customTarget || (state.inningsSummaries[state.inningsNum - 2].runs + 1), curO = state.matchSettings.customTargetOvers || state.matchSettings.originalMaxOvers, curM = state.matchSettings.targetMethod || "";
+    let html = `<label class="text-primary">Revised Target Runs</label><input type="number" id="modTargetRuns" class="modal-input w-100" value="${curT}"><label class="text-primary mt-10">Revised Max Overs</label><input type="number" id="modTargetOvers" class="modal-input w-100" value="${curO}" step="0.1"><label class="text-primary mt-10">Method (e.g. VJD, DLS, or leave blank)</label><input type="text" id="modTargetMethod" class="modal-input w-100" value="${curM}" placeholder="VJD"><button type="button" class="btn-action w-100 mt-15" style="background:#475569;" onclick="clearCustomTarget()">Reset to Original Target</button>`;
+    showModal("🎯 Edit Match Target", html, () => { saveState(); state.matchSettings.customTarget = parseInt(el('modTargetRuns').value) || null; state.matchSettings.customTargetOvers = parseFloat(el('modTargetOvers').value) || null; state.matchSettings.targetMethod = el('modTargetMethod').value.trim().toUpperCase(); if (state.matchSettings.customTargetOvers) { state.matchSettings.maxOvers = state.matchSettings.customTargetOvers; } closeModal(); updateUI(); });
+}
+
+function clearCustomTarget() { saveState(); state.matchSettings.customTarget = null; state.matchSettings.customTargetOvers = null; state.matchSettings.targetMethod = ""; state.matchSettings.maxOvers = state.matchSettings.originalMaxOvers; closeModal(); updateUI(); }
+function getTargetBalls() { let ov = state.matchSettings.maxOvers; let f = Math.floor(ov); let r = Math.round((ov - f) * 10); return f * 6 + r; }
+
+function openBreakModal() {
+    let html = `<label class="text-primary">Select Interval Type</label><select id="brkType" class="modal-input w-100"><option value="Luncheon Break">Luncheon Break</option><option value="Tea Break">Tea Break</option><option value="Day End / Stumps">Day End / Stumps</option><option value="Innings Break">Innings Break</option><option value="Drinks Break">Drinks Break</option><option value="Other Scheduled Interval">Other Scheduled Interval</option></select><label class="text-primary mt-10">Start Time</label>${getTimeDropdownsHtml('brkStart')}`;
+    showModal("Scheduled Break", html, startScheduledBreak, false, "360px", "Log Break");
+}
+
+function startScheduledBreak() { saveState(); let type = el('brkType').value, sT = parseTimeDropdowns('brkStart'); state.current.activeBreak = type; state.current.activeBreakStartTime = sT; state.current.activeBreakInsp = null; closeModal(); updateUI(); }
+function openInterruptionModal() { let html = `<label class="text-primary">Select Reason for Delay</label><select id="intType" class="modal-input w-100"><option value="Bad Weather / Rain">Bad Weather / Rain</option><option value="Bad Light">Bad Light</option><option value="Unfit Ground Conditions">Unfit Ground Conditions</option><option value="Medical Emergency">Medical Emergency</option><option value="Other Interruption">Other Interruption</option></select><label class="text-primary mt-10">Start Time</label>${getTimeDropdownsHtml('intStart')}<label class="text-primary mt-10">Next Inspection At (Optional)</label>${getTimeDropdownsHtml('intInsp', true)}`; showModal("Match Interruption", html, startInterruption, false); }
+function startInterruption() { saveState(); let type = el('intType').value, sT = parseTimeDropdowns('intStart'), nI = parseTimeDropdowns('intInsp'); state.current.activeBreak = type; state.current.activeBreakStartTime = sT; state.current.activeBreakInsp = nI; closeModal(); updateUI(); }
+function openResumeModal() { let html = `<label class="text-primary">Interruption Started At</label><input type="text" class="modal-input w-100" value="${state.current.activeBreakStartTime}" disabled><label class="text-primary mt-10">Select Resume Time</label>${getTimeDropdownsHtml('intEnd')}`; showModal("End Interruption", html, endInterruption, false, "360px", "Resume Play"); }
+
+function endInterruption() {
+    let eT = parseTimeDropdowns('intEnd'), sT = state.current.activeBreakStartTime, dur = calculateDurationMins(sT, eT);
+    if(state.current.sIdx !== null) getBatTeam().players[state.current.sIdx].breakMins += dur; if(state.current.nsIdx !== null) getBatTeam().players[state.current.nsIdx].breakMins += dur;
+    state.matchBreaks.push({ inn: state.inningsNum, type: state.current.activeBreak, start: sT, end: eT, dur: dur });
+    let remarkStr = `${state.current.activeBreak}: ${sT} to ${eT} (Lost: ${dur}m)`; if(state.current.activeBreakInsp) remarkStr += ` [Insp: ${state.current.activeBreakInsp}]`;
+    remarkLog.push({ over: formatOver(state.current.balls), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), batters: "-", bowler: "-", fielder: "-", remark: remarkStr });
+    state.current.activeBreak = null; state.current.activeBreakStartTime = null; state.current.activeBreakInsp = null; closeModal(); updateUI();
+}
+
+function markOpenerTimes() { if (state.current.sIdx !== null && state.current.nsIdx !== null) { let now = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); if (!getBatTeam().players[state.current.sIdx].inTime) getBatTeam().players[state.current.sIdx].inTime = now; if (!getBatTeam().players[state.current.nsIdx].inTime) getBatTeam().players[state.current.nsIdx].inTime = now; } }
+
+function checkTargetReached() { 
+    if (state.matchSettings.customTarget && state.current.runs >= state.matchSettings.customTarget) return true;
+    if (state.matchSettings.matchType === 'multiday') { let bowlTeamInns = state.inningsSummaries.filter(i => i.batTeam === getBowlTeam().name).length; if(bowlTeamInns === 2) { let batTotal = state.current.runs + state.inningsSummaries.filter(i=>i.batTeam===getBatTeam().name).reduce((a,b)=>a+b.runs,0); let bowlTotal = state.inningsSummaries.filter(i=>i.batTeam===getBowlTeam().name).reduce((a,b)=>a+b.runs,0); if(batTotal > bowlTotal) return true; } return false; } 
+    else { if (state.inningsNum % 2 === 0) { let targetToWin = state.matchSettings.customTarget || (state.inningsSummaries[state.inningsNum - 2].runs + 1); if (state.current.runs >= targetToWin) return true; } return false; }
+}
+
+function finalizeOver(isPartialTerminal = false) { 
+    let cur = state.current; let prevBalls = cur.overHistory.length > 0 ? cur.overHistory[cur.overHistory.length - 1].totalBallsAtEnd : 0; let ballsThisOver = cur.balls - prevBalls; let isPartial = isPartialTerminal && ballsThisOver > 0 && ballsThisOver < 6;
+    cur.bowlersInCurrentOver.forEach(i => { getBowlTeam().players[i].quotaOvers += 1; if(cur.runsInThisOver === 0 && i === cur.bIdx && !isPartial) getBowlTeam().players[i].m++; }); 
+    cur.overHistory.push({ over: cur.overHistory.length + 1, runs: cur.runs, wkts: cur.wkts, totalBallsAtEnd: cur.balls, isPartialTerminal: isPartial }); 
+    cur.lastOverBowlers = new Set(cur.bowlersInCurrentOver); cur.runsInThisOver = 0; cur.bowlersInCurrentOver.clear(); cur.recentBalls.push(...cur.currentOverLog, {label: '/', type: 'divider'}); if(cur.recentBalls.length > 14) cur.recentBalls = cur.recentBalls.slice(-14); cur.currentOverLog = []; 
+}
+
+async function triggerCloudSync() {
+    if (!supabaseClient || !state.matchId) return;
+    let fullStatePayload = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
+    fullStatePayload.match_status = 'live'; fullStatePayload.team1 = state.teams.A.name; fullStatePayload.team2 = state.teams.B.name;
+    let tName = (activeMatch && activeMatch.tournaments && activeMatch.tournaments.name) ? activeMatch.tournaments.name : (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament ? activeMatch.full_state.tournament : "Independent Match");
+    fullStatePayload.tournament = tName;
+    try { await supabaseClient.from('matches').update({ full_state: fullStatePayload }).eq('match_id', state.matchId); } catch(e) {}
     
-    let activeMatchStr = localStorage.getItem('cricStat_activeMatch');
-    if (activeMatchStr) {
-        showModal("Resume Match?", "An unfinished match was found in your browser. Would you like to resume it instantly without entering the PIN?", function() {
-            try {
-                let parsedState = JSON.parse(activeMatchStr); 
-                parsedState.current.lastOverBowlers = new Set(parsedState.current.lastOverBowlers); 
-                parsedState.current.bowlersInCurrentOver = new Set(parsedState.current.bowlersInCurrentOver); 
-                state = parsedState;
-                el('login-screen').classList.add('hidden'); 
-                el('top-title').classList.add('hidden');
-                el('scoringView').classList.remove('hidden'); 
-                if (state.matchSettings.matchType === 'multiday') el('breakBtn').classList.remove('hidden');
-                activeMatch = JSON.parse(localStorage.getItem('cricStat_activeMatchMetadata')) || null;
-                let savedHistory = localStorage.getItem('cricStat_stateHistory');
-                if (savedHistory) stateHistory = JSON.parse(savedHistory);
-                if (typeof updateUI === 'function') updateUI(); 
-                closeModal();
-            } catch(e) { localStorage.removeItem('cricStat_activeMatch'); location.reload(); }
-        }, false, "360px", "Resume Match");
-        el('modalCancelBtn').innerText = "Start Fresh (Enter PIN)"; 
-        el('modalCancelBtn').onclick = function() { localStorage.removeItem('cricStat_activeMatch'); closeModal(); };
+    let cur = state.current; let effBalls = getEffectiveBalls(cur); let crrVal = effBalls > 0 ? ((cur.runs / effBalls) * 6).toFixed(2) : "0.00";
+    let lightWeightLiveData = { matchId: state.matchId, batTeam: getBatTeam() ? getBatTeam().name : "", bowlTeam: getBowlTeam() ? getBowlTeam().name : "", runs: cur.runs, wkts: cur.wkts, overs: formatOver(cur.balls), crr: crrVal, target: el('dispTargetText') ? el('dispTargetText').innerText : "", batters: [ cur.sIdx !== null ? { name: getBatTeam().players[cur.sIdx].name, r: getBatTeam().players[cur.sIdx].r, b: getBatTeam().players[cur.sIdx].b, isStriker: true } : null, cur.nsIdx !== null ? { name: getBatTeam().players[cur.nsIdx].name, r: getBatTeam().players[cur.nsIdx].r, b: getBatTeam().players[cur.nsIdx].b, isStriker: false } : null ], bowler: cur.bIdx !== null ? { name: getBowlTeam().players[cur.bIdx].name, o: formatOver(getBowlTeam().players[cur.bIdx].o), r: getBowlTeam().players[cur.bIdx].rc, w: getBowlTeam().players[cur.bIdx].w } : null, recentBalls: cur.recentBalls };
+    try { await supabaseClient.from('live_matches').upsert({ match_id: state.matchId, live_data: lightWeightLiveData }, { onConflict: 'match_id' }); } catch(e) {}
+}
+
+async function logBallEvent(batterObj, bowlerObj, runsBat, runsExtra, extraType, isWicket, wicketType, dismissedObj) {
+    if (!supabaseClient || !state.matchId) return;
+    let ballData = { match_id: state.matchId, innings_no: state.inningsNum, over_no: Math.floor(state.current.balls / 6), ball_no: (state.current.balls % 6) + 1, batter_name: batterObj ? batterObj.name : "Unknown", bowler_name: bowlerObj ? bowlerObj.name : "Unknown", runs_batter: runsBat, runs_extra: runsExtra, is_valid_ball: (extraType !== 'Wide' && extraType !== 'No-Ball'), extra_type: extraType, is_wicket: isWicket, wicket_type: wicketType || null, dismissed_player_name: dismissedObj ? dismissedObj.name : null };
+    try { await supabaseClient.from('ball_by_ball').insert([ballData]); } catch(e) {}
+}
+
+async function logCareerStats() {
+    if (!supabaseClient || !state.matchId) return;
+    let finalState = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
+    finalState.match_status = 'completed'; finalState.team1 = state.teams.A.name; finalState.team2 = state.teams.B.name;
+    let tName = (activeMatch && activeMatch.tournaments && activeMatch.tournaments.name) ? activeMatch.tournaments.name : (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament ? activeMatch.full_state.tournament : "Independent Match");
+    finalState.tournament = tName;
+    try { await supabaseClient.from('matches').update({ full_state: finalState }).eq('match_id', state.matchId); } catch(e){}
+    let payloadStr = JSON.stringify(state.inningsSummaries);
+    try { await supabaseClient.from('completed_matches').upsert({ match_id: state.matchId, final_data: payloadStr }, { onConflict: 'match_id' }); } catch (e) {}
+}
+
+function ballScored(runs, isB) {
+    saveState(); markOpenerTimes(); let cur = state.current; if(cur.bIdx === null) return openSelector('bowler', "Select Bowler");
+    cur.bowlersInCurrentOver.add(cur.bIdx); let s = getBatTeam().players[cur.sIdx], b = getBowlTeam().players[cur.bIdx];
+    b.cw = 0; s.r += runs; s.b++; if(isB) { runs === 4 ? s.f++ : s.s++; } 
+    b.rc += runs; b.o++; cur.runs += runs; cur.runsInThisOver += runs; cur.balls++; cur.currPartnership.runs += runs; cur.currPartnership.balls++; 
+    cur.currentOverLog.push({label: runs.toString(), type: isB ? (runs === 4 ? 'four' : 'six') : 'normal'}); cur.isFreeHit = false;
+    logBallEvent(s, b, runs, 0, 'None', false, null, null); 
+    if(runs % 2 !== 0) manualRotate(); 
+    if (checkTargetReached()) { finalizeOver(true); setTimeout(endInnings, 100); return; }
+    updateUI(); checkAutoOverPrompt();
+}
+
+function openManualRun() { showModal("Manual Runs", `<label class="text-primary">Enter Runs Scored</label><input type="number" id="mRunVal" value="5" min="0" class="modal-input w-100">`, () => { let r = parseInt(el('mRunVal').value) || 0; closeModal(); ballScored(r, false); }); }
+
+function openExtra(type) { 
+    if(state.current.bIdx === null) return openSelector('bowler', "Select Bowler"); 
+    modalContext = { action: 'extra', type: type }; let defVal = (type === 'B' || type === 'LB') ? 1 : 0; 
+    let html = `<label class="text-primary">Extra Runs:</label><input type="number" id="exR" value="${defVal}" class="modal-input w-100">`; if(type === 'NB') { html += `<select id="nbT" class="modal-input w-100 mt-5"><option value="bat">Off the Bat</option><option value="bye">Byes</option><option value="legbye">Leg Byes</option></select>`; }
+    showModal(`${type === 'W' ? 'WIDE' : (type === 'NB' ? 'NO BALL' : type)} Entry`, html, processExtraSubmit); 
+}
+
+function processExtraSubmit() {
+    saveState(); markOpenerTimes(); let cur = state.current, ex = parseInt(el('exR').value) || 0, b = getBowlTeam().players[cur.bIdx], s = getBatTeam().players[cur.sIdx], typ = modalContext.type, lbl = ''; cur.bowlersInCurrentOver.add(cur.bIdx); 
+    let runsBat = 0; let runsExt = 0; let exLabel = '';
+
+    if(typ === 'W') { 
+        let t = ex + 1; cur.runs += t; cur.runsInThisOver += t; cur.currPartnership.runs += t; b.rc += t; b.wd += t; cur.extras.w += t; lbl = t + 'wd'; runsExt = t; exLabel = 'Wide';
+    } else if (typ === 'NB') { 
+        let nt = el('nbT').value; cur.runs += 1; cur.extras.nb += 1; b.rc += 1; b.nb += 1; cur.runsInThisOver += 1; cur.currPartnership.runs += (1 + ex); runsExt = 1; exLabel = 'No-Ball';
+        if(nt === 'bat' && ex > 0) { s.r += ex; b.rc += ex; cur.runs += ex; cur.runsInThisOver += ex; runsBat = ex; } 
+        else if (ex > 0) { cur.runs += ex; runsExt += ex; if (nt === 'bye') { cur.extras.b += ex; b.byes += ex; } else { cur.extras.lb += ex; b.legbyes += ex; } } 
+        lbl = (ex + 1) + 'nb'; if (state.matchSettings.matchType !== 'multiday') cur.isFreeHit = true; s.b++; cur.currPartnership.balls++; 
+    } else { 
+        lbl = ex + (typ === 'B' ? 'b' : 'lb'); cur.runs += ex; cur.balls++; b.o++; s.b++; cur.currPartnership.runs += ex; cur.currPartnership.balls++; runsExt = ex; exLabel = (typ === 'B' ? 'Bye' : 'Leg-Bye');
+        if (typ === 'B') { cur.extras.b += ex; b.byes += ex; } else { cur.extras.lb += ex; b.legbyes += ex; } cur.isFreeHit = false; 
     }
-};
-
-async function fetchRegistry() {
-    if(!supabaseClient) return;
-    try {
-        const { data, error } = await supabaseClient.from('match_registry').select('*');
-        if(!error && data) {
-            let vHtml = '', oHtml = '';
-            data.forEach(item => { if(item.category === 'venue') vHtml += `<option value="${item.name}">`; if(item.category === 'official') oHtml += `<option value="${item.name}">`; });
-            if(el('db-venues')) el('db-venues').innerHTML = vHtml;
-            if(el('db-officials')) el('db-officials').innerHTML = oHtml;
-        }
-    } catch(e) {}
-}
-
-async function saveToRegistry(venue, officials) {
-    if(!supabaseClient) return;
-    let payload = [];
-    if(venue) payload.push({ category: 'venue', name: venue });
-    Object.values(officials).forEach(o => { if(o) payload.push({ category: 'official', name: o }); });
-    if(payload.length === 0) return;
-    try { await supabaseClient.from('match_registry').upsert(payload, {onConflict: 'name'}); } catch(e) {}
-}
-
-async function authenticateMatch() {
-    try {
-        const matchId = el('login-match-id').value.trim().toUpperCase(); const pin = el('login-pin').value.trim(); const errBox = el('login-error');
-        if(!matchId || !pin) { errBox.innerText = "Please enter both Match ID and PIN."; return; }
-        errBox.style.color = "#38bdf8"; errBox.innerText = "⏳ Authenticating with Cloud...";
-        if (!supabaseClient) throw new Error("Database connection failed.");
-        
-        const { data, error } = await supabaseClient.from('matches').select('*, tournaments(name)').eq('match_id', matchId).eq('scorer_pin', pin).single();
-        if (error || !data) { errBox.style.color = "#ef4444"; errBox.innerText = "❌ Invalid Match ID or PIN."; return; }
-        
-        let fullState = data.full_state || {};
-        if (fullState.match_status === 'completed') { errBox.style.color = "#f59e0b"; errBox.innerHTML = "🏁 <b>Match Locked</b><br><span style='font-size:0.85rem; color:#94a3b8;'>This match has already been completed.</span>"; return; }
-        
-        activeMatch = data; localStorage.setItem('cricStat_activeMatchMetadata', JSON.stringify(activeMatch));
-        if (fullState.match_status === 'live') {
-            showModal("☁️ Cloud Sync Found", "<div class='text-center mt-10 text-success font-bold'>Match is already in progress!</div><div class='text-center text-muted mt-5' style='font-size:0.85rem;'>Resuming from the latest cloud save...</div>", function() {
-                try {
-                    let parsedState = fullState; parsedState.current.lastOverBowlers = new Set(parsedState.current.lastOverBowlers || []); parsedState.current.bowlersInCurrentOver = new Set(parsedState.current.bowlersInCurrentOver || []); state = parsedState;
-                    el('login-screen').classList.add('hidden'); el('top-title').classList.add('hidden'); el('scoringView').classList.remove('hidden'); 
-                    if (state.matchSettings.matchType === 'multiday') el('breakBtn').classList.remove('hidden');
-                    if(typeof updateUI === 'function') updateUI(); 
-                    closeModal();
-                } catch(e) { alert("Error loading cloud state."); }
-            }, true, "360px", "Resume Match"); return;
-        }
-        
-        setupSquads = { A: { bench: [], xi: [], subs: [], roles: { c: null, vc: null, wk: null } }, B: { bench: [], xi: [], subs: [], roles: { c: null, vc: null, wk: null } } };
-        el('login-screen').classList.add('hidden'); el('toss-screen').classList.remove('hidden');
-        let t1 = fullState.team1 || (fullState.teams && fullState.teams.A ? fullState.teams.A.name : 'Team A'); let t2 = fullState.team2 || (fullState.teams && fullState.teams.B ? fullState.teams.B.name : 'Team B');
-        el('tossWinner').innerHTML = `<option value="A">${t1}</option><option value="B">${t2}</option>`; el('team-a-name').innerText = t1; el('team-b-name').innerText = t2; errBox.innerText = ""; 
-        
-        await loadTournamentSquads(activeMatch.team_a_id, 'A', t1); await loadTournamentSquads(activeMatch.team_b_id, 'B', t2);
-    } catch(e) { let errBox = el('login-error'); if(errBox) { errBox.style.color = "#ef4444"; errBox.innerText = "❌ System Error: " + e.message; } }
-}
-
-// ==========================================
-// TAP-AND-FLY SQUAD SETUP
-// ==========================================
-async function loadTournamentSquads(teamId, teamKey, fallbackTeamName) {
-    let savedPlayers = activeMatch.full_state?.teams?.[teamKey]?.players;
-    if (savedPlayers && savedPlayers.length > 0) {
-        savedPlayers.forEach(p => setupSquads[teamKey].bench.push({ id: p.id || p.regNo, name: p.name }));
-        renderTapAndFly(teamKey); return;
-    }
-    if (!activeMatch.tournament_id || !teamId) {
-        for(let i=1; i<=18; i++) setupSquads[teamKey].bench.push({ id: `dummy_${teamKey}_${i}`, name: `${fallbackTeamName} Player ${i}` });
-        renderTapAndFly(teamKey); return; 
-    }
-    const { data, error } = await supabaseClient.from('tournament_squads').select('player_id, players(full_name)').eq('tournament_id', activeMatch.tournament_id).eq('team_id', teamId);
-    if(error || !data || data.length === 0) { 
-        for(let i=1; i<=18; i++) setupSquads[teamKey].bench.push({ id: `dummy_${teamKey}_${i}`, name: `${fallbackTeamName} Player ${i}` });
-        renderTapAndFly(teamKey); return; 
-    }
-    data.forEach((row, index) => { 
-        let pName = (row.players && row.players.full_name) ? row.players.full_name : `${fallbackTeamName} Player ${index + 1}`;
-        let pId = row.player_id || `dummy_${teamKey}_${index + 1}`;
-        setupSquads[teamKey].bench.push({ id: pId, name: pName }); 
-    });
-    renderTapAndFly(teamKey);
-}
-
-function renderTapAndFly(tKey) {
-    let sq = setupSquads[tKey];
-    el(`bench-${tKey}`).innerHTML = sq.bench.map(p => `<div class="tf-player tf-bench" onclick="tapPlayer('${tKey}', '${p.id}', 'bench')"><span>${p.name}</span> <span>➡</span></div>`).join('');
-    el(`xi-${tKey}`).innerHTML = sq.xi.map(p => {
-        let isC = sq.roles.c === p.id ? 'active c' : ''; let isVC = sq.roles.vc === p.id ? 'active vc' : ''; let isWK = sq.roles.wk === p.id ? 'active wk' : '';
-        return `<div class="tf-player tf-xi" onclick="tapPlayer('${tKey}', '${p.id}', 'xi')"><span>${p.name}</span><div class="role-badges" onclick="event.stopPropagation()"><span class="r-badge ${isC}" onclick="setRole(event, '${tKey}', '${p.id}', 'c')">C</span><span class="r-badge ${isVC}" onclick="setRole(event, '${tKey}', '${p.id}', 'vc')">VC</span><span class="r-badge ${isWK}" onclick="setRole(event, '${tKey}', '${p.id}', 'wk')">WK</span></div></div>`;
-    }).join('');
-    el(`subs-${tKey}`).innerHTML = sq.subs.map(p => `<div class="tf-player tf-sub" onclick="tapPlayer('${tKey}', '${p.id}', 'subs')"><span>${p.name}</span> <span>⬅</span></div>`).join('');
-    el(`count-${tKey}-xi`).innerText = `${sq.xi.length}/11`; el(`count-${tKey}-subs`).innerText = `${sq.subs.length}/7`; el(`count-${tKey}-xi`).style.color = sq.xi.length > 11 ? '#ef4444' : '#10b981';
-}
-
-function tapPlayer(tKey, pId, fromPane) {
-    let sq = setupSquads[tKey];
-    if (fromPane === 'bench') {
-        let pIdx = sq.bench.findIndex(x => String(x.id) === String(pId)); let p = sq.bench.splice(pIdx, 1)[0];
-        if (sq.xi.length < 11) sq.xi.push(p); else if (sq.subs.length < 7) sq.subs.push(p); else { sq.bench.push(p); alert("Squad is full! Maximum 11 XI and 7 Subs."); }
-    } else if (fromPane === 'xi') {
-        let pIdx = sq.xi.findIndex(x => String(x.id) === String(pId)); let p = sq.xi.splice(pIdx, 1)[0]; sq.bench.push(p);
-        if(sq.roles.c === pId) sq.roles.c = null; if(sq.roles.vc === pId) sq.roles.vc = null; if(sq.roles.wk === pId) sq.roles.wk = null;
-    } else if (fromPane === 'subs') {
-        let pIdx = sq.subs.findIndex(x => String(x.id) === String(pId)); let p = sq.subs.splice(pIdx, 1)[0]; sq.bench.push(p);
-    }
-    renderTapAndFly(tKey);
-}
-
-function setRole(e, tKey, pId, role) {
-    e.stopPropagation();
-    if (setupSquads[tKey].roles[role] === pId) setupSquads[tKey].roles[role] = null; else setupSquads[tKey].roles[role] = pId;
-    renderTapAndFly(tKey);
-}
-
-function buildPlayerFromSetup(p, isXi, tKey) {
-    let roles = setupSquads[tKey].roles; let desig = [];
-    if(roles.c === p.id) desig.push('C'); if(roles.vc === p.id) desig.push('VC');
-    let skill = "Batter / Bowler"; if(roles.wk === p.id) { skill = "WK"; if(desig.includes('C')) desig = ['C/WK']; }
-    return { id: p.id, regNo: "", name: p.name, desig: desig.join('/'), r:0, b:0, f:0, s:0, out:false, outOnDuck:0, hasBatted: false, dismissalInfo: "", o:0, rc:0, w:0, m:0, ex:0, wd:0, nb:0, byes:0, legbyes:0, cw:0, catches:0, stumpings:0, runouts:0, quotaOvers: 0, inTime: null, outTime: null, isPlayingXI: isXi, skill: skill, breakMins: 0 };
-}
-
-async function lockPlayingXI() {
-    if(setupSquads.A.xi.length === 0 || setupSquads.B.xi.length === 0) { alert("Select at least 1 player in the Playing XI for both teams!"); return; }
-    state.matchId = activeMatch.match_id; state.teams.A.name = el('team-a-name').innerText; state.teams.B.name = el('team-b-name').innerText;
-    state.teams.A.players = [...setupSquads.A.xi.map(p => buildPlayerFromSetup(p, true, 'A')), ...setupSquads.A.subs.map(p => buildPlayerFromSetup(p, false, 'A'))];
-    state.teams.B.players = [...setupSquads.B.xi.map(p => buildPlayerFromSetup(p, true, 'B')), ...setupSquads.B.subs.map(p => buildPlayerFromSetup(p, false, 'B'))];
-
-    state.matchSettings.venue = el('match-venue') ? el('match-venue').value.trim() : "";
-    state.matchSettings.officials = { referee: el('match-referee')?el('match-referee').value.trim():"", coach: el('match-coach')?el('match-coach').value.trim():"", manager: el('match-manager')?el('match-manager').value.trim():"", umpire1: el('umpire-1')?el('umpire-1').value.trim():"", umpire2: el('umpire-2')?el('umpire-2').value.trim():"", umpire3: el('umpire-3')?el('umpire-3').value.trim():"", umpire4: el('umpire-4')?el('umpire-4').value.trim():"", scorer1: el('scorer-1')?el('scorer-1').value.trim():"", scorer2: el('scorer-2')?el('scorer-2').value.trim():"" };
-    saveToRegistry(state.matchSettings.venue, state.matchSettings.officials);
-
-    let win = el('tossWinner').value, dec = el('tossDecision').value; state.battingKey = ((win === 'A' && dec === 'bat') || (win === 'B' && dec === 'bowl')) ? 'A' : 'B'; state.bowlingKey = state.battingKey === 'A' ? 'B' : 'A';
-    let updatedFullState = activeMatch.full_state || {}; updatedFullState.match_status = 'live';
-    const { error } = await supabaseClient.from('matches').update({ full_state: updatedFullState }).eq('match_id', activeMatch.match_id);
-    if(error) { alert("Error connecting to cloud: " + error.message); return; }
-
-    el('toss-screen').classList.add('hidden'); el('initialization-screen').classList.remove('hidden');
-    el('init-bat-title').innerText = `${state.teams[state.battingKey].name} Openers`; el('init-bowl-title').innerText = `${state.teams[state.bowlingKey].name} Bowler`;
-    let batOpts = '<option value="">-- Select Batter --</option>'; state.teams[state.battingKey].players.forEach((p, index) => { if(p.isPlayingXI) batOpts += `<option value="${index}">${p.name}</option>`; });
-    let bowlOpts = '<option value="">-- Select Bowler --</option>'; state.teams[state.bowlingKey].players.forEach((p, index) => { if(p.isPlayingXI) bowlOpts += `<option value="${index}">${p.name}</option>`; });
-    el('sel-striker').innerHTML = batOpts; el('sel-nonstriker').innerHTML = batOpts; el('sel-bowler').innerHTML = bowlOpts;
-}
-
-function startInnings() {
-    const s = el('sel-striker').value, ns = el('sel-nonstriker').value, b = el('sel-bowler').value;
-    if(!s || !ns || !b) { alert("You must select the Striker, Non-Striker, and Opening Bowler to begin."); return; }
-    if(s === ns) { alert("Striker and Non-Striker cannot be the same person!"); return; }
-
-    state.current.sIdx = parseInt(s); state.current.nsIdx = parseInt(ns); state.current.bIdx = parseInt(b);
-    getBatTeam().players[state.current.sIdx].hasBatted = true; getBatTeam().players[state.current.nsIdx].hasBatted = true;
-    state.current.bowlersInCurrentOver.add(state.current.bIdx);
-    state.current.inningsStartTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     
+    cur.currentOverLog.push({label: lbl, type: 'extra'}); logBallEvent(s, b, runsBat, runsExt, exLabel, false, null, null); 
+    if(ex % 2 !== 0) manualRotate(); 
+    if (checkTargetReached()) { finalizeOver(true); closeModal(); setTimeout(endInnings, 100); return; }
+    closeModal(); updateUI(); checkAutoOverPrompt();
+}
+
+function openRetire() { if(state.current.bIdx === null) return openSelector('bowler', "Select Bowler"); showModal("🏃 Process Retire", `<label class="text-primary">Batter Out</label><select id="wWho" class="modal-input w-100"><option value="striker">Striker</option><option value="nonstriker">Non-Striker</option></select><label class="text-primary mt-5">Dismissal Type</label><select id="wType" class="modal-input w-100"><option value="RetiredHurt">Retired - Not Out</option><option value="RetiredOut">Retired - Out</option></select>`, processWicketSubmit); }
+
+function openWicket() { 
+    if(state.current.bIdx === null) return openSelector('bowler', "Select Bowler"); 
+    let fOpts = `<option value="">-- Select Fielder (Sub) --</option>`; getBowlTeam().players.forEach(p => { if(p.name) fOpts += `<option value="${p.name}">${p.name}</option>`; });
+    let html = `<label class="text-danger">Batter Out</label><select id="wWho" class="modal-input w-100" onchange="updWktOpts()"><option value="striker">Striker</option><option value="nonstriker">Non-Striker</option></select><label class="text-primary mt-5">Type of Delivery</label><select id="wExtra" class="modal-input w-100" onchange="updWktOpts()"><option value="none">Legal</option><option value="wide">Wide</option><option value="noball">No-ball</option></select><label class="text-danger mt-5">Dismissal Type</label><select id="wType" class="modal-input w-100" onchange="updWktFlds()"></select><select id="wFldr" class="modal-input w-100 hidden mt-5">${fOpts}</select><div id="wRunsBox" class="hidden mt-10" style="background:rgba(0,0,0,0.3); padding:10px; border-radius:6px; border:1px dashed var(--primary);"><label class="text-primary">Runs Completed Before Dismissal</label><input type="number" id="wRuns" class="modal-input w-100" value="0" min="0"><div id="wRunTypeWrap"><label class="text-primary mt-5">Runs Scored Via</label><select id="wRunType" class="modal-input w-100" style="margin-bottom:0;"><option value="bat">Off the Bat</option><option value="bye">Byes</option><option value="legbye">Leg Byes</option></select></div></div>`;
+    showModal("🚨 Process Wicket", html, processWicketSubmit); setTimeout(() => { updWktOpts(); }, 10); 
+}
+
+function updWktOpts() { 
+    if(!el('wWho') || !el('wType')) return;
+    let who = el('wWho').value, wT = el('wType'), wEx = el('wExtra') ? el('wExtra').value : 'none', o = ''; if (wT.options.length > 0 && wT.options[0].value === 'RetiredHurt') return;
+    let isFreeHitActive = state.current.isFreeHit || wEx === 'noball';
+    if (isFreeHitActive) { if (who === 'striker') o = `<option value="RunOut">Run Out</option><option value="HitBallTwice">Hit the ball twice</option><option value="ObstructingField">Obstructing the field</option>`; else o = `<option value="RunOut">Run Out</option><option value="ObstructingField">Obstructing the field</option>`; } 
+    else if (wEx === 'wide') { if (who === 'striker') o = `<option value="Stumped">Stumped</option><option value="RunOut">Run Out</option><option value="HitWicket">Hit Wicket</option><option value="TimedOut">Timed Out</option><option value="ObstructingField">Obstructing the field</option><option value="HitBallTwice">Hit the ball twice</option>`; else o = `<option value="RunOut">Run Out</option><option value="TimedOut">Timed Out</option><option value="ObstructingField">Obstructing the field</option>`; } 
+    else { if (who === 'striker') o = `<option value="Bowled">Bowled</option><option value="Caught">Caught</option><option value="LBW">LBW</option><option value="RunOut">Run Out</option><option value="Stumped">Stumped</option><option value="HitWicket">Hit Wicket</option><option value="TimedOut">Timed Out</option><option value="ObstructingField">Obstructing the field</option><option value="HitBallTwice">Hit the ball twice</option>`; else o = `<option value="RunOut">Run Out</option><option value="TimedOut">Timed Out</option><option value="ObstructingField">Obstructing the field</option>`; }
+    wT.innerHTML = o; updWktFlds(); 
+}
+
+function updWktFlds() { 
+    if(!el('wType')) return; let t = el('wType').value, fldr = el('wFldr'), rBox = el('wRunsBox'), wEx = el('wExtra') ? el('wExtra').value : 'none';
+    if (fldr) { if (['Caught', 'RunOut'].includes(t)) fldr.classList.remove('hidden'); else fldr.classList.add('hidden'); }
+    if (rBox) { if (['RunOut', 'ObstructingField'].includes(t)) { rBox.classList.remove('hidden'); if (el('wRunTypeWrap')) el('wRunTypeWrap').classList.toggle('hidden', wEx === 'wide'); } else { rBox.classList.add('hidden'); } }
+}
+
+function processWicketSubmit() {
+    saveState(); markOpenerTimes(); let cur = state.current, wWho = el('wWho').value, wType = el('wType').value, wFldr = el('wFldr') ? el('wFldr').value : "", extraType = el('wExtra') ? el('wExtra').value : 'none';
+    let b = getBowlTeam().players[cur.bIdx], s = getBatTeam().players[cur.sIdx]; cur.bowlersInCurrentOver.add(cur.bIdx);
+    let isSO = (wWho === 'striker'), outIdx = isSO ? cur.sIdx : cur.nsIdx, oB = getBatTeam().players[outIdx];
+
+    if (wType === 'RetiredHurt' || wType === 'RetiredOut') { 
+        if (wType === 'RetiredHurt') { oB.out = 'retiredHurt'; oB.dismissalInfo = "Retired Hurt (Not Out)"; } else { cur.wkts++; oB.out = true; oB.dismissalInfo = "Retired Out"; } 
+        cur.currentOverLog.push({label: 'Ret', type: 'wicket'}); logBallEvent(s, b, 0, 0, 'None', true, wType, oB); 
+    } else {
+        cur.wkts++; oB.out = true; let runsScored = 0, runType = 'bat'; let runsExt = 0; let exLabel = 'None';
+        
+        if (['RunOut', 'ObstructingField'].includes(wType)) { let runsInput = el('wRuns') ? el('wRuns').value : "0"; runsScored = parseInt(runsInput, 10); if (isNaN(runsScored)) runsScored = 0; runType = extraType === 'wide' ? 'wide' : (el('wRunType') ? el('wRunType').value : 'bat'); }
+        if (extraType === 'wide') { cur.runs += 1; cur.runsInThisOver += 1; cur.extras.w += 1; b.rc += 1; b.wd += 1; runsExt += 1; exLabel = 'Wide'; } else if (extraType === 'noball') { cur.runs += 1; cur.runsInThisOver += 1; cur.extras.nb += 1; b.rc += 1; b.nb += 1; s.b++; cur.currPartnership.balls++; if (state.matchSettings.matchType !== 'multiday') cur.isFreeHit = true; runsExt += 1; exLabel = 'No-Ball'; } else if (wType !== 'TimedOut') { s.b++; cur.balls++; b.o++; cur.currPartnership.balls++; cur.isFreeHit = false; }
+        
+        let runsBat = 0;
+        if (runsScored > 0) { cur.runs += runsScored; cur.runsInThisOver += runsScored; cur.currPartnership.runs += runsScored; if (extraType === 'wide') { cur.extras.w += runsScored; b.rc += runsScored; b.wd += runsScored; runsExt += runsScored; } else if (runType === 'bat') { s.r += runsScored; b.rc += runsScored; if (runsScored === 4) s.f++; if (runsScored === 6) s.s++; runsBat = runsScored; } else if (runType === 'bye') { cur.extras.b += runsScored; b.byes += runsScored; runsExt += runsScored; } else if (runType === 'legbye') { cur.extras.lb += runsScored; b.legbyes += runsScored; runsExt += runsScored; } }
+        if(['Bowled', 'Caught', 'LBW', 'Stumped', 'HitWicket'].includes(wType)) { b.w++; b.cw = (b.cw || 0) + 1; } else { b.cw = 0; }
+        
+        if (wType === 'Stumped') { let wk = getBowlTeam().players.find(p => p.skill && p.skill.includes('WK') && p.isPlayingXI); if (wk) { wk.stumpings++; wFldr = wk.name; } else { wFldr = "WK"; } } else if (wFldr) { let fObj = getBowlTeam().players.find(p => p.name === wFldr); if (fObj) { if (wType === 'Caught') fObj.catches++; else if (wType === 'RunOut') fObj.runouts++; } }
+        
+        let logLabel = (runsScored > 0 ? runsScored : '') + 'W'; if (extraType === 'wide') logLabel = (runsScored + 1) + 'wd+W'; else if (extraType === 'noball') logLabel = (runsScored + 1) + 'nb+W';
+        cur.currentOverLog.push({label: logLabel, type: 'wicket'}); oB.outOnDuck = (oB.r === 0) ? 1 : 0;
+        let dT = ""; if (wType === 'Bowled') dT = `b ${b.name}`; else if (wType === 'Caught') dT = `c ${wFldr || 'Sub'} b ${b.name}`; else if (wType === 'LBW') dT = `lbw b ${b.name}`; else if (wType === 'Stumped') dT = `st ${wFldr} b ${b.name}`; else if (wType === 'RunOut') dT = `run out (${wFldr || 'Sub'})`; else if (wType === 'HitWicket') dT = `hit wicket b ${b.name}`; else if (wType === 'ObstructingField') dT = `obstructing the field`; else if (wType === 'HitBallTwice') dT = `hit the ball twice`; else if (wType === 'TimedOut') dT = `timed out`;
+        if (extraType === 'wide') dT += ' (wd)'; else if (extraType === 'noball') dT += ' (nb)'; oB.dismissalInfo = dT; logBallEvent(s, b, runsBat, runsExt, exLabel, true, wType, oB); 
+    }
+
+    oB.outTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); cur.fow.push({ wktNum: cur.wkts, runs: cur.runs, overs: formatOver(cur.balls), outBatter: oB.name, partner: getBatTeam().players[isSO ? cur.nsIdx : cur.sIdx].name, pRuns: cur.currPartnership.runs, pBalls: cur.currPartnership.balls }); cur.currPartnership = { runs: 0, balls: 0 };
+    let runsScoredRotate = 0; if (['RunOut', 'ObstructingField'].includes(wType)) { let rotInput = el('wRuns') ? el('wRuns').value : "0"; runsScoredRotate = parseInt(rotInput, 10); if (isNaN(runsScoredRotate)) runsScoredRotate = 0; }
+    if (['RunOut', 'ObstructingField'].includes(wType)) { if (runsScoredRotate % 2 === 0) manualRotate(); } else { if (runsScoredRotate % 2 !== 0 && !['Caught', 'Bowled', 'LBW', 'Stumped', 'HitWicket', 'TimedOut'].includes(wType)) { manualRotate(); } }
+    if (checkTargetReached()) { if(cur.bIdx !== null) finalizeOver(true); closeModal(); setTimeout(endInnings, 100); return; }
+    closeModal(); updateUI(); let promptDelay = 800; if(cur.wkts < 10) { let slot = getBatTeam().players[cur.sIdx].out ? 'striker' : 'nonstriker'; setTimeout(() => openSelector(slot, "Next Batter"), promptDelay); } else { setTimeout(() => endInnings(), promptDelay); }
+}
+
+function openPenalty() { let html = `<select id="penT" class="modal-input w-100"><option value="bat">Batting Team</option><option value="bowl">Bowling Team</option></select><input type="number" id="penR" class="modal-input w-100" placeholder="Runs" value="5">`; showModal("Award Penalty Runs", html, () => { saveState(); let t = el('penT').value, r = parseInt(el('penR').value) || 0; if (r === 0) { closeModal(); return; } if (t === 'bat') { state.current.runs += r; state.current.penalties += r; state.current.currentOverLog.push({label: `+${r}P`, type: 'extra'}); if (checkTargetReached()) { finalizeOver(true); closeModal(); setTimeout(endInnings, 100); return; } } else { let p = state.inningsSummaries.find(i => i.batTeam === getBowlTeam().name); if (p) { p.runs += r; p.penalties = (p.penalties || 0) + r; alert("Penalty added to completed innings!"); } else { state.teams[state.bowlingKey].pendingPenalties += r; alert("Penalty will be added to next innings!"); } } closeModal(); updateUI(); }); }
+function openChangeWK() { let o = getBowlTeam().players.map((p, i) => p.isPlayingXI ? `<option value="${i}" ${p.skill && p.skill.includes('WK') ? 'selected' : ''}>${p.name}</option>` : '').join(''); showModal("🧤 Change WK", `<select id="nWK" class="modal-input w-100"><option value="-1">-- No WK Selected --</option>${o}</select>`, () => { getBowlTeam().players.forEach(p => { if(p.skill && p.skill.includes('/ WK')) { p.skill = p.skill.replace(' / WK', ''); } }); let idx = parseInt(el('nWK').value); if(idx >= 0) { if(!getBowlTeam().players[idx].skill.includes('WK')) { getBowlTeam().players[idx].skill += ' / WK'; } } syncMetadataToHistory(false); closeModal(); updateUI(); }); }
+function updSwap() { el('swO').innerHTML = state.teams[el('swT').value].players.map((p, i) => p.isPlayingXI ? `<option value="${i}">${p.name}</option>` : '').join(''); el('swI').innerHTML = state.teams[el('swT').value].players.map((p, i) => !p.isPlayingXI ? `<option value="${i}">${p.name}</option>` : '').join(''); }
+function openPlayerSwap() { let html = `<select id="swT" class="modal-input w-100" onchange="updSwap()"><option value="A">${state.teams.A.name}</option><option value="B">${state.teams.B.name}</option></select><label>OUT:</label><select id="swO" class="modal-input w-100"></select><label>IN:</label><select id="swI" class="modal-input w-100"></select>`; showModal("🔄 Sub Swap", html, () => { let k = el('swT').value, o = parseInt(el('swO').value), i = parseInt(el('swI').value), t = state.teams[k].players; if ((k === state.battingKey && (state.current.sIdx === o || state.current.nsIdx === o)) || (k === state.bowlingKey && state.current.bIdx === o)) { alert("Cannot swap active player!"); return; } saveState(); t[o].isPlayingXI = false; if (!t[o].dismissalInfo && t[o].hasBatted) t[o].dismissalInfo = "Replaced (Injury)"; t[i].isPlayingXI = true; closeModal(); updateUI(); }); setTimeout(updSwap, 10); }
+function openEditSquad() { let html = `<select id="editSqTeam" class="modal-input w-100" onchange="buildEditSq()"><option value="A">${state.teams.A.name}</option><option value="B">${state.teams.B.name}</option></select><div id="editSqDiv" style="max-height:60vh; overflow-y:auto; margin-top:10px; border:1px solid var(--border); border-radius:6px; background:rgba(0,0,0,0.2);"></div>`; showModal("🛠️ Edit Squad & Playing XI", html, saveEditSquad, true, "500px", "Save Changes"); setTimeout(buildEditSq, 50); }
+function buildEditSq() { let k = el('editSqTeam').value, t = state.teams[k].players; let html = `<table class="roster-table" style="color:white; margin-top:0; min-width:100%;"><thead style="position:sticky; top:0; background:#020617; z-index:5;"><tr><th style="width:10%;">#</th><th style="width:65%;">Player Name</th><th style="width:25%; text-align:center;">Playing 11</th></tr></thead><tbody>`; t.forEach((p, i) => { html += `<tr><td style="text-align:center; color:var(--text-muted);">${i+1}</td><td><input type="text" id="es-n-${i}" value="${p.name}" class="w-100" style="padding:6px; font-size:0.85rem; border:none; background:transparent; border-bottom:1px solid #334155; border-radius:0;"></td><td style="text-align:center;"><input type="checkbox" id="es-p-${i}" ${p.isPlayingXI ? 'checked' : ''} style="width:18px;height:18px; cursor:pointer;"></td></tr>`; }); html += `</tbody></table>`; el('editSqDiv').innerHTML = html; }
+function saveEditSquad() { let k = el('editSqTeam').value, t = state.teams[k].players; let activeIdxs = []; if (k === state.battingKey) { if(state.current.sIdx !== null) activeIdxs.push(state.current.sIdx); if(state.current.nsIdx !== null) activeIdxs.push(state.current.nsIdx); } if (k === state.bowlingKey) { if(state.current.bIdx !== null) activeIdxs.push(state.current.bIdx); } for(let i=0; i<t.length; i++) { let isChecked = el(`es-p-${i}`).checked; if (!isChecked && activeIdxs.includes(i)) { alert(`Cannot remove ${t[i].name} from Playing XI because they are active!`); return; } } for(let i=0; i<t.length; i++) { t[i].name = el(`es-n-${i}`).value.trim(); t[i].isPlayingXI = el(`es-p-${i}`).checked; } syncMetadataToHistory(true); closeModal(); updateUI(); }
+
+function openSelector(typ, title) { 
+    let cur = state.current, lst = typ === 'bowler' ? getBowlTeam().players : getBatTeam().players; 
+    let opt = lst.map((p, i) => { if (!p.isPlayingXI) return ''; let s = typ === 'bowler' ? (!cur.lastOverBowlers.has(i) && i !== cur.bIdx && p.quotaOvers < state.matchSettings.bowlerQuota) : ((!p.hasBatted || p.out === 'retiredHurt') && i !== cur.sIdx && i !== cur.nsIdx); return s ? `<option value="${i}">${p.name}</option>` : ''; }).join(''); 
+    showModal(title, `<select id="gSel" class="modal-input w-100">${opt}</select>`, () => { 
+        saveState(); let val = parseInt(el('gSel').value); 
+        if(typ === 'bowler') { cur.bIdx = val; cur.bowlersInCurrentOver.add(val); } else { cur[typ === 'striker' ? 'sIdx' : 'nsIdx'] = val; let nB = getBatTeam().players[val]; if (nB.out === 'retiredHurt') { nB.out = false; nB.dismissalInfo = ""; } else { nB.inTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); } nB.hasBatted = true; } 
+        closeModal(); updateUI(); 
+        if (typ !== 'bowler' && cur.bIdx === null && cur.wkts < 10) { setTimeout(() => openSelector('bowler', "Select Next Bowler"), 50); } else if (typ !== 'bowler') { checkAutoOverPrompt(); }
+    }, false, "360px", "Confirm"); 
+}
+
+function updateUI() {
+    let cur = state.current, bT = getBatTeam().players, bwT = getBowlTeam().players;
+    setTimeout(() => { localStorage.setItem('cricStat_activeMatch', JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value)); triggerCloudSync(); }, 0);
+
     if (activeMatch && activeMatch.full_state) {
-        let format = activeMatch.full_state.format || 'T20';
-        if (format.includes('Multi-Day') || format === 'Test') {
-            state.matchSettings.matchType = 'multiday'; state.matchSettings.maxOvers = 999; state.matchSettings.bowlerQuota = 999; state.matchSettings.maxInnings = 4; if(el('breakBtn')) el('breakBtn').classList.remove('hidden');
-        } else if (format === 'One Day') {
-            state.matchSettings.matchType = 'oneday'; state.matchSettings.maxOvers = 50; state.matchSettings.bowlerQuota = 10; state.matchSettings.maxInnings = 2;
-        } else {
-            state.matchSettings.matchType = 't20'; state.matchSettings.maxOvers = 20; state.matchSettings.bowlerQuota = 4; state.matchSettings.maxInnings = 2;
-        }
-        state.matchSettings.originalMaxOvers = state.matchSettings.maxOvers;
+        let tName = (activeMatch && activeMatch.tournaments && activeMatch.tournaments.name) ? activeMatch.tournaments.name : (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament ? activeMatch.full_state.tournament : "INDEPENDENT MATCH");
+        if (el('displayTournament')) el('displayTournament').innerText = tName;
     }
 
-    if(activeMatch && activeMatch.full_state) { el('displayTournament').innerText = activeMatch.full_state.tournament || "MATCH IN PROGRESS"; }
-    el('dispGroundName').innerText = state.matchSettings.venue || "Live Ground"; 
+    el('inningsBadge').innerText = `INNINGS ${state.inningsNum}`; el('dispBatTeamName').innerText = state.teams[state.battingKey].name; el('dispBowlTeamName').innerText = state.teams[state.bowlingKey].name; el('dispBatTeamNameTop').innerText = state.teams[state.battingKey].name;
+    let histHtml = ''; state.inningsSummaries.forEach(inn => { histHtml += `<div class="text-success mb-5" style="font-size:0.85rem;">Inn ${inn.innNum}: ${inn.batTeam} scored ${inn.runs}/${inn.wkts}</div>`; }); el('inningsHistoryText').innerHTML = histHtml;
+
+    let effBalls = getEffectiveBalls(cur); let crrVal = effBalls > 0 ? ((cur.runs / effBalls) * 6).toFixed(2) : "0.00"; if(el('liveCrr')) el('liveCrr').innerText = crrVal;
     
-    el('initialization-screen').classList.add('hidden'); el('top-title').classList.add('hidden'); el('scoringView').classList.remove('hidden');
-    if(typeof updateUI === 'function') updateUI();
+    let curTargetString = null; let rrrVal = null;
+    if (state.matchSettings.matchType === 'multiday') {
+        let allInn = [...state.inningsSummaries]; let bowlTeam = getBowlTeam().name; let bowlTeamInnsCount = allInn.filter(i => i.batTeam === bowlTeam).length;
+        if (state.matchSettings.customTarget) { curTargetString = `${state.matchSettings.customTarget} Runs`; } else if (bowlTeamInnsCount === 2) { let bowlTotal = allInn.filter(i => i.batTeam === bowlTeam).reduce((sum, i) => sum + i.runs, 0); let batPrevInns = allInn.filter(i => i.batTeam === getBatTeam().name).reduce((sum, i) => sum + i.runs, 0); let targetToWin = bowlTotal - batPrevInns + 1; if (targetToWin > 0) curTargetString = `Target: ${targetToWin}`; }
+        if (curTargetString) { el('dispTargetText').innerText = curTargetString; el('targetDisplayBox').classList.remove('hidden'); } else { el('targetDisplayBox').classList.add('hidden'); }
+        if(el('rrrBox')) el('rrrBox').classList.add('hidden'); 
+    } else {
+        if (state.inningsNum > 1 && state.inningsSummaries.length > 0) { 
+            let tRuns = state.matchSettings.customTarget || (state.inningsSummaries[state.inningsNum - 2].runs + 1); let tOvers = state.matchSettings.customTargetOvers || state.matchSettings.originalMaxOvers; let tMethod = state.matchSettings.targetMethod || ""; curTargetString = `${tRuns} (${tOvers}) ${tMethod}`.trim(); 
+            el('dispTargetText').innerText = curTargetString; el('targetDisplayBox').classList.remove('hidden'); 
+            let runsNeeded = tRuns - cur.runs; if(runsNeeded < 0) runsNeeded = 0;
+            let targetFullOvers = Math.floor(tOvers); let targetExtraBalls = Math.round((tOvers - targetFullOvers) * 10); let totalTargetBalls = (targetFullOvers * 6) + targetExtraBalls;
+            let ballsLeft = totalTargetBalls - effBalls; if (ballsLeft < 0) ballsLeft = 0; rrrVal = ballsLeft > 0 ? ((runsNeeded / ballsLeft) * 6).toFixed(2) : "0.00";
+            if(el('liveRrr')) el('liveRrr').innerText = rrrVal; 
+            let runsColor = runsNeeded < ballsLeft ? 'var(--success)' : (runsNeeded > ballsLeft ? 'var(--danger)' : 'white');
+            if(el('liveReq')) { el('liveReq').innerHTML = `<span style="color:${runsColor};">${runsNeeded}</span><span style="color:var(--primary);">/</span><span style="color:var(--accent);">${ballsLeft}</span>`; }
+            if(el('rrrBox')) el('rrrBox').classList.remove('hidden');
+        } else { el('targetDisplayBox').classList.add('hidden'); if(el('rrrBox')) el('rrrBox').classList.add('hidden'); }
+    }
+
+    let leadBoxHtml = "";
+    if (state.matchSettings.matchType === 'multiday' && state.inningsNum > 1) { let tBat = getBatTeam().name, tBowl = getBowlTeam().name; let sBat = state.current.runs + state.inningsSummaries.filter(i=>i.batTeam===tBat).reduce((a,b)=>a+b.runs,0); let sBowl = state.inningsSummaries.filter(i=>i.batTeam===tBowl).reduce((a,b)=>a+b.runs,0); let diff = sBat - sBowl; let txt = diff > 0 ? `lead by ${diff}` : (diff < 0 ? `trail by ${Math.abs(diff)}` : `scores level`); leadBoxHtml = `<p class="text-accent font-bold mt-5 mb-0" style="font-size:0.85rem; text-transform:uppercase;">📊 ${tBat} ${txt}</p>`; }
+    el('leadTrailBox').innerHTML = leadBoxHtml;
+
+    el('livePartnership').innerText = `${cur.currPartnership.runs} (${cur.currPartnership.balls})`; 
+    el('liveRuns').innerText = cur.runs; el('liveWkts').innerText = cur.wkts; el('liveWkts').style.color = "var(--danger)"; 
+    el('liveOvers').innerText = getTeamOversDisplay(); 
+    el('liveExtras').innerText = cur.extras.w + cur.extras.nb + cur.extras.b + cur.extras.lb; 
+    el('exW').innerText = cur.extras.w; el('exNB').innerText = cur.extras.nb; el('exB').innerText = cur.extras.b; el('exLB').innerText = cur.extras.lb; el('livePenalties').innerText = cur.penalties; 
+    el('freeHitBadge').classList.toggle('hidden', !cur.isFreeHit);
+    
+    if (state.current.activeBreak) { el('scoringEventsBox').classList.add('hidden'); el('breakOverlayBox').classList.remove('hidden'); el('breakTitle').innerText = `PAUSED: ${state.current.activeBreak}`; if (state.current.activeBreakInsp) { el('breakSubtitle').innerText = `Next Inspection: ${state.current.activeBreakInsp}`; } else { el('breakSubtitle').innerText = ""; } } else { el('scoringEventsBox').classList.remove('hidden'); el('breakOverlayBox').classList.add('hidden'); }
+
+    let battedPlayers = bT.map((p, i) => ({p: p, i: i})).filter(item => item.p.hasBatted);
+    battedPlayers.sort((a, b) => { let aActive = (a.i === cur.sIdx || a.i === cur.nsIdx) ? 1 : 0; let bActive = (b.i === cur.sIdx || b.i === cur.nsIdx) ? 1 : 0; if (aActive !== bActive) return bActive - aActive; return a.i - b.i; });
+
+    let battersHtml = `<table class="bowler-table" style="font-size: 0.85rem; margin-top:0;"><thead><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>`;
+    battersHtml += battedPlayers.map(item => { 
+        let p = item.p, rI = item.i; let isActive = (rI === cur.sIdx || rI === cur.nsIdx); let isStriker = (rI === cur.sIdx); let sr = p.b > 0 ? ((p.r / p.b) * 100).toFixed(2) : "0.00"; 
+        let dName = p.name; if(p.desig === 'C' || p.desig === 'C/WK' || p.desig.includes('C')) dName += ' (C)'; if(p.skill && p.skill.includes('WK')) dName += ' *'; if(isStriker) dName += ' <span style="font-size:0.8rem;" title="Striker">🏏</span>';
+        let rowStyle = isActive ? (isStriker ? 'background: rgba(16, 185, 129, 0.15); border-left: 3px solid var(--success);' : 'background: rgba(255,255,255,0.05); border-left: 3px solid transparent;') : 'opacity: 0.6; border-left: 3px solid transparent;';
+        let statusInfo = p.out ? `<div style="font-size:0.65rem; color:var(--danger); font-style:italic; margin-top:2px;">${p.dismissalInfo}</div>` : (isActive ? `<div style="font-size:0.65rem; color:var(--success); font-style:italic; margin-top:2px;">Not Out</div>` : '');
+        return `<tr style="${rowStyle}"><td style="padding:8px; max-width: 140px;"><div style="font-weight:bold; color:${isActive ? 'white' : 'var(--text-muted)'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.name}">${dName}</div>${statusInfo}</td><td style="font-weight:bold; font-size:1.1rem; color:var(--primary); padding:8px;">${p.r}</td><td style="padding:8px;">${p.b}</td><td style="color:var(--b4); padding:8px;">${p.f}</td><td style="color:var(--b6); padding:8px;">${p.s}</td><td style="color:var(--accent); font-weight:bold; padding:8px;">${sr}</td></tr>`; 
+    }).join('');
+    battersHtml += `</tbody></table>`; el('battersContainer').innerHTML = battersHtml;
+    
+    let miniBatHtml = "";
+    if (cur.sIdx !== null) { let p = bT[cur.sIdx]; miniBatHtml += `<div style="display: flex; align-items: center; width: 100%; margin-bottom: 2px;"><div style="color: white; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; text-align: left;" title="${p.name}">${p.name}</div><div style="flex: 0 0 auto; margin-left: 4px; white-space: nowrap;"><span style="font-size:0.6rem; margin-right: 2px;">🏏</span><span class="text-primary" style="font-weight:bold;">${p.r}</span><span style="color:var(--text-muted); font-weight:normal; font-size:0.7rem; margin-left:2px;">(${p.b})</span></div></div>`; }
+    if (cur.nsIdx !== null) { let p = bT[cur.nsIdx]; miniBatHtml += `<div style="display: flex; align-items: center; width: 100%;"><div style="color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; text-align: left;" title="${p.name}">${p.name}</div><div style="flex: 0 0 auto; margin-left: 4px; white-space: nowrap;"><span class="text-primary" style="font-weight:bold;">${p.r}</span><span style="color:var(--text-muted); font-weight:normal; font-size:0.7rem; margin-left:2px;">(${p.b})</span></div></div>`; }
+    el('miniLiveBatters').innerHTML = miniBatHtml;
+    
+    if(cur.bIdx !== null) { 
+        let actB = bwT[cur.bIdx]; let bName = actB.name; if(actB.desig === 'C' || actB.desig === 'C/WK' || actB.desig.includes('C')) bName += ' (C)'; if(actB.skill && actB.skill.includes('WK')) bName += ' *'; 
+        el('activeBowlerNameRight').innerText = bName; el('activeBowlerNameRight').title = bName; el('activeBowlerProgress').innerHTML = cur.currentOverLog.map(getBadgeHtml).join(''); 
+        let totalRuns = (actB.rc || 0); 
+        let miniBowlHtml = `<div style="display:flex; justify-content:flex-end; align-items:center; width:100%; margin-bottom:2px;"><div style="flex: 0 0 auto; margin-right:4px;">⚾</div><div style="color:white; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex: 0 1 auto; text-align:right;">${actB.name}</div></div>`; miniBowlHtml += `<div style="color:var(--text-muted); font-size:0.75rem; text-align:right; white-space:nowrap;">${formatOver(actB.o)}-${actB.m}-${totalRuns}-<span class="text-danger" style="font-weight:bold;">${actB.w}</span></div>`; el('miniLiveBowler').innerHTML = miniBowlHtml;
+    } else {
+        el('activeBowlerNameRight').innerText = "Select..."; el('activeBowlerNameRight').title = ""; el('activeBowlerProgress').innerHTML = ""; el('miniLiveBowler').innerHTML = `<div style="color: var(--text-muted); font-style:italic;">Select Bowler...</div>`;
+    }
+    
+    el('recentBallsData').innerHTML = cur.recentBalls.map(getBadgeHtml).join(''); 
+    el('bowlStatsBody').innerHTML = bwT.filter(p => p.o > 0 || p.rc > 0).map(p => { 
+        let bName = p.name; if(p.desig === 'C' || p.desig === 'C/WK' || p.desig.includes('C')) bName += ' (C)'; if(p.skill && p.skill.includes('WK')) bName += ' *'; 
+        let totalRuns = p.rc || 0; 
+        let exStr = `${p.byes||0}b, ${p.legbyes||0}lb`; let noBalls = p.nb || 0; let wides = p.wd || 0;
+        return `<tr><td style="max-width: 85px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.name}">${bName}</td><td>${formatOver(p.o)}</td><td>${p.m}</td><td>${totalRuns}</td><td style="color:var(--danger); font-weight:bold;">${p.w}</td><td style="font-size:0.7rem; color:var(--text-muted);">${exStr}</td><td>${noBalls}</td><td>${wides}</td></tr>`; 
+    }).join('');
+}
+
+function manualRotateUI() { saveState(); manualRotate(); }
+function manualRotate() { [state.current.sIdx, state.current.nsIdx] = [state.current.nsIdx, state.current.sIdx]; updateUI(); }
+
+function executeEndOver() {
+    saveState(); finalizeOver(false); manualRotate(); state.current.bIdx = null; updateUI();
+    if (state.current.overHistory.length >= state.matchSettings.maxOvers) { setTimeout(endInnings, 100); } else { setTimeout(() => openSelector('bowler', "Select Next Bowler"), 50); }
+}
+
+function manualEndOver() {
+    if (state.current.bIdx === null) { alert("No bowler is currently active!"); return; }
+    let cur = state.current; let completedOvers = cur.overHistory.length; let ballsInPreviousOvers = completedOvers > 0 ? (cur.overHistory[completedOvers - 1].totalBallsAtEnd || (completedOvers * 6)) : 0; let currentOverBalls = Math.max(0, cur.balls - ballsInPreviousOvers);
+    if (currentOverBalls === 0) { alert("No legal deliveries bowled in this over yet!"); return; }
+    if (currentOverBalls < 6) { showModal("⚠️ Early Over Call", `<div class="text-center mb-10 text-accent" style="font-size:1.1rem;">Only <b>${currentOverBalls}</b> legal deliveries bowled!</div><div class="text-center text-muted" style="font-size:0.85rem;">Do you really want to end this over early?</div>`, () => { closeModal(); executeEndOver(); }, false, "360px", "Yes, Call Over"); return; }
+    executeEndOver();
+}
+
+function checkAutoOverPrompt() {
+    let cur = state.current;
+    if (cur.wkts >= 10 || checkTargetReached()) return;
+
+    let completedOvers = cur.overHistory.length;
+    let ballsInPreviousOvers = completedOvers > 0 ? (cur.overHistory[completedOvers - 1].totalBallsAtEnd || (completedOvers * 6)) : 0;
+    let currentOverBalls = Math.max(0, cur.balls - ballsInPreviousOvers);
+
+    if (currentOverBalls === 6) {
+        let strikerOut = cur.sIdx !== null && getBatTeam().players[cur.sIdx].out;
+        let nonStrikerOut = cur.nsIdx !== null && getBatTeam().players[cur.nsIdx].out;
+        if (strikerOut || nonStrikerOut) return; 
+
+        let scoringBox = el('scoringEventsBox');
+        if(scoringBox) { scoringBox.style.pointerEvents = 'none'; scoringBox.style.opacity = '0.6'; }
+
+        setTimeout(() => {
+            if (state.current.bIdx === null) {
+                if(scoringBox) { scoringBox.style.pointerEvents = 'auto'; scoringBox.style.opacity = '1'; }
+                return; 
+            } 
+            showModal("🔄 Over Completed", `<div class="text-center mb-10 text-accent font-bold" style="font-size:1.1rem;">6 legal deliveries bowled!</div><div class="text-center text-muted" style="font-size:0.85rem;">Click <b>Call Over</b> to select the next bowler, or click <b>Cancel</b> if the umpire allows play to continue (7th ball).</div>`, () => { closeModal(); executeEndOver(); }, false, "360px", "Call Over");
+        }, 600); 
+    }
 }
