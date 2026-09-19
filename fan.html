@@ -26,7 +26,6 @@
         .match-card:hover { border-color: #38bdf8; background: rgba(30, 41, 59, 0.8); }
         
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        
         .tourney-name { font-size: 0.75rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px; }
         .match-number { background: #334155; color: #f8fafc; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 900; }
         
@@ -34,7 +33,6 @@
         .badge-live { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
         .badge-comp { background: rgba(16, 185, 129, 0.2); color: #10b981; }
         .badge-up { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-
         .format-badge { background: #0f172a; color: #38bdf8; border: 1px solid #38bdf8; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; margin-left: 10px; }
 
         .teams { font-size: 1.15rem; font-weight: bold; color: white; margin-bottom: 8px; }
@@ -54,11 +52,21 @@
         .details-table td { padding: 6px 4px; border-bottom: 1px solid #1e293b; text-align: right; }
         .details-table td:first-child { text-align: left; }
         
-        /* NEW: Styles for the Meta Box (Toss, Points, Result) */
+        /* THE META BOX */
         .meta-box { margin-top: 8px; margin-bottom: 12px; font-size: 0.85rem; line-height: 1.5; background: rgba(0,0,0,0.25); padding: 10px 15px; border-radius: 6px; border-left: 3px solid #38bdf8; }
         .meta-toss { color: #cbd5e1; }
         .meta-result { color: #10b981; font-weight: bold; margin-top: 4px; font-size: 0.9rem; }
         .meta-points { color: #f59e0b; margin-top: 4px; font-weight: bold; }
+        .meta-stars { color: #38bdf8; margin-top: 4px; font-weight: bold; }
+
+        /* 🔥 NEW: FILE FOLDER TABS UI */
+        .folder-tabs { display: flex; gap: 4px; border-bottom: 1px solid #38bdf8; margin-bottom: 15px; overflow-x: auto; scrollbar-width: none; }
+        .folder-tabs::-webkit-scrollbar { display: none; }
+        .folder-tab { background: rgba(0,0,0,0.2); border: 1px solid #334155; border-bottom: none; padding: 8px 15px; color: #94a3b8; cursor: pointer; border-radius: 6px 6px 0 0; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; white-space: nowrap; transition: 0.2s; }
+        .folder-tab:hover { color: white; background: rgba(56, 189, 248, 0.1); }
+        .folder-tab.active { background: #0f172a; color: #38bdf8; border-color: #38bdf8; border-bottom: 2px solid #0f172a; margin-bottom: -1px; }
+        .inn-pane { display: none; animation: fadeIn 0.3s ease; }
+        .inn-pane.active { display: block; }
     </style>
 </head>
 <body>
@@ -111,21 +119,33 @@
             }
         }
 
+        // 🔥 NEW: Function to switch between File Folders natively
+        window.switchFolder = function(matchId, targetIdx, totalInn, event) {
+            event.stopPropagation(); // Stops the card from closing
+            for(let i=0; i<totalInn; i++) {
+                let tab = document.getElementById(`tab-${matchId}-${i}`);
+                let pane = document.getElementById(`pane-${matchId}-${i}`);
+                if(tab) tab.classList.remove('active');
+                if(pane) { pane.classList.remove('active'); pane.style.display = 'none'; }
+            }
+            let actTab = document.getElementById(`tab-${matchId}-${targetIdx}`);
+            let actPane = document.getElementById(`pane-${matchId}-${targetIdx}`);
+            if(actTab) actTab.classList.add('active');
+            if(actPane) { actPane.classList.add('active'); actPane.style.display = 'block'; }
+        };
+
         async function fetchMatches() {
             const { data, error } = await db.from('matches').select('match_id, full_state, tournaments(name)').order('created_at', { ascending: false });
             if (error) { console.error("Cloud Error:", error); return; }
             
             allFanMatches = data || [];
-            
             let filterSets = { teams: new Set(), tourneys: new Set(), formats: new Set() };
             
             allFanMatches.forEach(m => {
                 let fs = m.full_state || {};
-                
                 let t1 = fs.team1 || (fs.teams?.A?.name);
                 let t2 = fs.team2 || (fs.teams?.B?.name);
                 let tourney = (m.tournaments && m.tournaments.name) ? m.tournaments.name : fs.tournament;
-                
                 let format = fs.format;
                 if (!format || format === 'undefined' || format === '') {
                     if (fs.matchSettings && fs.matchSettings.matchType === 'multiday') { format = 'Multi-Day (Test)'; } 
@@ -168,7 +188,6 @@
 
             allFanMatches.forEach(m => {
                 let fs = m.full_state || {};
-                
                 let t1 = fs.team1 || (fs.teams?.A?.name) || 'Team 1';
                 let t2 = fs.team2 || (fs.teams?.B?.name) || 'Team 2';
                 let tourney = (m.tournaments && m.tournaments.name) ? m.tournaments.name : (fs.tournament || 'Independent Match');
@@ -179,7 +198,7 @@
                 if (fTourn !== 'ALL' && tourney !== fTourn) return;
                 if (fForm !== 'ALL' && format !== fForm) return;
                 
-                let searchStr = `${t1} ${t2} ${tourney}`.toLowerCase();
+                let searchStr = `${t1} ${t2}${tourney}`.toLowerCase();
                 if (query && !searchStr.includes(query)) return; 
 
                 let scoreText = '';
@@ -193,66 +212,89 @@
                     scoreText = `<div class="score-line" style="${scoreColor}">${batTeam}: ${runs}/${wkts} <span class="overs">(${overs} ov)</span></div>`;
                 }
 
-                // 🔥 NEW: Extract Toss, Result, and Points from fan_portal_summary
                 let fps = fs.fan_portal_summary || {};
                 let tossStr = fps.toss && fps.toss !== "Toss not recorded" ? `🪙 ${fps.toss}` : '';
                 let resultStr = '';
                 let pointsStr = '';
+                let starsStr = '';
 
-                // Only show Result and Points if match is actually completed
+                // Extract Key Players
+                if (fps.top_batters && fps.top_batters.length > 0 && fps.top_batters[0].name) {
+                    let bestBat = fps.top_batters[0];
+                    let bestBowl = fps.top_bowlers && fps.top_bowlers.length > 0 ? fps.top_bowlers[0] : null;
+                    starsStr = `🌟 Key Performers: ${bestBat.name} (${bestBat.runs}r)`;
+                    if (bestBowl && bestBowl.name) starsStr += ` & ${bestBowl.name} (${bestBowl.wkts}w)`;
+                }
+
                 if (status === 'completed') {
-                    if (fps.result && fps.result !== "Match in Progress") {
-                        resultStr = `🏆 ${fps.result}`;
-                    }
+                    if (fps.result && fps.result !== "Match in Progress") resultStr = `🏆 ${fps.result}`;
                     if (fps.team_points) {
                         let ptsArr = [];
-                        for (const [tName, pts] of Object.entries(fps.team_points)) {
-                            ptsArr.push(`${tName}: ${pts}`);
-                        }
-                        if (ptsArr.length > 0) {
-                            pointsStr = `📊 Points: ${ptsArr.join(' | ')}`;
-                        }
+                        for (const [tName, pts] of Object.entries(fps.team_points)) { ptsArr.push(`${tName}:${pts}`); }
+                        if (ptsArr.length > 0) pointsStr = `📊 Points: ${ptsArr.join(' | ')}`;
                     }
                 }
 
-                // 🔥 NEW: Build the Meta Box HTML
                 let metaHtml = '';
-                if (tossStr || resultStr || pointsStr) {
+                if (tossStr || resultStr || pointsStr || starsStr) {
                     metaHtml += `<div class="meta-box">`;
                     if (tossStr) metaHtml += `<div class="meta-toss">${tossStr}</div>`;
                     if (resultStr) metaHtml += `<div class="meta-result">${resultStr}</div>`;
                     if (pointsStr) metaHtml += `<div class="meta-points">${pointsStr}</div>`;
+                    if (starsStr) metaHtml += `<div class="meta-stars">${starsStr}</div>`;
                     metaHtml += `</div>`;
                 }
 
                 let isExpanded = expandedMatches.has(m.match_id) ? 'style="display: block;"' : '';
                 let detailsHtml = `<div class="match-details" id="details-${m.match_id}" ${isExpanded} onclick="event.stopPropagation()">`;
                 
-                if (fs.inningsSummaries && fs.inningsSummaries.length > 0) {
-                    fs.inningsSummaries.forEach((inn, idx) => {
-                        detailsHtml += `<div style="color:#38bdf8; font-weight:bold; margin-bottom:10px; font-size: 0.9rem; text-transform: uppercase;">Innings ${idx+1} - ${inn.batTeam}</div>`;
+                // 🔥 BUILD THE INNINGS ARRAY (Completed + Ongoing Live Innings)
+                let displayInnings = [];
+                if (fs.inningsSummaries) { displayInnings = [...fs.inningsSummaries]; }
+                if (status === 'live' && fs.current && fs.current.balls > 0) {
+                    displayInnings.push({
+                        batTeam: fs.teams[fs.battingKey].name,
+                        batters: fs.teams[fs.battingKey].players,
+                        bowlers: fs.teams[fs.bowlingKey].players,
+                        isOngoing: true
+                    });
+                }
+
+                // 🔥 RENDER THE FILE FOLDER UI
+                if (displayInnings.length > 0) {
+                    let tabsHtml = `<div class="folder-tabs">`;
+                    let panesHtml = ``;
+
+                    displayInnings.forEach((inn, idx) => {
+                        // Default to the most recent innings
+                        let isAct = idx === (displayInnings.length - 1) ? 'active' : ''; 
+                        let dState = idx === (displayInnings.length - 1) ? 'block' : 'none';
+                        let iLabel = `Inn ${idx+1}: ${inn.batTeam}`;
+                        if (inn.isOngoing) iLabel += ` (LIVE)`;
+
+                        // The Folder Tab
+                        tabsHtml += `<div class="folder-tab ${isAct}" id="tab-${m.match_id}-${idx}" onclick="switchFolder('${m.match_id}', ${idx}, ${displayInnings.length}, event)">${iLabel}</div>`;
                         
-                        // Batters Table
-                        detailsHtml += `<table class="details-table">
-                            <tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr>`;
+                        // The Folder Content
+                        panesHtml += `<div class="inn-pane ${isAct}" id="pane-${m.match_id}-${idx}" style="display:${dState};">`;
+                        
+                        // Batters
+                        panesHtml += `<table class="details-table"><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr>`;
                         (inn.batters || []).filter(b => b.hasBatted).forEach(b => {
                             let sr = b.b > 0 ? ((b.r/b.b)*100).toFixed(1) : '0.0';
                             let outStr = b.out ? (b.dismissalInfo || 'out') : 'not out';
-                            detailsHtml += `<tr>
+                            panesHtml += `<tr>
                                 <td><span style="font-weight:bold; color:white;">${b.name}</span><div style="font-size:0.65rem; color:#64748b;">${outStr}</div></td>
                                 <td style="font-weight:bold; color:white;">${b.r}</td><td>${b.b}</td><td>${b.f}</td><td>${b.s}</td><td>${sr}</td>
                             </tr>`;
                         });
-                        detailsHtml += `</table>`;
+                        panesHtml += `</table>`;
 
-                        // Bowlers Table
-                        detailsHtml += `<table class="details-table">
-                            <tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Econ</th></tr>`;
+                        // Bowlers
+                        panesHtml += `<table class="details-table"><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Econ</th></tr>`;
                         (inn.bowlers || []).filter(bw => bw.o > 0 || bw.rc > 0).forEach(bw => {
                             let oVal = Number(bw.o) || 0;
-                            let oversStr = "";
-                            let absBalls = 0;
-                            
+                            let oversStr = "", absBalls = 0;
                             if (oVal % 1 !== 0) {
                                 oversStr = Math.floor(oVal) + "." + Math.round((oVal - Math.floor(oVal)) * 10);
                                 absBalls = Math.floor(oVal) * 6 + Math.round((oVal - Math.floor(oVal)) * 10);
@@ -260,22 +302,20 @@
                                 oversStr = Math.floor(oVal / 6) + "." + (oVal % 6);
                                 absBalls = oVal;
                             }
-                            
                             let econ = absBalls > 0 ? ((bw.rc/absBalls)*6).toFixed(2) : '0.00';
-                            
-                            detailsHtml += `<tr>
+                            panesHtml += `<tr>
                                 <td><span style="font-weight:bold; color:white;">${bw.name}</span></td>
                                 <td>${oversStr}</td><td>${bw.m}</td><td>${bw.rc}</td><td style="font-weight:bold; color:#10b981;">${bw.w}</td><td>${econ}</td>
                             </tr>`;
                         });
-                        detailsHtml += `</table>`;
+                        panesHtml += `</table></div>`;
                     });
+                    detailsHtml += tabsHtml + panesHtml;
                 } else {
                     detailsHtml += `<div style="color:#64748b; font-style:italic; text-align:center; padding: 10px;">Scorecard details will appear once the match begins.</div>`;
                 }
                 detailsHtml += `</div>`;
 
-                // 🔥 NEW: Injecting the metaHtml into the card
                 let createCard = (num, badgeClass, badgeText) => `
                     <div class="match-card" onclick="toggleDetails('${m.match_id}', event)">
                         <div class="card-header">
@@ -290,15 +330,9 @@
                     </div>
                 `;
 
-                if (status === 'live' || status === 'innings_break') { 
-                    liveHtml += createCard(liveCnt++, 'badge-live', 'LIVE'); 
-                }
-                else if (status === 'completed') { 
-                    compHtml += createCard(compCnt++, 'badge-comp', 'COMPLETED'); 
-                }
-                else { 
-                    upHtml += createCard(upCnt++, 'badge-up', 'UPCOMING'); 
-                }
+                if (status === 'live' || status === 'innings_break') { liveHtml += createCard(liveCnt++, 'badge-live', 'LIVE'); }
+                else if (status === 'completed') { compHtml += createCard(compCnt++, 'badge-comp', 'COMPLETED'); }
+                else { upHtml += createCard(upCnt++, 'badge-up', 'UPCOMING'); }
             });
 
             document.getElementById('live-container').innerHTML = liveHtml || '<div class="empty-msg">No active matches matching your criteria.</div>';
