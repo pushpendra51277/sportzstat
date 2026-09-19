@@ -132,6 +132,20 @@ function ballScored(runs, isB) {
     if (checkTargetReached()) { finalizeOver(true); setTimeout(endInnings, 100); return; }
     updateUI(); checkAutoOverPrompt();
 }
+function getTeamOversDisplay() {
+    let cur = state.current; let completedOvers = cur.overHistory.length; let ballsInPreviousOvers = completedOvers > 0 ? (cur.overHistory[completedOvers - 1].totalBallsAtEnd || (completedOvers * 6)) : 0; let currentOverBalls = Math.max(0, cur.balls - ballsInPreviousOvers);
+    return completedOvers + "." + currentOverBalls;
+}
+
+function resetMatch() { 
+    state.matchBreaks = []; state.inningsNum = 1; state.inningsSummaries = []; state.matchResult = ""; 
+    stateHistory = []; remarkLog = []; state.matchId = ""; 
+    state.current = { runs:0, wkts:0, balls:0, sIdx:null, nsIdx:null, bIdx:null, isFreeHit: false, penalties: 0, lastOverBowlers: new Set(), extras: {w:0, nb:0, b:0, lb:0}, recentBalls: [], currentOverLog: [], runsInThisOver: 0, bowlersInCurrentOver: new Set(), overHistory: [], currPartnership: { runs: 0, balls: 0 }, fow: [], activeBreak: null, activeBreakStartTime: null, activeBreakInsp: null, pendingBreakMins: 0, inningsStartTime: null, inningsEndTime: null, allowances: 0 }; 
+    el('inningsHistoryText').innerHTML = ''; el('scoringView').classList.add('hidden');
+    localStorage.removeItem('cricStat_activeMatch'); localStorage.removeItem('cricStat_activeMatchMetadata'); localStorage.removeItem('cricStat_stateHistory');
+    if (window.matchChart) window.matchChart.destroy();
+    window.location.reload();
+}
 
 function openManualRun() { showModal("Manual Runs", `<label class="text-primary">Enter Runs Scored</label><input type="number" id="mRunVal" value="5" min="0" class="modal-input w-100">`, () => { let r = parseInt(el('mRunVal').value) || 0; closeModal(); ballScored(r, false); }); }
 
