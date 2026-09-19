@@ -248,7 +248,7 @@
                 let isExpanded = expandedMatches.has(m.match_id) ? 'style="display: block;"' : '';
                 let detailsHtml = `<div class="match-details" id="details-${m.match_id}" ${isExpanded} onclick="event.stopPropagation()">`;
                 
-                // 🔥 BUILD THE INNINGS ARRAY (Completed + Ongoing Live Innings)
+                // 🔥 BUILD THE INNINGS ARRAY
                 let displayInnings = [];
                 if (fs.inningsSummaries) { displayInnings = [...fs.inningsSummaries]; }
                 if (status === 'live' && fs.current && fs.current.balls > 0) {
@@ -266,7 +266,6 @@
                     let panesHtml = ``;
 
                     displayInnings.forEach((inn, idx) => {
-                        // Default to the most recent innings
                         let isAct = idx === (displayInnings.length - 1) ? 'active' : ''; 
                         let dState = idx === (displayInnings.length - 1) ? 'block' : 'none';
                         let iLabel = `Inn ${idx+1}: ${inn.batTeam}`;
@@ -279,7 +278,7 @@
                         panesHtml += `<div class="inn-pane ${isAct}" id="pane-${m.match_id}-${idx}" style="display:${dState};">`;
                         
                         // Batters
-                        panesHtml += `<table class="details-table"><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr>`;
+                        panesHtml += `<table class="details-table" style="margin-bottom: 25px;"><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr>`;
                         (inn.batters || []).filter(b => b.hasBatted).forEach(b => {
                             let sr = b.b > 0 ? ((b.r/b.b)*100).toFixed(1) : '0.0';
                             let outStr = b.out ? (b.dismissalInfo || 'out') : 'not out';
@@ -310,6 +309,9 @@
                         });
                         panesHtml += `</table></div>`;
                     });
+
+                    tabsHtml += `</div>`; // 🔥 THIS IS THE CLOSING DIV I FORGOT!
+                    
                     detailsHtml += tabsHtml + panesHtml;
                 } else {
                     detailsHtml += `<div style="color:#64748b; font-style:italic; text-align:center; padding: 10px;">Scorecard details will appear once the match begins.</div>`;
