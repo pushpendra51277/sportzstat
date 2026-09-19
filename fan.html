@@ -59,7 +59,7 @@
         .meta-points { color: #f59e0b; margin-top: 4px; font-weight: bold; }
         .meta-stars { color: #38bdf8; margin-top: 4px; font-weight: bold; }
 
-        /* 🔥 NEW: FILE FOLDER TABS UI */
+        /* FILE FOLDER TABS UI */
         .folder-tabs { display: flex; gap: 4px; border-bottom: 1px solid #38bdf8; margin-bottom: 15px; overflow-x: auto; scrollbar-width: none; }
         .folder-tabs::-webkit-scrollbar { display: none; }
         .folder-tab { background: rgba(0,0,0,0.2); border: 1px solid #334155; border-bottom: none; padding: 8px 15px; color: #94a3b8; cursor: pointer; border-radius: 6px 6px 0 0; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; white-space: nowrap; transition: 0.2s; }
@@ -102,6 +102,7 @@
 
         let allFanMatches = [];
         let expandedMatches = new Set();
+        let activeTabs = {}; // Tracks open tabs to prevent resetting during auto-refresh
 
         window.onload = async () => {
             await fetchMatches();
@@ -119,9 +120,11 @@
             }
         }
 
-        // 🔥 NEW: Function to switch between File Folders natively
         window.switchFolder = function(matchId, targetIdx, totalInn, event) {
             event.stopPropagation(); // Stops the card from closing
+            
+            activeTabs[matchId] = targetIdx; // Save user's tab choice to memory
+            
             for(let i=0; i<totalInn; i++) {
                 let tab = document.getElementById(`tab-${matchId}-${i}`);
                 let pane = document.getElementById(`pane-${matchId}-${i}`);
@@ -248,7 +251,7 @@
                 let isExpanded = expandedMatches.has(m.match_id) ? 'style="display: block;"' : '';
                 let detailsHtml = `<div class="match-details" id="details-${m.match_id}" ${isExpanded} onclick="event.stopPropagation()">`;
                 
-                // 🔥 BUILD THE INNINGS ARRAY
+                // BUILD THE INNINGS ARRAY
                 let displayInnings = [];
                 if (fs.inningsSummaries) { displayInnings = [...fs.inningsSummaries]; }
                 if (status === 'live' && fs.current && fs.current.balls > 0) {
@@ -260,14 +263,18 @@
                     });
                 }
 
-                // 🔥 RENDER THE FILE FOLDER UI
+                // RENDER THE FILE FOLDER UI
                 if (displayInnings.length > 0) {
                     let tabsHtml = `<div class="folder-tabs">`;
                     let panesHtml = ``;
 
+                    // Retrieve saved tab index or default to latest
+                    let savedTabIdx = activeTabs[m.match_id] !== undefined ? activeTabs[m.match_id] : (displayInnings.length - 1);
+                    if (savedTabIdx >= displayInnings.length) savedTabIdx = displayInnings.length - 1;
+
                     displayInnings.forEach((inn, idx) => {
-                        let isAct = idx === (displayInnings.length - 1) ? 'active' : ''; 
-                        let dState = idx === (displayInnings.length - 1) ? 'block' : 'none';
+                        let isAct = (idx === savedTabIdx) ? 'active' : ''; 
+                        let dState = (idx === savedTabIdx) ? 'block' : 'none';
                         let iLabel = `Inn ${idx+1}: ${inn.batTeam}`;
                         if (inn.isOngoing) iLabel += ` (LIVE)`;
 
@@ -310,8 +317,7 @@
                         panesHtml += `</table></div>`;
                     });
 
-                    tabsHtml += `</div>`; // 🔥 THIS IS THE CLOSING DIV I FORGOT!
-                    
+                    tabsHtml += `</div>`; 
                     detailsHtml += tabsHtml + panesHtml;
                 } else {
                     detailsHtml += `<div style="color:#64748b; font-style:italic; text-align:center; padding: 10px;">Scorecard details will appear once the match begins.</div>`;
@@ -337,9 +343,15 @@
                 else { upHtml += createCard(upCnt++, 'badge-up', 'UPCOMING'); }
             });
 
-            document.getElementById('live-container').innerHTML = liveHtml || '<div class="empty-msg">No active matches matching your criteria.</div>';
-            document.getElementById('comp-container').innerHTML = compHtml || '<div class="empty-msg">No completed matches matching your criteria.</div>';
-            document.getElementById('up-container').innerHTML = upHtml || '<div class="empty-msg">No upcoming fixtures matching your criteria.</div>';
+            // SMART UPDATER: Only redraws if the HTML actually changed (Prevents flickering!)
+            const safeUpdate = (id, newHtml) => {
+                const el = document.getElementById(id);
+                if (el && el.innerHTML !== newHtml) { el.innerHTML = newHtml; }
+            };
+
+            safeUpdate('live-container', liveHtml || '<div class="empty-msg">No active matches matching your criteria.</div>');
+            safeUpdate('comp-container', compHtml || '<div class="empty-msg">No completed matches matching your criteria.</div>');
+            safeUpdate('up-container', upHtml || '<div class="empty-msg">No upcoming fixtures matching your criteria.</div>');
         }
     </script>
 </body>
