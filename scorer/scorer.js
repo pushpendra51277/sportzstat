@@ -111,12 +111,16 @@ function buildFanPortalSummary() {
         match_type: state.matchSettings.matchType,
         officials: state.matchSettings.officials,
         result: state.matchResult || calculateResultText() || "Match in Progress",
+        // 🔥 NEW: Attach the assigned points to the team names natively!
+        team_points: {
+            [state.teams.A.name]: state.teams.A.points || 0,
+            [state.teams.B.name]: state.teams.B.points || 0
+        },
         innings: allInn.map(i => ({ team: i.batTeam || i.team, score: `${i.runs}/${i.wkts}`, overs: i.overs })),
         top_batters: perfs.batters.slice(0, 3).map(b => ({ name: b.name, runs: b.r, balls: b.b })),
         top_bowlers: perfs.bowlers.slice(0, 3).map(b => ({ name: b.name, wkts: b.w, runs: b.rc, overs: formatOver(b.o) }))
     };
 }
-
 async function triggerCloudSync() {
     if (!supabaseClient || !state.matchId) return;
     
