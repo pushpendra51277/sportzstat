@@ -221,8 +221,17 @@ async function lockPlayingXI() {
     state.matchSettings.officials = { referee: el('match-referee')?el('match-referee').value.trim():"", coach: el('match-coach')?el('match-coach').value.trim():"", manager: el('match-manager')?el('match-manager').value.trim():"", umpire1: el('umpire-1')?el('umpire-1').value.trim():"", umpire2: el('umpire-2')?el('umpire-2').value.trim():"", umpire3: el('umpire-3')?el('umpire-3').value.trim():"", umpire4: el('umpire-4')?el('umpire-4').value.trim():"", scorer1: el('scorer-1')?el('scorer-1').value.trim():"", scorer2: el('scorer-2')?el('scorer-2').value.trim():"" };
     saveToRegistry(state.matchSettings.venue, state.matchSettings.officials);
 
-    let win = el('tossWinner').value, dec = el('tossDecision').value; state.battingKey = ((win === 'A' && dec === 'bat') || (win === 'B' && dec === 'bowl')) ? 'A' : 'B'; state.bowlingKey = state.battingKey === 'A' ? 'B' : 'A';
-    let updatedFullState = activeMatch.full_state || {}; updatedFullState.match_status = 'live';
+    let win = el('tossWinner').value, dec = el('tossDecision').value; 
+    state.battingKey = ((win === 'A' && dec === 'bat') || (win === 'B' && dec === 'bowl')) ? 'A' : 'B'; 
+    state.bowlingKey = state.battingKey === 'A' ? 'B' : 'A';
+    
+    // 🔥 NEW: Save the exact toss text for the Fan Portal
+    let tossWinName = win === 'A' ? state.teams.A.name : state.teams.B.name;
+    let tossDecText = dec === 'bat' ? 'bat' : 'bowl';
+    state.matchSettings.tossStr = `${tossWinName} won the toss and elected to ${tossDecText}`;
+
+    let updatedFullState = activeMatch.full_state || {}; 
+    updatedFullState.match_status = 'live';
     const { error } = await supabaseClient.from('matches').update({ full_state: updatedFullState }).eq('match_id', activeMatch.match_id);
     if(error) { alert("Error connecting to cloud: " + error.message); return; }
 
