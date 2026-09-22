@@ -237,11 +237,37 @@
         <div id="step3" class="dashboard-section">
             <div class="admin-form">
                 <h3 style="margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">3. Multi-Mode Fixture Builder</h3>
+                <!-- STEP 3 -->
+        <div id="step3" class="dashboard-section">
+            <div class="admin-form">
+                <h3 style="margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">3. Multi-Mode Fixture Builder</h3>
+                
+                <!-- 🔥 NEW: Added the League / Round Robin Tab Button -->
                 <div class="sub-tab-nav">
-                    <button type="button" class="sub-tab-btn active" onclick="switchSubTab('tab-canvas', this)">Manual Draw Canvas (Edit Mode)</button>
+                    <button type="button" class="sub-tab-btn active" onclick="switchSubTab('tab-canvas', this)">Manual Draw Canvas</button>
+                    <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-league', this)">League / Round Robin</button>
                     <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-pools', this)">Visual Pool Builder</button>
                     <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-knockouts', this)">Knockout Mapping</button>
                 </div>
+
+                <!-- 🔥 NEW: The League Generator Pane -->
+                <div id="tab-league" class="sub-tab-pane">
+                    <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">Generate a full league schedule where every team plays each other.</p>
+                    <div style="background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
+                        <label style="color: #f8fafc; font-weight: bold; font-size: 0.9rem;">Auto-Generate Format:</label>
+                        <select id="league-type-select" class="postings-select" style="width: auto;">
+                            <option value="single">Single Round Robin (Play Once)</option>
+                            <option value="double">Double Round Robin (Home & Away)</option>
+                        </select>
+                        <button type="button" style="background: #3b82f6; border:none; color:white; padding: 8px 15px; font-size: 0.85rem; cursor:pointer; border-radius:4px;" onclick="generateLeagueMatches()">Generate Schedule</button>
+                    </div>
+                    
+                    <div id="league-generated-results" style="display:none; margin-top:15px; max-height:300px; overflow-y:auto; background:#0f172a; padding:15px; border-radius:8px; border:1px solid #334155;"></div>
+                    
+                    <button type="button" style="background: #f59e0b; width:100%; padding:12px; border:none; border-radius:6px; color:black; font-weight:bold; margin-top:15px; cursor:pointer;" onclick="lockLeagueAndProceed()">Lock League & Proceed</button>
+                </div>
+
+                <!-- Keep your existing tab-canvas, tab-pools, and tab-knockouts panes here -->
 
                 <div id="tab-canvas" class="sub-tab-pane active">
                     <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">All existing and newly added matches will appear here for editing.</p>
