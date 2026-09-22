@@ -63,7 +63,7 @@
         .btn-success { background: #10b981; color: white; padding: 10px 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; display: inline-block; }
         .btn-success:hover { background: #059669; }
 
-        /* 🔥 NEW: 3-PANE UI CSS */
+        /* 3-PANE UI CSS */
         .tourney-grid { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 20px; align-items: start; margin-top: 20px; }
         .tourney-pane { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         .pane-title { font-size: 1.1rem; color: #38bdf8; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-top: 0; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
@@ -124,7 +124,7 @@
                     </div>
                 </div>
 
-                <!-- NEW: 3-PANE GRID -->
+                <!-- 3-PANE GRID -->
                 <div class="tourney-grid">
                     <!-- PANE 1: Basic Details -->
                     <div class="tourney-pane">
@@ -237,12 +237,7 @@
         <div id="step3" class="dashboard-section">
             <div class="admin-form">
                 <h3 style="margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">3. Multi-Mode Fixture Builder</h3>
-                <!-- STEP 3 -->
-        <div id="step3" class="dashboard-section">
-            <div class="admin-form">
-                <h3 style="margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">3. Multi-Mode Fixture Builder</h3>
                 
-                <!-- 🔥 NEW: Added the League / Round Robin Tab Button -->
                 <div class="sub-tab-nav">
                     <button type="button" class="sub-tab-btn active" onclick="switchSubTab('tab-canvas', this)">Manual Draw Canvas</button>
                     <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-league', this)">League / Round Robin</button>
@@ -250,7 +245,6 @@
                     <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-knockouts', this)">Knockout Mapping</button>
                 </div>
 
-                <!-- 🔥 NEW: The League Generator Pane -->
                 <div id="tab-league" class="sub-tab-pane">
                     <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">Generate a full league schedule where every team plays each other.</p>
                     <div style="background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
@@ -266,8 +260,6 @@
                     
                     <button type="button" style="background: #f59e0b; width:100%; padding:12px; border:none; border-radius:6px; color:black; font-weight:bold; margin-top:15px; cursor:pointer;" onclick="lockLeagueAndProceed()">Lock League & Proceed</button>
                 </div>
-
-                <!-- Keep your existing tab-canvas, tab-pools, and tab-knockouts panes here -->
 
                 <div id="tab-canvas" class="sub-tab-pane active">
                     <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">All existing and newly added matches will appear here for editing.</p>
@@ -354,18 +346,17 @@
         const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let activeTeams = []; // Used across Steps 2, 3, 4
+        let activeTeams = []; 
         let activeTeamMap = {}; 
         let poolsData = {}; 
         let manualMatches = []; 
         let poolGeneratedMatches = []; 
         let koGeneratedMatches = [];
-        let leagueGeneratedMatches = []; // 🔥 Add this line
+        let leagueGeneratedMatches = [];
         let finalLockedMatches = []; 
         let currentTournamentId = null;
         let tournamentSquadsCache = {};
         
-        // 🔥 NEW UI STATE
         let allDbTeams = [];
         let selectedTourneyTeams = [];
 
@@ -422,9 +413,6 @@
             btn.innerText = "Save to Master & Add to Squad"; btn.disabled = false;
         }
 
-        // ==========================================
-        // 🔥 NEW: 3-PANE TEAM SELECTOR LOGIC
-        // ==========================================
         async function loadExistingTeamsFromDB() {
             const { data, error } = await db.from('teams').select('*').order('name', { ascending: true });
             if (!error && data) {
@@ -448,7 +436,7 @@
                     </div>
                 `).join('');
             
-            document.getElementById('availableTeamsList').innerHTML = availableHtml || '<div style="text-align:center; padding:10px; color:#64748b; font-size:0.8rem;">No teams found.</div>';
+            document.getElementById('availableTeamsList').innerHTML = availableHtml || '<div style="text-align:center; padding:20px; color:#64748b; font-size:0.8rem;">No teams found.</div>';
 
             let selectedHtml = selectedTourneyTeams.map(t => `
                 <div class="team-item" style="border-left: 3px solid #10b981;">
@@ -457,7 +445,7 @@
                 </div>
             `).join('');
             
-            document.getElementById('selectedTeamsList').innerHTML = selectedHtml || '<div style="text-align:center; padding:10px; color:#64748b; font-size:0.8rem; font-style:italic;">No teams selected.</div>';
+            document.getElementById('selectedTeamsList').innerHTML = selectedHtml || '<div style="text-align:center; padding:20px; color:#64748b; font-size:0.8rem; font-style:italic;">No teams selected.</div>';
             document.getElementById('teamCountBadge').innerText = selectedTourneyTeams.length;
         }
 
@@ -499,9 +487,6 @@
             }
         }
 
-        // ==========================================
-        // TOURNAMENT LOAD & SAVE LOGIC
-        // ==========================================
         async function loadExistingTournamentsList() {
             const { data, error } = await db.from('tournaments').select('*');
             const select = document.getElementById('existing-tournament-select');
@@ -537,7 +522,6 @@
             document.getElementById('t-format').value = tData.format || 'T20';
             document.getElementById('t-date').value = tData.start_date ? tData.start_date.split('T')[0] : '';
             
-            // Map the config JSON back to the Structure Engine
             if(tData.config) {
                 if(tData.config.groupStage) document.getElementById('tGroupType').value = tData.config.groupStage;
                 if(tData.config.playoffs) document.getElementById('tPlayoffType').value = tData.config.playoffs;
@@ -570,7 +554,6 @@
                 });
             }
 
-            // Sync the dual-pane UI
             selectedTourneyTeams = allDbTeams.filter(t => linkedTeamNames.has(t.name));
             renderTeamPanes();
             activeTeams = Array.from(linkedTeamNames);
@@ -608,7 +591,6 @@
 
             if (tError) { alert("Error saving tournament: " + tError.message); return; }
 
-            // Convert selected objects to string array to preserve compatibility with Step 2, 3, and 4
             activeTeams = selectedTourneyTeams.map(t => t.name);
 
             const select = document.getElementById('squad-team-select');
@@ -616,12 +598,9 @@
             activeTeams.forEach((team, index) => { select.innerHTML += `<option value="${team}">${index + 1}. ${team}</option>`; });
 
             alert(`✅ Success! Tournament saved with ${activeTeams.length} Teams.`);
-            document.querySelectorAll('.wizard-step')[1].click(); // Proceed to Squads Step
+            document.querySelectorAll('.wizard-step')[1].click(); 
         }
 
-        // ==========================================
-        // SQUADS, CANVAS & DEPLOYMENT LOGIC
-        // ==========================================
         function generateUniqueMatchID(prefix) { return `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`; }
         function generateUniquePin() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
@@ -765,9 +744,6 @@
         }
         function lockPoolsAndProceed() { if(poolGeneratedMatches.length===0) generatePoolMatches(); updateFinalLockedMatches(); document.querySelectorAll('.wizard-step')[3].click(); }
 
-        // ==============================
-        // ROUND ROBIN / LEAGUE GENERATOR
-        // ==============================
         function generateLeagueMatches() {
             let type = document.getElementById('league-type-select').value;
             leagueGeneratedMatches = [];
@@ -777,10 +753,8 @@
                 alert("Not enough teams to generate a league. Please select teams in Step 1."); return;
             }
 
-            // Loop to create Round Robin math
             for (let i = 0; i < activeTeams.length; i++) {
                 for (let j = i + 1; j < activeTeams.length; j++) {
-                    // Match 1
                     leagueGeneratedMatches.push({
                         id: generateUniqueMatchID("L"),
                         name: `League Match ${matchCount++}`,
@@ -788,12 +762,11 @@
                         t2: activeTeams[j]
                     });
                     
-                    // Match 2 (If Double Round Robin)
                     if (type === 'double') {
                         leagueGeneratedMatches.push({
                             id: generateUniqueMatchID("L"),
                             name: `League Match ${matchCount++} (Reverse Fixture)`,
-                            t1: activeTeams[j], // Reverses the Team order
+                            t1: activeTeams[j], 
                             t2: activeTeams[i]
                         });
                     }
