@@ -91,6 +91,7 @@
         </div>
     </div>
 
+    <!-- 🔥 NAVIGATION FLOW: Setup -> Fixtures -> Squads -> Deployment -->
     <div class="wizard-nav" style="max-width: 1100px; margin: 0 auto 25px auto;">
         <div class="wizard-step active" onclick="switchStep('step1')">1. Setup & Teams</div>
         <div class="wizard-step" onclick="switchStep('step2')">2. Fixture Builder</div>
@@ -189,17 +190,12 @@
                     <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-knockouts', this)">2. Playoff / Knockout Engine</button>
                 </div>
 
-                <!-- ENGINE 1: LEAGUES & POOLS -->
+                <!-- ENGINE 1: LEAGUES & DYNAMIC POOLS -->
                 <div id="tab-pools" class="sub-tab-pane">
-                    <div style="background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
+                    <div style="background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
                         <label style="color: #f8fafc; font-weight: bold; font-size: 0.9rem;">Number of Pools:</label>
-                        <select id="pool-count-select" class="postings-select" style="width: auto;" onchange="initPoolsWorkspace(this.value)">
-                            <option value="1">1 Pool (Single League Auto-Fill)</option>
-                            <option value="2">2 Pools</option>
-                            <option value="3">3 Pools</option>
-                            <option value="4">4 Pools</option>
-                            <option value="8">8 Pools</option>
-                        </select>
+                        <!-- 🔥 Dynamic Pool Input (Supports 1, 2, 3, 4, 10, or any number) -->
+                        <input type="number" id="pool-count-input" value="1" min="1" max="20" class="postings-select" style="width: 80px;" onchange="initPoolsWorkspace(this.value)">
                         
                         <label style="color: #f8fafc; font-weight: bold; font-size: 0.9rem; margin-left: 20px;">Play Each Other:</label>
                         <select id="pool-round-select" class="postings-select" style="width: auto;">
@@ -244,7 +240,7 @@
                             <button type="button" style="background: #10b981; border:none; color:white; padding: 10px 15px; font-weight: bold; cursor:pointer; border-radius:4px;" onclick="generateKnockoutBracket()">⚙️ Generate Bracket & Send to Canvas</button>
                         </div>
                     </div>
-                    <p style="color:#94a3b8; font-size:0.85rem; font-style:italic;">Note: If using Placeholders, you can select the real teams later in the Master Canvas when they qualify.</p>
+                    <p style="color:#94a3b8; font-size:0.85rem; font-style:italic;">Note: If using Placeholders, you can select real teams later in the Master Canvas when they qualify.</p>
                 </div>
 
                 <!-- THE MASTER CANVAS -->
@@ -342,10 +338,10 @@
         let allDbTeams = [];
         let selectedTourneyTeams = [];
 
-        // Dynamic Placeholders for Dropdowns
         const standardPlaceholders = [
             "TBD", "Winner QF 1", "Winner QF 2", "Winner QF 3", "Winner QF 4", 
-            "Winner SF 1", "Winner SF 2", "Winner Qualifier 1", "Winner Eliminator", "Winner Qualifier 2"
+            "Winner SF 1", "Winner SF 2", "Winner Qualifier 1", "Winner Eliminator", "Winner Qualifier 2",
+            "Rank 1", "Rank 2", "Rank 3", "Rank 4"
         ];
 
         document.addEventListener('DOMContentLoaded', async () => { 
@@ -580,11 +576,10 @@
             select.innerHTML = '<option value="">Select a team to verify squad...</option>';
             activeTeams.forEach((team, index) => { select.innerHTML += `<option value="${team}">${index + 1}. ${team}</option>`; });
 
-            initPoolsWorkspace("1"); // Auto-assigns teams to Single Pool
+            initPoolsWorkspace(document.getElementById('pool-count-input').value || "1");
             document.querySelectorAll('.wizard-step')[1].click(); 
         }
 
-        // 🔥 FIXTURE NAVIGATION
         function switchStep(stepId) {
             document.querySelectorAll('.wizard-step').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.dashboard-section').forEach(sec => sec.classList.remove('active'));
@@ -600,23 +595,34 @@
         }
 
         // ==========================================
-        // 🔥 ENGINE 1: POOLS & LEAGUES
+        // 🔥 DYNAMIC MULTI-POOL ENGINE
         // ==========================================
-        function initPoolsWorkspace(countStr) { 
-            let count = parseInt(countStr) || 1;
+        function initPoolsWorkspace(countVal) { 
+            let count = parseInt(countVal) || 1;
+            if(count < 1) count = 1;
             poolsData = {};
+            
             if(count === 1) { 
-                // Auto assign all teams to the single league!
                 poolsData["Single Pool / League"] = [...activeTeams]; 
             } else { 
-                for(let i=0; i<count; i++) { poolsData["Pool " + String.fromCharCode(65 + i)] = []; } 
+                for(let i=0; i<count; i++) { 
+                    poolsData["Pool " + String.fromCharCode(65 + i)] = []; 
+                }
+                // Auto-distribute active teams across the custom number of pools evenly
+                activeTeams.forEach((t, idx) => {
+                    let poolKey = "Pool " + String.fromCharCode(65 + (idx % count));
+                    poolsData[poolKey].push(t);
+                });
             }
             renderPoolsWorkspace(); 
         }
         
         function renderPoolsWorkspace() {
-            let assigned = [].concat(...Object.values(poolsData)); let unassigned = activeTeams.filter(t => !assigned.includes(t));
-            document.getElementById('staging-teams-list').innerHTML = unassigned.map((t, i) => `<div style="background:#0f172a; padding:8px; border-radius:4px; margin-bottom:5px; font-weight:bold;">${t} <select style="background:#1e293b; color:white; float:right; border-radius:4px;" onchange="assignTeam('${t}', this.value)"><option value="">Move...</option>${Object.keys(poolsData).map(p => `<option value="${p}">${p}</option>`)}</select></div>`).join('');
+            let assigned = [].concat(...Object.values(poolsData)); 
+            let unassigned = activeTeams.filter(t => !assigned.includes(t));
+            
+            document.getElementById('staging-teams-list').innerHTML = unassigned.length > 0 ? unassigned.map((t, i) => `<div style="background:#0f172a; padding:8px; border-radius:4px; margin-bottom:5px; font-weight:bold;">${t} <select style="background:#1e293b; color:white; float:right; border-radius:4px;" onchange="assignTeam('${t}', this.value)"><option value="">Move...</option>${Object.keys(poolsData).map(p => `<option value="${p}">${p}</option>`)}</select></div>`).join('') : '<div style="color:#64748b; font-size:0.8rem; font-style:italic;">All teams assigned to pools.</div>';
+            
             document.getElementById('pools-container-grid').innerHTML = Object.keys(poolsData).map(pName => `<div class="pool-card"><b style="color:#f59e0b;">${pName}</b><div class="pool-teams-box">${poolsData[pName].map((t, i) => `<div class="team-pill">${t} <span style="cursor:pointer; margin-left:5px;" onclick="removeTeam('${pName}', '${t}')">×</span></div>`).join('')}</div></div>`).join('');
         }
         
@@ -641,12 +647,12 @@
                 } 
             });
             alert(`Generated ${count} Matches! Moved to Master Canvas.`);
-            document.querySelectorAll('.sub-tab-btn')[0].click(); // Switch to canvas
+            document.querySelectorAll('.sub-tab-btn')[0].click(); 
             renderCanvas();
         }
 
         // ==========================================
-        // 🔥 ENGINE 2: PLAYOFFS & KNOCKOUTS
+        // PLAYOFFS & KNOCKOUTS ENGINE
         // ==========================================
         function generateKnockoutBracket() {
             let template = document.getElementById('ko-template-select').value;
@@ -654,7 +660,6 @@
             let count = 0;
 
             if (template === 'direct') {
-                // Auto-Fill Direct Knockout using real teams
                 let teamsToPair = [...activeTeams];
                 let totalTeams = teamsToPair.length;
                 if(totalTeams < 2) { alert("Not enough teams for a direct knockout."); return; }
@@ -669,7 +674,6 @@
                     count++;
                 }
                 
-                // Add the subsequent rounds as TBD
                 if (matchesNeeded >= 4) {
                      masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 1", t1: "TBD", t2: "TBD" });
                      masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 2", t1: "TBD", t2: "TBD" });
@@ -691,7 +695,6 @@
                     count++;
                 }
             } else {
-                // Standard Knockout Placeholders
                 if (size >= 16) { for(let i=1; i<=8; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Round of 16 - Match ${i}`, t1: "TBD", t2: "TBD" }); count+=8;}
                 if (size >= 8) { for(let i=1; i<=4; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Quarter-Final ${i}`, t1: "TBD", t2: "TBD" }); count+=4;}
                 if (size >= 4) { masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 1", t1: "TBD", t2: "TBD" }); masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 2", t1: "TBD", t2: "TBD" }); count+=2;}
@@ -699,12 +702,12 @@
             }
 
             alert(`Generated ${count} Playoff/Bracket Matches! Moved to Master Canvas.`);
-            document.querySelectorAll('.sub-tab-btn')[0].click(); // Switch to canvas
+            document.querySelectorAll('.sub-tab-btn')[0].click(); 
             renderCanvas();
         }
 
         // ==========================================
-        // 🔥 ENGINE 3: THE MASTER CANVAS
+        // THE MASTER CANVAS
         // ==========================================
         function addManualMatch() { masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Custom Match`, t1: "TBD", t2: "TBD" }); renderCanvas(); }
         
@@ -821,6 +824,9 @@
                     </td>
                 </tr>`).join('');
         }
+
+        function generateUniqueMatchID(prefix) { return `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`; }
+        function generateUniquePin() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
         async function saveMatchesToCloud() {
             if(!currentTournamentId) { alert("Tournament ID missing. Ensure Step 1 completed successfully."); return; }
