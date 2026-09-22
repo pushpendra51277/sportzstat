@@ -91,7 +91,7 @@
         </div>
     </div>
 
-    <!-- 🔥 NAVIGATION FLOW: Setup -> Fixtures -> Squads -> Deployment -->
+    <!-- NAVIGATION FLOW -->
     <div class="wizard-nav" style="max-width: 1100px; margin: 0 auto 25px auto;">
         <div class="wizard-step active" onclick="switchStep('step1')">1. Setup & Teams</div>
         <div class="wizard-step" onclick="switchStep('step2')">2. Fixture Builder</div>
@@ -184,17 +184,17 @@
                 <h3 style="margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">2. Multi-Stage Fixture Builder</h3>
                 <p style="color:#94a3b8; font-size:0.85rem; margin-top:0;">Use the Helper Engines to auto-generate matches, then review and edit them in the Master Canvas.</p>
                 
+                <!-- 🔥 CORRECTED LOGICAL TAB ORDER (1, 2, 3) -->
                 <div class="sub-tab-nav">
-                    <button type="button" class="sub-tab-btn active" onclick="switchSubTab('tab-canvas', this)">3. Master Fixture Canvas (Edit All)</button>
-                    <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-pools', this)">1. Group Stage / League Engine</button>
+                    <button type="button" class="sub-tab-btn active" onclick="switchSubTab('tab-pools', this)">1. Group Stage / League Engine</button>
                     <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-knockouts', this)">2. Playoff / Knockout Engine</button>
+                    <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-canvas', this)">3. Master Fixture Canvas (Edit All)</button>
                 </div>
 
                 <!-- ENGINE 1: LEAGUES & DYNAMIC POOLS -->
-                <div id="tab-pools" class="sub-tab-pane">
+                <div id="tab-pools" class="sub-tab-pane active">
                     <div style="background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
                         <label style="color: #f8fafc; font-weight: bold; font-size: 0.9rem;">Number of Pools:</label>
-                        <!-- 🔥 Dynamic Pool Input (Supports 1, 2, 3, 4, 10, or any number) -->
                         <input type="number" id="pool-count-input" value="1" min="1" max="20" class="postings-select" style="width: 80px;" onchange="initPoolsWorkspace(this.value)">
                         
                         <label style="color: #f8fafc; font-weight: bold; font-size: 0.9rem; margin-left: 20px;">Play Each Other:</label>
@@ -244,7 +244,7 @@
                 </div>
 
                 <!-- THE MASTER CANVAS -->
-                <div id="tab-canvas" class="sub-tab-pane active">
+                <div id="tab-canvas" class="sub-tab-pane">
                     <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">The Single Source of Truth. All generated matches appear here. You can manually edit any team, placeholder, or match name.</p>
                     
                     <div id="canvas-container"></div>
@@ -330,6 +330,7 @@
         let activeTeams = []; 
         let activeTeamMap = {}; 
         let poolsData = {}; 
+        
         let masterFixtures = []; 
 
         let currentTournamentId = null;
@@ -595,7 +596,7 @@
         }
 
         // ==========================================
-        // 🔥 DYNAMIC MULTI-POOL ENGINE
+        // 🔥 ENGINE 1: POOLS & LEAGUES
         // ==========================================
         function initPoolsWorkspace(countVal) { 
             let count = parseInt(countVal) || 1;
@@ -608,7 +609,6 @@
                 for(let i=0; i<count; i++) { 
                     poolsData["Pool " + String.fromCharCode(65 + i)] = []; 
                 }
-                // Auto-distribute active teams across the custom number of pools evenly
                 activeTeams.forEach((t, idx) => {
                     let poolKey = "Pool " + String.fromCharCode(65 + (idx % count));
                     poolsData[poolKey].push(t);
@@ -647,12 +647,13 @@
                 } 
             });
             alert(`Generated ${count} Matches! Moved to Master Canvas.`);
-            document.querySelectorAll('.sub-tab-btn')[0].click(); 
+            // 🔥 FIXED: Switches to the Canvas Tab automatically (Index 2)
+            document.querySelectorAll('.sub-tab-btn')[2].click(); 
             renderCanvas();
         }
 
         // ==========================================
-        // PLAYOFFS & KNOCKOUTS ENGINE
+        // 🔥 ENGINE 2: PLAYOFFS & KNOCKOUTS
         // ==========================================
         function generateKnockoutBracket() {
             let template = document.getElementById('ko-template-select').value;
@@ -702,7 +703,8 @@
             }
 
             alert(`Generated ${count} Playoff/Bracket Matches! Moved to Master Canvas.`);
-            document.querySelectorAll('.sub-tab-btn')[0].click(); 
+            // 🔥 FIXED: Switches to the Canvas Tab automatically (Index 2)
+            document.querySelectorAll('.sub-tab-btn')[2].click(); 
             renderCanvas();
         }
 
@@ -824,9 +826,6 @@
                     </td>
                 </tr>`).join('');
         }
-
-        function generateUniqueMatchID(prefix) { return `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`; }
-        function generateUniquePin() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
         async function saveMatchesToCloud() {
             if(!currentTournamentId) { alert("Tournament ID missing. Ensure Step 1 completed successfully."); return; }
