@@ -360,6 +360,7 @@
         let manualMatches = []; 
         let poolGeneratedMatches = []; 
         let koGeneratedMatches = [];
+        let leagueGeneratedMatches = []; // 🔥 Add this line
         let finalLockedMatches = []; 
         let currentTournamentId = null;
         let tournamentSquadsCache = {};
@@ -764,6 +765,58 @@
         }
         function lockPoolsAndProceed() { if(poolGeneratedMatches.length===0) generatePoolMatches(); updateFinalLockedMatches(); document.querySelectorAll('.wizard-step')[3].click(); }
 
+        // ==============================
+        // ROUND ROBIN / LEAGUE GENERATOR
+        // ==============================
+        function generateLeagueMatches() {
+            let type = document.getElementById('league-type-select').value;
+            leagueGeneratedMatches = [];
+            let matchCount = 1;
+
+            if (activeTeams.length < 2) {
+                alert("Not enough teams to generate a league. Please select teams in Step 1."); return;
+            }
+
+            // Loop to create Round Robin math
+            for (let i = 0; i < activeTeams.length; i++) {
+                for (let j = i + 1; j < activeTeams.length; j++) {
+                    // Match 1
+                    leagueGeneratedMatches.push({
+                        id: generateUniqueMatchID("L"),
+                        name: `League Match ${matchCount++}`,
+                        t1: activeTeams[i],
+                        t2: activeTeams[j]
+                    });
+                    
+                    // Match 2 (If Double Round Robin)
+                    if (type === 'double') {
+                        leagueGeneratedMatches.push({
+                            id: generateUniqueMatchID("L"),
+                            name: `League Match ${matchCount++} (Reverse Fixture)`,
+                            t1: activeTeams[j], // Reverses the Team order
+                            t2: activeTeams[i]
+                        });
+                    }
+                }
+            }
+            
+            let resDiv = document.getElementById('league-generated-results');
+            resDiv.style.display = 'block';
+            let html = `<div style="color:#10b981; margin-bottom:10px; font-weight:bold;">Generated ${leagueGeneratedMatches.length} League Matches!</div>`;
+            html += `<table style="width:100%; text-align:left; color:white; font-size:0.85rem; border-collapse:collapse;">`;
+            leagueGeneratedMatches.forEach(m => {
+                html += `<tr style="border-bottom:1px solid #334155;"><td style="padding:8px;">${m.name}</td><td style="padding:8px; color:#38bdf8; font-weight:bold;">${m.t1} <span style="color:#94a3b8; font-weight:normal;">vs</span> ${m.t2}</td></tr>`;
+            });
+            html += `</table>`;
+            resDiv.innerHTML = html;
+        }
+
+        function lockLeagueAndProceed() {
+            if (leagueGeneratedMatches.length === 0) generateLeagueMatches();
+            updateFinalLockedMatches();
+            document.querySelectorAll('.wizard-step')[3].click();
+        }
+
         function generateKnockoutBracket() {
             let size = parseInt(document.getElementById('ko-size-select').value); koGeneratedMatches = [];
             if (size === 4) { 
@@ -809,7 +862,7 @@
 
         function updateFinalLockedMatches() {
             let tName = document.getElementById('t-name').value || "Unnamed Tournament"; 
-            finalLockedMatches = [...manualMatches, ...poolGeneratedMatches, ...koGeneratedMatches];
+            finalLockedMatches = [...manualMatches, ...leagueGeneratedMatches, ...poolGeneratedMatches, ...koGeneratedMatches];
             document.getElementById('postings-body').innerHTML = finalLockedMatches.map((m, i) => `
                 <tr>
                     <td style="font-weight: bold; color: #38bdf8; font-size: 1.1rem;">
