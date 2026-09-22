@@ -184,7 +184,6 @@
                 <h3 style="margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">2. Multi-Stage Fixture Builder</h3>
                 <p style="color:#94a3b8; font-size:0.85rem; margin-top:0;">Use the Helper Engines to auto-generate matches, then review and edit them in the Master Canvas.</p>
                 
-                <!-- 🔥 CORRECTED LOGICAL TAB ORDER (1, 2, 3) -->
                 <div class="sub-tab-nav">
                     <button type="button" class="sub-tab-btn active" onclick="switchSubTab('tab-pools', this)">1. Group Stage / League Engine</button>
                     <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-knockouts', this)">2. Playoff / Knockout Engine</button>
@@ -223,7 +222,7 @@
                         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
                             <label style="color: #f8fafc; font-weight: bold; font-size: 0.9rem;">Playoff Structure:</label>
                             <select id="ko-template-select" class="postings-select" style="width: auto;">
-                                <option value="direct">🔥 Direct Knockout (Auto-Fill Real Teams)</option>
+                                <option value="direct">🔥 Direct Knockout Bracket (Auto-Calculates Byes & Rounds)</option>
                                 <option value="standard">Standard Knockout (TBD Placeholders)</option>
                                 <option value="ipl">IPL Style (Qualifier 1, Eliminator, Qualifier 2, Final)</option>
                                 <option value="super">Super League (Super Six / Super Eight)</option>
@@ -330,7 +329,6 @@
         let activeTeams = []; 
         let activeTeamMap = {}; 
         let poolsData = {}; 
-        
         let masterFixtures = []; 
 
         let currentTournamentId = null;
@@ -647,13 +645,12 @@
                 } 
             });
             alert(`Generated ${count} Matches! Moved to Master Canvas.`);
-            // 🔥 FIXED: Switches to the Canvas Tab automatically (Index 2)
             document.querySelectorAll('.sub-tab-btn')[2].click(); 
             renderCanvas();
         }
 
         // ==========================================
-        // 🔥 ENGINE 2: PLAYOFFS & KNOCKOUTS
+        // 🔥 ENGINE 2: PLAYOFFS & KNOCKOUTS (Advanced Mathematical Bracket)
         // ==========================================
         function generateKnockoutBracket() {
             let template = document.getElementById('ko-template-select').value;
@@ -665,25 +662,50 @@
                 let totalTeams = teamsToPair.length;
                 if(totalTeams < 2) { alert("Not enough teams for a direct knockout."); return; }
                 
-                let matchesNeeded = Math.floor(totalTeams / 2);
-                let roundName = matchesNeeded >= 8 ? "Round of 16" : (matchesNeeded >= 4 ? "Quarter-Final" : (matchesNeeded >= 2 ? "Semi-Final" : "Final"));
+                // 1. Mathematically Calculate Bracket Properties
+                let nextPow2 = Math.pow(2, Math.ceil(Math.log2(totalTeams)));
+                if (nextPow2 === 1) nextPow2 = 2; 
                 
-                for(let i=0; i<matchesNeeded; i++) {
-                    let t1 = teamsToPair[i*2] || "TBD";
-                    let t2 = teamsToPair[i*2 + 1] || "TBD";
-                    masterFixtures.push({ id: generateUniqueMatchID("M"), name: `${roundName} ${i+1}`, t1: t1, t2: t2 });
+                let byes = nextPow2 - totalTeams;
+                let r1MatchesCount = (totalTeams - byes) / 2;
+                
+                // 2. Generate Round 1 (Real Teams paired)
+                let matchIdx = 0;
+                let roundName = (nextPow2 === 16) ? "Round of 16" : (nextPow2 === 8) ? "Quarter-Final" : (nextPow2 === 4) ? "Semi-Final" : (nextPow2 === 2) ? "Final" : `Round of ${nextPow2}`;
+                
+                for(let i=0; i<r1MatchesCount; i++) {
+                    masterFixtures.push({ id: generateUniqueMatchID("M"), name: `${roundName} - Match ${i+1}`, t1: teamsToPair[matchIdx++], t2: teamsToPair[matchIdx++] });
                     count++;
                 }
                 
-                if (matchesNeeded >= 4) {
-                     masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 1", t1: "TBD", t2: "TBD" });
-                     masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 2", t1: "TBD", t2: "TBD" });
-                     masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "TBD", t2: "TBD" });
-                     count += 3;
-                } else if (matchesNeeded >= 2) {
-                     masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "TBD", t2: "TBD" });
-                     count += 1;
+                let teamsGettingByes = [];
+                while(matchIdx < totalTeams) {
+                    teamsGettingByes.push(teamsToPair[matchIdx++]);
                 }
+                
+                // 3. Generate Subsequent Bracket Rounds (TBD Placeholders)
+                let teamsInNextRound = r1MatchesCount + byes; 
+                while (teamsInNextRound >= 2) {
+                    let matchesThisRound = teamsInNextRound / 2;
+                    let rName = (matchesThisRound === 4) ? "Quarter-Final" : (matchesThisRound === 2) ? "Semi-Final" : (matchesThisRound === 1) ? "Final" : `Round of ${teamsInNextRound*2}`;
+                    
+                    for(let i=0; i<matchesThisRound; i++) {
+                        let mName = (matchesThisRound === 1) ? "Final" : `${rName} ${i+1}`;
+                        masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: "TBD", t2: "TBD" });
+                        count++;
+                    }
+                    teamsInNextRound = matchesThisRound;
+                }
+
+                let msg = `Generated ${count} Bracket Matches!`;
+                if(byes > 0) {
+                    msg += `\n\n🚨 NOTE: ${byes} team(s) received a BYE to the next round:\n${teamsGettingByes.join(', ')}`;
+                }
+                alert(msg + "\n\nMoved to Master Canvas.");
+                document.querySelectorAll('.sub-tab-btn')[2].click(); 
+                renderCanvas();
+                return;
+
             } else if (template === 'ipl') {
                 masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Qualifier 1", t1: "Rank 1", t2: "Rank 2" });
                 masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Eliminator", t1: "Rank 3", t2: "Rank 4" });
@@ -703,7 +725,6 @@
             }
 
             alert(`Generated ${count} Playoff/Bracket Matches! Moved to Master Canvas.`);
-            // 🔥 FIXED: Switches to the Canvas Tab automatically (Index 2)
             document.querySelectorAll('.sub-tab-btn')[2].click(); 
             renderCanvas();
         }
@@ -826,6 +847,9 @@
                     </td>
                 </tr>`).join('');
         }
+
+        function generateUniqueMatchID(prefix) { return `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`; }
+        function generateUniquePin() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
         async function saveMatchesToCloud() {
             if(!currentTournamentId) { alert("Tournament ID missing. Ensure Step 1 completed successfully."); return; }
