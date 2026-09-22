@@ -61,7 +61,7 @@
         .btn-success { background: #10b981; color: white; padding: 10px 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; display: inline-block; }
         .btn-success:hover { background: #059669; }
 
-        .tourney-grid { display: grid; grid-template-columns: 1.2fr 2fr; gap: 20px; align-items: start; margin-top: 20px; }
+        .tourney-grid { display: grid; grid-template-columns: 1.2fr 2fr; gap: 20px; align-items: start; }
         .tourney-pane { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         .pane-title { font-size: 1.1rem; color: #38bdf8; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-top: 0; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
         
@@ -106,25 +106,29 @@
             <div class="admin-form">
                 <h3 style="margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px;">1. Tournament Details & Team Selection</h3>
                 
-                <div style="background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #334155; display: flex; gap: 15px; align-items: center;">
-                    <div style="flex: 1;">
-                        <label style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; font-weight: bold; display:block;">Mode Selection</label>
-                        <select id="tournament-mode-select" onchange="toggleTournamentMode(this.value)" style="width: 100%; padding: 10px; background: #020617; border: 1px solid #475569; color: white; border-radius: 6px;">
-                            <option value="new">➕ Create New Tournament</option>
-                            <option value="edit">✏️ Edit Existing Tournament</option>
-                        </select>
-                    </div>
-                    <div id="existing-tournament-wrapper" style="flex: 1; display: none;">
-                        <label style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; font-weight: bold; display:block;">Select Tournament to Edit</label>
-                        <select id="existing-tournament-select" onchange="loadExistingTournamentData(this.value)" style="width: 100%; padding: 10px; background: #020617; border: 1px solid #475569; color: white; border-radius: 6px;">
-                            <option value="">Loading tournaments...</option>
-                        </select>
-                    </div>
-                </div>
-
                 <div class="tourney-grid">
+                    <!-- PANE 1: Setup Details -->
                     <div class="tourney-pane">
                         <h3 class="pane-title">📋 1. Setup Details</h3>
+                        
+                        <!-- 🔥 MODE SELECTION INTEGRATED HERE -->
+                        <div class="input-group" style="background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 6px; border: 1px solid #3b82f6; margin-bottom: 15px;">
+                            <label style="color: #38bdf8;">Mode Selection</label>
+                            <select id="tournament-mode-select" onchange="toggleTournamentMode(this.value)" style="width: 100%; padding: 8px; background: #0f172a; border: 1px solid #3b82f6; color: white; border-radius: 4px; outline: none;">
+                                <option value="new">➕ Create New Tournament</option>
+                                <option value="edit">✏️ Edit Existing Tournament</option>
+                            </select>
+                        </div>
+                        
+                        <div class="input-group" id="existing-tournament-wrapper" style="display: none; background: rgba(245, 158, 11, 0.1); padding: 10px; border-radius: 6px; border: 1px solid #f59e0b; margin-bottom: 15px;">
+                            <label style="color: #f59e0b;">Select Tournament to Edit</label>
+                            <select id="existing-tournament-select" onchange="loadExistingTournamentData(this.value)" style="width: 100%; padding: 8px; background: #0f172a; border: 1px solid #f59e0b; color: white; border-radius: 4px; outline: none;">
+                                <option value="">Loading tournaments...</option>
+                            </select>
+                        </div>
+                        
+                        <hr style="border: 0; border-top: 1px dashed #334155; margin: 20px 0;">
+
                         <div class="input-group">
                             <label>Tournament Name *</label>
                             <input type="text" id="t-name" placeholder="e.g. Veda Premier League">
@@ -148,6 +152,7 @@
                         </div>
                     </div>
 
+                    <!-- PANE 2: Team Selector -->
                     <div class="tourney-pane">
                         <h3 class="pane-title">🛡️ 2. Select Teams <span id="teamCountBadge" class="counter-badge">0</span></h3>
                         
@@ -329,6 +334,7 @@
         let activeTeams = []; 
         let activeTeamMap = {}; 
         let poolsData = {}; 
+        
         let masterFixtures = []; 
 
         let currentTournamentId = null;
@@ -650,7 +656,7 @@
         }
 
         // ==========================================
-        // 🔥 ENGINE 2: PLAYOFFS & KNOCKOUTS (Advanced Mathematical Bracket)
+        // 🔥 ENGINE 2: PLAYOFFS & KNOCKOUTS
         // ==========================================
         function generateKnockoutBracket() {
             let template = document.getElementById('ko-template-select').value;
@@ -662,14 +668,12 @@
                 let totalTeams = teamsToPair.length;
                 if(totalTeams < 2) { alert("Not enough teams for a direct knockout."); return; }
                 
-                // 1. Mathematically Calculate Bracket Properties
                 let nextPow2 = Math.pow(2, Math.ceil(Math.log2(totalTeams)));
                 if (nextPow2 === 1) nextPow2 = 2; 
                 
                 let byes = nextPow2 - totalTeams;
                 let r1MatchesCount = (totalTeams - byes) / 2;
                 
-                // 2. Generate Round 1 (Real Teams paired)
                 let matchIdx = 0;
                 let roundName = (nextPow2 === 16) ? "Round of 16" : (nextPow2 === 8) ? "Quarter-Final" : (nextPow2 === 4) ? "Semi-Final" : (nextPow2 === 2) ? "Final" : `Round of ${nextPow2}`;
                 
@@ -683,7 +687,6 @@
                     teamsGettingByes.push(teamsToPair[matchIdx++]);
                 }
                 
-                // 3. Generate Subsequent Bracket Rounds (TBD Placeholders)
                 let teamsInNextRound = r1MatchesCount + byes; 
                 while (teamsInNextRound >= 2) {
                     let matchesThisRound = teamsInNextRound / 2;
