@@ -8,198 +8,512 @@
     
     <style>
         /* BASE STYLES */
-        body { margin: 0; padding: 0; background-color: #020617; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+        body { margin: 0; background-color: #020617; color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; height: 100vh; overflow: hidden; }
         * { box-sizing: border-box; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
         /* SIDEBAR NAVIGATION */
-        .sidebar { width: 260px; background: #0f172a; border-right: 1px solid #1e293b; display: flex; flex-direction: column; z-index: 10; }
-        .sidebar-header { padding: 20px; border-bottom: 1px solid #1e293b; text-align: left; }
-        .sidebar-header h2 { color: #3b82f6; margin: 0; font-size: 1.2rem; letter-spacing: 1px; }
-        .sidebar-header a { color: #94a3b8; font-size: 0.8rem; text-decoration: none; margin-top: 5px; display: inline-block; transition: 0.2s; }
-        .sidebar-header a:hover { color: #cbd5e1; }
-        
-        .nav-menu { display: flex; flex-direction: column; padding: 15px 10px; gap: 5px; flex: 1; }
-        .nav-item { background: transparent; color: #94a3b8; border: none; padding: 12px 15px; border-radius: 6px; text-align: left; font-size: 0.95rem; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 10px; }
-        .nav-item:hover { background: #1e293b; color: #f8fafc; }
-        .nav-item.active { background: #3b82f6; color: white; }
-        
-        .nav-footer { padding: 15px; border-top: 1px solid #1e293b; }
-        .btn-deploy { width: 100%; background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-deploy:hover { background: #059669; }
+        .sidebar { width: 280px; background: #0f172a; border-right: 1px solid #1e293b; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: 25px 20px; border-bottom: 1px solid #1e293b; }
+        .back-link { color: #94a3b8; text-decoration: none; font-size: 0.85rem; font-weight: bold; display: inline-block; margin-bottom: 15px; transition: 0.2s; }
+        .back-link:hover { color: #38bdf8; }
+        .app-title { margin: 0; color: #3b82f6; letter-spacing: 1px; font-size: 1.2rem; }
+        .app-subtitle { margin: 5px 0 0 0; color: #64748b; font-size: 0.75rem; }
 
+        .nav-menu { flex: 1; overflow-y: auto; padding: 20px 0; }
+        .nav-group-title { padding: 0 20px; font-size: 0.7rem; text-transform: uppercase; color: #64748b; font-weight: bold; letter-spacing: 1px; margin-bottom: 10px; margin-top: 15px; }
+        .nav-item { padding: 12px 20px 12px 25px; color: #cbd5e1; cursor: pointer; display: flex; align-items: center; gap: 12px; font-size: 0.95rem; border-left: 3px solid transparent; transition: 0.2s; }
+        .nav-item:hover { background: #1e293b; color: white; }
+        .nav-item.active { background: #1e293b; color: #38bdf8; border-left-color: #38bdf8; font-weight: bold; }
+        
         /* MAIN CONTENT AREA */
-        .main-content { flex: 1; display: flex; flex-direction: column; background: #020617; overflow: hidden; }
-        
-        /* TOP STATUS BAR */
-        .top-bar { height: 70px; background: #0f172a; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; padding: 0 30px; }
-        .tourney-title { margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 15px; }
-        .badge-draft { background: #f59e0b; color: #020617; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;}
-        
-        /* WORKSPACE (SCROLLABLE) */
-        .workspace { flex: 1; padding: 30px; overflow-y: auto; }
-        .hub-section { display: none; animation: fadeIn 0.3s ease; }
+        .content-area { flex: 1; padding: 40px; overflow-y: auto; background: #020617; }
+        .hub-section { display: none; animation: fadeIn 0.3s ease; max-width: 1100px; margin: 0 auto; }
         .hub-section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* GENERIC PANEL STYLES */
-        .panel { background: #0f172a; border: 1px solid #1e293b; border-radius: 10px; padding: 25px; margin-bottom: 20px; }
-        .panel-header { margin-top: 0; color: #38bdf8; border-bottom: 1px solid #1e293b; padding-bottom: 10px; margin-bottom: 20px; font-size: 1.1rem; }
         
+        .section-header { margin-bottom: 30px; border-bottom: 1px solid #1e293b; padding-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .section-title { margin: 0; font-size: 1.8rem; color: white; }
+        .section-desc { margin: 5px 0 0 0; color: #94a3b8; font-size: 0.9rem; }
+        
+        /* REUSABLE UI CARDS */
+        .card { background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #1e293b; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .card-title { margin-top: 0; color: #38bdf8; font-size: 1.1rem; margin-bottom: 15px; border-bottom: 1px solid #1e293b; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* INPUTS & BUTTONS */
         .input-group { margin-bottom: 15px; }
         .input-group label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; font-weight:bold; }
-        .input-group input, .input-group select { width: 100%; padding: 10px; background: #020617; border: 1px solid #334155; color: white; border-radius: 6px; box-sizing: border-box; outline: none; }
-        .input-group input:focus, .input-group select:focus { border-color: #3b82f6; }
-
+        .input-group input, .input-group select { width: 100%; padding: 10px; background: #020617; border: 1px solid #334155; color: white; border-radius: 6px; outline: none; transition: 0.2s; }
+        .input-group input:focus, .input-group select:focus { border-color: #38bdf8; }
+        
+        .btn-primary { background: #3b82f6; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-success { background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.85rem;}
+        .btn-success:hover { background: #059669; }
+        .btn-danger { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.75rem;}
+        .btn-outline { background: transparent; color: #38bdf8; border: 1px dashed #38bdf8; padding: 12px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        
         /* GRID LAYOUTS */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         
-        /* TEMPORARY PLACEHOLDER BOXES */
-        .placeholder-box { background: rgba(59, 130, 246, 0.05); border: 2px dashed #334155; border-radius: 8px; padding: 40px; text-align: center; color: #64748b; font-style: italic; }
+        /* POOLS & TEAMS CSS */
+        .team-list-item { background: #1e293b; padding: 10px 15px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid transparent; transition: 0.2s; }
+        .team-list-item:hover { border-color: #38bdf8; }
+        .custom-scroll { overflow-y: auto; max-height: 400px; padding-right: 5px; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        
+        .pool-box { background: #020617; border: 1px solid #334155; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+        .pool-box-header { color: #f59e0b; font-weight: bold; margin-bottom: 10px; font-size: 0.95rem; border-bottom: 1px dashed #334155; padding-bottom: 5px; }
+        .assigned-team-pill { background: #1e293b; border: 1px solid #3b82f6; padding: 6px 12px; border-radius: 4px; display: inline-flex; align-items: center; gap: 8px; margin: 4px; font-size: 0.85rem; }
     </style>
 </head>
 <body>
 
-    <!-- SIDEBAR -->
-    <div class="sidebar">
+    <!-- 📱 SIDEBAR NAVIGATION -->
+    <aside class="sidebar">
         <div class="sidebar-header">
-            <h2>SPORTZSTAT</h2>
-            <a href="../index.html">← Back to Dashboard</a>
+            <a href="../index.html" class="back-link">← Back to Dashboard</a>
+            <h2 class="app-title">TOURNAMENT HUB</h2>
+            <p class="app-subtitle">Cloud Connected</p>
         </div>
         
         <div class="nav-menu">
-            <button class="nav-item active" onclick="switchHubTab('tab-setup', this)">⚙️ Tournament Setup</button>
-            <button class="nav-item" onclick="switchHubTab('tab-teams', this)">🛡️ Teams & Pools</button>
-            <button class="nav-item" onclick="switchHubTab('tab-matches', this)">🗓️ Match Schedule</button>
-            <button class="nav-item" onclick="switchHubTab('tab-squads', this)">👥 Roster Verification</button>
-        </div>
-
-        <div class="nav-footer">
-            <button class="btn-deploy">🚀 Publish to Live</button>
-            <div style="font-size: 0.7rem; color: #64748b; text-align: center; margin-top: 8px;">Auto-saving Draft...</div>
-        </div>
-    </div>
-
-    <!-- MAIN CONTENT -->
-    <div class="main-content">
-        <!-- TOP STATUS BAR -->
-        <div class="top-bar">
-            <h3 class="tourney-title">
-                <span id="header-tourney-name">Unnamed Tournament</span> 
-                <span class="badge-draft">Draft Mode</span>
-            </h3>
-            <div style="color: #94a3b8; font-size: 0.85rem;">Connected to Supabase DB</div>
-        </div>
-
-        <!-- WORKSPACE AREA -->
-        <div class="workspace custom-scroll">
+            <div class="nav-group-title">Configuration</div>
+            <div class="nav-item active" onclick="switchTab('sec-settings', this)">⚙️ Basic Settings</div>
             
-            <!-- SECTION 1: SETUP -->
-            <div id="tab-setup" class="hub-section active">
-                <div class="panel">
-                    <h3 class="panel-header">Basic Details</h3>
-                    <div class="grid-2">
-                        <div class="input-group">
-                            <label>Tournament Name *</label>
-                            <input type="text" id="t-name" placeholder="e.g. Veda Premier League" oninput="document.getElementById('header-tourney-name').innerText = this.value || 'Unnamed Tournament';">
-                        </div>
-                        <div class="input-group">
-                            <label>Format *</label>
-                            <select id="t-format">
-                                <option value="T20">T20 (20 Overs)</option>
-                                <option value="One Day">One Day (50 Overs)</option>
-                                <option value="Multi-Day">Multi-Day (Test)</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label>Starting Date</label>
-                            <input type="date" id="t-date">
-                        </div>
-                        <div class="input-group">
-                            <label>Points System (Per Win)</label>
-                            <input type="number" id="tWinPoints" value="2">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Upcoming Phase 2 Feature -->
-                <div class="panel" style="border-color: #3b82f6;">
-                    <h3 class="panel-header" style="color: #3b82f6;">🚀 Quick-Start Templates (Phase 2)</h3>
-                    <div class="placeholder-box">
-                        This area will contain 1-click template buttons (IPL Style, World Cup Style, Standard). <br>Clicking one will auto-configure the rules for the rest of the hub.
-                    </div>
-                </div>
-            </div>
-
-            <!-- SECTION 2: TEAMS & POOLS -->
-            <div id="tab-teams" class="hub-section">
-                <div class="panel">
-                    <h3 class="panel-header">Participating Teams & Groups</h3>
-                    <p style="color: #94a3b8; font-size: 0.85rem; margin-top: -10px; margin-bottom: 20px;">Search your Master DB, add teams to this tournament, and drag them into their respective pools.</p>
-                    
-                    <!-- Upcoming Phase 2 Feature -->
-                    <div class="grid-2">
-                        <div class="placeholder-box" style="height: 400px; padding-top: 150px;">
-                            Master DB Search & Select UI
-                        </div>
-                        <div class="placeholder-box" style="height: 400px; padding-top: 150px;">
-                            Drag & Drop Pool Builder UI
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SECTION 3: MATCH SCHEDULE -->
-            <div id="tab-matches" class="hub-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <div>
-                        <h2 style="margin: 0; color: white;">Master Match Schedule</h2>
-                        <p style="color: #94a3b8; font-size: 0.85rem; margin: 5px 0 0 0;">All fixtures live here. Use auto-generators or add matches manually.</p>
-                    </div>
-                    <div style="display: flex; gap: 10px;">
-                        <button style="background: transparent; color: #3b82f6; border: 1px dashed #3b82f6; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer;">+ Add Custom Match</button>
-                        <button style="background: #3b82f6; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer;">⚙️ Auto-Generate...</button>
-                    </div>
-                </div>
-
-                <div class="panel">
-                    <!-- Upcoming Phase 3/4 Feature -->
-                    <div class="placeholder-box" style="height: 300px; padding-top: 100px;">
-                        The Master Canvas / Visual Bracket Tree UI will render here.
-                    </div>
-                </div>
-            </div>
-
-            <!-- SECTION 4: SQUADS -->
-            <div id="tab-squads" class="hub-section">
-                <div class="panel">
-                    <h3 class="panel-header">Roster Verification</h3>
-                    <p style="color: #94a3b8; font-size: 0.85rem; margin-top: -10px; margin-bottom: 20px;">Verify which players are active for this specific tournament. This can be done independently of match scheduling.</p>
-                    
-                    <!-- Upcoming Phase 5 Feature -->
-                    <div class="placeholder-box" style="height: 300px; padding-top: 100px;">
-                        Team Readiness Dashboard 🔴/🟢 and Squad Checkbox UI
-                    </div>
-                </div>
-            </div>
-
+            <div class="nav-group-title">Participants</div>
+            <div class="nav-item" onclick="switchTab('sec-teams', this)">🛡️ Teams & Pools</div>
+            <div class="nav-item" onclick="switchTab('sec-squads', this)">👥 Roster Status</div>
+            
+            <div class="nav-group-title">Fixtures & Scheduling</div>
+            <div class="nav-item" onclick="switchTab('sec-matches', this)">📅 Match Canvas</div>
+            <div class="nav-item" onclick="switchTab('sec-bracket', this)">🏆 Visual Bracket</div>
+            
+            <div class="nav-group-title">Launch</div>
+            <div class="nav-item" onclick="switchTab('sec-deploy', this)">🚀 Deploy to Cloud</div>
         </div>
-    </div>
+    </aside>
 
-    <!-- JAVASCRIPT FOR DYNAMIC ROUTING -->
+    <!-- 💻 MAIN CONTENT AREA -->
+    <main class="content-area">
+        
+        <!-- MODULE 1: SETTINGS -->
+        <section id="sec-settings" class="hub-section active">
+            <div class="section-header">
+                <div>
+                    <h1 class="section-title">Basic Settings</h1>
+                    <p class="section-desc">Define the core rules and identity of this tournament.</p>
+                </div>
+                <div id="tourney-status-badge" style="background: rgba(148, 163, 184, 0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid #94a3b8; color: #94a3b8; font-size: 0.85rem; font-weight: bold;">Unsaved</div>
+            </div>
+
+            <div class="card" style="border-color: #3b82f6;">
+                <div class="grid-2">
+                    <div class="input-group" style="margin:0;">
+                        <label style="color: #38bdf8;">Mode Selection</label>
+                        <select id="tournament-mode-select" onchange="toggleTournamentMode(this.value)">
+                            <option value="new">➕ Create New Tournament</option>
+                            <option value="edit">✏️ Edit Existing Tournament</option>
+                        </select>
+                    </div>
+                    <div class="input-group" id="existing-tournament-wrapper" style="display: none; margin:0;">
+                        <label style="color: #f59e0b;">Select Tournament to Edit</label>
+                        <select id="existing-tournament-select" onchange="loadExistingTournamentData(this.value)">
+                            <option value="">Loading tournaments...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Tournament Identity</h3>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label>Tournament Name *</label>
+                        <input type="text" id="t-name" placeholder="e.g. Veda Premier League">
+                    </div>
+                    <div class="input-group">
+                        <label>Format *</label>
+                        <select id="t-format">
+                            <option value="T20">T20 (20 Overs)</option>
+                            <option value="One Day">One Day (50 Overs)</option>
+                            <option value="Multi-Day">Multi-Day (Test)</option>
+                            <option value="T10">T10</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Starting Date *</label>
+                        <input type="date" id="t-date">
+                    </div>
+                    <div class="input-group">
+                        <label>Points System (Per Win)</label>
+                        <input type="number" id="tWinPoints" value="2">
+                    </div>
+                </div>
+                <button class="btn-primary" style="margin-top: 15px; width: 100%; font-size: 1.1rem; padding: 15px;" onclick="saveBasicSettings()">💾 Save Settings & Start Adding Teams</button>
+            </div>
+        </section>
+
+        <!-- MODULE 2: TEAMS & POOLS -->
+        <section id="sec-teams" class="hub-section">
+            <div class="section-header">
+                <div>
+                    <h1 class="section-title">Teams & Pools</h1>
+                    <p class="section-desc">Add teams from the Master DB and organize them into groups.</p>
+                </div>
+                <button class="btn-success" onclick="createNewTeamNatively()">+ Create Brand New Team</button>
+            </div>
+
+            <div class="grid-2">
+                <!-- Left Side: Database Teams -->
+                <div class="card">
+                    <h3 class="card-title">Master DB Teams</h3>
+                    <input type="text" id="teamSearch" placeholder="🔍 Search database teams..." style="width:100%; padding:10px; border-radius:6px; border:1px solid #334155; background:#020617; color:white; margin-bottom: 15px;" onkeyup="renderAvailableTeams()">
+                    
+                    <div class="custom-scroll" id="available-teams-list" style="height: 350px;">
+                        <div style="text-align: center; padding: 20px; color: #64748b;">Loading Master Database...</div>
+                    </div>
+                </div>
+
+                <!-- Right Side: Active Pools -->
+                <div class="card" style="border-color: #10b981;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #1e293b; padding-bottom:10px;">
+                        <h3 class="card-title" style="border:none; margin:0; padding:0; color:#10b981;">Tournament Pools</h3>
+                        <select id="pool-count-select" onchange="initPools(this.value)" style="background: #020617; color: white; border: 1px solid #334155; padding: 6px 12px; border-radius: 4px; outline:none; font-weight:bold;">
+                            <option value="1">1 Pool (Single League)</option>
+                            <option value="2">2 Pools</option>
+                            <option value="3">3 Pools</option>
+                            <option value="4">4 Pools</option>
+                            <option value="8">8 Pools</option>
+                        </select>
+                    </div>
+                    
+                    <div class="custom-scroll" id="pools-container" style="height: 350px;">
+                        <!-- Unassigned Box -->
+                        <div class="pool-box" style="border-color: #f59e0b;">
+                            <div class="pool-box-header" style="color: #f59e0b;">Unassigned Teams</div>
+                            <div id="unassigned-box" style="min-height: 40px; color: #64748b; font-size: 0.85rem; font-style: italic;">Select teams from the left to add them here.</div>
+                        </div>
+                        
+                        <!-- Dynamic Pools Render Here -->
+                        <div id="dynamic-pools-area"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="text-align: right;">
+                <button class="btn-primary" onclick="document.querySelectorAll('.nav-item')[3].click()">Continue to Match Canvas ➡️</button>
+            </div>
+        </section>
+
+        <!-- MODULE 3: MATCH CANVAS (Placeholders for Phase 3) -->
+        <section id="sec-matches" class="hub-section">
+            <div class="section-header">
+                <div>
+                    <h1 class="section-title">Match Canvas</h1>
+                    <p class="section-desc">The single source of truth for your tournament schedule.</p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-outline">📁 Import CSV</button>
+                    <button class="btn-primary">⚙️ Auto-Generate Matches</button>
+                </div>
+            </div>
+            <div class="card"><div style="text-align: center; padding: 40px; color: #64748b;"><p style="font-size: 1.2rem;">[Match Canvas Engine in Phase 3]</p></div></div>
+        </section>
+
+        <!-- MODULE 4: VISUAL BRACKET (Placeholders for Phase 4) -->
+        <section id="sec-bracket" class="hub-section">
+            <div class="section-header">
+                <div>
+                    <h1 class="section-title">Visual Knockout Bracket</h1>
+                    <p class="section-desc">Click on empty nodes to assign teams that qualify from the Group Stage.</p>
+                </div>
+            </div>
+            <div class="card" style="min-height: 400px; display: flex; align-items: center; justify-content: center; border: 1px dashed #38bdf8; background: rgba(56, 189, 248, 0.05);"><p style="color: #38bdf8; font-size: 1.1rem;">[Visual Bracket Tree in Phase 4]</p></div>
+        </section>
+
+        <!-- MODULE 5: ROSTER STATUS (Placeholders for Phase 5) -->
+        <section id="sec-squads" class="hub-section">
+            <div class="section-header">
+                <div>
+                    <h1 class="section-title">Roster Status</h1>
+                    <p class="section-desc">Monitor which teams have submitted their playing squads.</p>
+                </div>
+            </div>
+            <div class="card"><div style="text-align: center; padding: 40px; color: #64748b;"><p style="font-size: 1.2rem;">[Squad Tracking Dashboard in Phase 5]</p></div></div>
+        </section>
+
+        <!-- MODULE 6: DEPLOYMENT -->
+        <section id="sec-deploy" class="hub-section">
+            <div class="section-header">
+                <div>
+                    <h1 class="section-title">Deployment Control</h1>
+                    <p class="section-desc">Push your draft matches to the live public cloud.</p>
+                </div>
+            </div>
+            <div class="card" style="border-color: #f59e0b; background: rgba(245, 158, 11, 0.05); text-align: center; padding: 40px;">
+                <h3 style="color: #f59e0b; font-size: 1.5rem; margin-top: 0;">Ready to go live?</h3>
+                <p style="color: #cbd5e1; max-width: 600px; margin: 0 auto 25px auto;">Publishing will assign Scorer PINs to all matches on your canvas and make the tournament visible on the Fan Portal.</p>
+                <button class="btn-primary" style="background: #f59e0b; font-size: 1.2rem; padding: 15px 30px;">🚀 PUBLISH TOURNAMENT</button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- LOGIC & SUPABASE INTEGRATION -->
     <script>
-        function switchHubTab(tabId, btnElement) {
-            // 1. Hide all sections
-            const sections = document.querySelectorAll('.hub-section');
-            sections.forEach(sec => sec.classList.remove('active'));
-            
-            // 2. Remove 'active' class from all nav items
-            const navItems = document.querySelectorAll('.nav-item');
-            navItems.forEach(btn => btn.classList.remove('active'));
-            
-            // 3. Show target section and highlight clicked button
-            document.getElementById(tabId).classList.add('active');
-            btnElement.classList.add('active');
+        // --- 1. INITIALIZATION & STATE ---
+        const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
+        const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let currentTournamentId = null;
+        let allDbTeams = [];        // Every team in the master DB
+        let tourneyTeams = [];      // Teams selected for this tournament
+        let poolCount = 1;          // Active number of pools
+        
+        // Data structure to hold pool assignments
+        let poolsData = { 
+            "Unassigned": [], 
+            "Single Pool / League": [] 
+        };
+
+        // Boot up
+        document.addEventListener('DOMContentLoaded', async () => { 
+            await fetchAllMasterTeams();
+            await loadExistingTournamentsList();
+            initPools(1); // Default to 1 pool
+        });
+
+        // Sidebar Router
+        function switchTab(targetId, navElement) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            navElement.classList.add('active');
+            document.querySelectorAll('.hub-section').forEach(sec => sec.classList.remove('active'));
+            document.getElementById(targetId).classList.add('active');
         }
+
+        // --- 2. CONFIGURATION & SETTINGS SAVING ---
+        async function saveBasicSettings() {
+            let tName = document.getElementById('t-name').value.trim();
+            let tFormat = document.getElementById('t-format').value;
+            let tDate = document.getElementById('t-date').value;
+            let tWinPoints = document.getElementById('tWinPoints').value;
+
+            if (!tName || !tDate) { alert("Tournament Name and Starting Date are required."); return; }
+
+            let configPayload = { winPoints: tWinPoints };
+            let mode = document.getElementById('tournament-mode-select').value;
+            
+            try {
+                if (mode === 'edit' && currentTournamentId) {
+                    const { error } = await db.from('tournaments').update({ name: tName, format: tFormat, start_date: tDate, config: configPayload }).eq('tournament_id', currentTournamentId);
+                    if (error) throw error;
+                    alert("✅ Tournament Settings Updated!");
+                } else {
+                    const { data, error } = await db.from('tournaments').insert([{ name: tName, format: tFormat, start_date: tDate, config: configPayload, status: 'draft' }]).select();
+                    if (error) throw error;
+                    currentTournamentId = data[0].tournament_id;
+                    document.getElementById('tournament-mode-select').value = 'edit';
+                    alert("✅ New Tournament Created & Saved!");
+                }
+                
+                // Update UI Badge
+                let badge = document.getElementById('tourney-status-badge');
+                badge.innerText = "Saved: Draft Mode";
+                badge.style.background = "rgba(16, 185, 129, 0.1)";
+                badge.style.borderColor = "#10b981";
+                badge.style.color = "#10b981";
+                
+                // Navigate seamlessly to Tab 2
+                document.querySelectorAll('.nav-item')[2].click(); 
+
+            } catch (err) {
+                alert("Error saving tournament: " + err.message);
+            }
+        }
+
+        async function loadExistingTournamentsList() {
+            const { data, error } = await db.from('tournaments').select('tournament_id, name, format');
+            const select = document.getElementById('existing-tournament-select');
+            if (error || !data || data.length === 0) { select.innerHTML = '<option value="">No existing tournaments found</option>'; return; }
+            select.innerHTML = '<option value="">-- Choose tournament to edit --</option>' + data.map(t => `<option value="${t.tournament_id}">${t.name} (${t.format})</option>`).join('');
+        }
+
+        function toggleTournamentMode(mode) {
+            const wrapper = document.getElementById('existing-tournament-wrapper');
+            if (mode === 'edit') {
+                wrapper.style.display = 'block'; 
+            } else {
+                wrapper.style.display = 'none'; 
+                currentTournamentId = null; 
+                document.getElementById('t-name').value = '';
+                document.getElementById('t-date').value = '';
+                tourneyTeams = [];
+                initPools(1);
+                renderAvailableTeams();
+                document.getElementById('tourney-status-badge').innerText = "Unsaved";
+                document.getElementById('tourney-status-badge').style = "background: rgba(148, 163, 184, 0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid #94a3b8; color: #94a3b8; font-size: 0.85rem; font-weight: bold;";
+            }
+        }
+
+        // Placeholder for loading a specific tournament's data
+        async function loadExistingTournamentData(tournId) {
+            if(!tournId) return;
+            alert("Loading tournament data... (Will be fully mapped in the next phase)");
+            currentTournamentId = tournId;
+            // Map name, date, and fetch linked teams/pools logic will go here
+        }
+
+        // --- 3. TEAM SELECTION & POOL ENGINE ---
+        async function fetchAllMasterTeams() {
+            const { data, error } = await db.from('teams').select('*').order('name', { ascending: true });
+            if (!error && data) {
+                allDbTeams = data;
+                renderAvailableTeams();
+            }
+        }
+
+        function renderAvailableTeams() {
+            let searchStr = document.getElementById('teamSearch').value.toLowerCase();
+            let container = document.getElementById('available-teams-list');
+            
+            // Filter out teams that are already in the tournament
+            let filteredTeams = allDbTeams
+                .filter(t => !tourneyTeams.some(sel => sel.team_id === t.team_id))
+                .filter(t => t.name.toLowerCase().includes(searchStr));
+
+            if (filteredTeams.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">No teams found.</div>';
+                return;
+            }
+
+            container.innerHTML = filteredTeams.map(t => `
+                <div class="team-list-item">
+                    <span>${t.name}</span>
+                    <button class="btn-success" onclick="addTeamToTournament('${t.team_id}', '${t.name.replace(/'/g, "\\'")}')">+ Add</button>
+                </div>
+            `).join('');
+        }
+
+        function addTeamToTournament(id, name) {
+            tourneyTeams.push({ team_id: id, name: name });
+            poolsData["Unassigned"].push(name); // Drops directly into Unassigned
+            renderAvailableTeams();
+            renderPools();
+        }
+
+        function removeTeamFromTournament(name) {
+            tourneyTeams = tourneyTeams.filter(t => t.name !== name);
+            // Remove from whichever pool it is currently in
+            Object.keys(poolsData).forEach(pKey => {
+                poolsData[pKey] = poolsData[pKey].filter(t => t !== name);
+            });
+            renderAvailableTeams();
+            renderPools();
+        }
+
+        async function createNewTeamNatively() {
+            let tName = prompt("Enter the name of the new team:");
+            if (!tName || tName.trim() === "") return;
+            tName = tName.trim();
+
+            if (allDbTeams.some(t => t.name.toLowerCase() === tName.toLowerCase())) {
+                alert("Team already exists in database!"); return;
+            }
+
+            try {
+                const { data, error } = await db.from('teams').insert([{ name: tName }]).select();
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    allDbTeams.push(data[0]); 
+                    addTeamToTournament(data[0].team_id, data[0].name);
+                }
+            } catch(e) {
+                alert("Error saving team to cloud: " + e.message);
+            }
+        }
+
+        // --- POOL UI RENDERING ---
+        function initPools(countVal) {
+            poolCount = parseInt(countVal) || 1;
+            
+            // Preserve unassigned teams
+            let currentUnassigned = poolsData["Unassigned"] || [];
+            // Flatten any teams that were previously assigned so they don't get lost when shrinking pools
+            let previouslyAssigned = [];
+            Object.keys(poolsData).forEach(pKey => {
+                if (pKey !== "Unassigned") previouslyAssigned = previouslyAssigned.concat(poolsData[pKey]);
+            });
+
+            // Reset Structure
+            poolsData = { "Unassigned": currentUnassigned };
+            
+            if(poolCount === 1) {
+                poolsData["Single Pool / League"] = previouslyAssigned; 
+            } else {
+                for(let i=0; i<poolCount; i++) {
+                    poolsData["Pool " + String.fromCharCode(65 + i)] = [];
+                }
+                // Dump all previously assigned teams back to Unassigned to avoid index errors
+                poolsData["Unassigned"] = poolsData["Unassigned"].concat(previouslyAssigned);
+            }
+            renderPools();
+        }
+
+        function renderPools() {
+            // Render Unassigned Box
+            let unassignedHtml = poolsData["Unassigned"].map(tName => `
+                <div class="assigned-team-pill" style="border-color: #f59e0b;">
+                    ${tName}
+                    <select style="background:#0f172a; color:white; border:none; outline:none; border-left:1px solid #334155; padding-left:5px; margin-left:5px;" onchange="moveTeam('${tName}', 'Unassigned', this.value)">
+                        <option value="">Move...</option>
+                        ${Object.keys(poolsData).filter(k => k !== "Unassigned").map(pKey => `<option value="${pKey}">${pKey}</option>`).join('')}
+                    </select>
+                    <button class="btn-danger" style="margin-left:5px;" onclick="removeTeamFromTournament('${tName}')">X</button>
+                </div>
+            `).join('');
+            
+            document.getElementById('unassigned-box').innerHTML = unassignedHtml || "No unassigned teams.";
+
+            // Render Active Pools Area
+            let activePoolsHtml = "";
+            Object.keys(poolsData).forEach(pKey => {
+                if (pKey === "Unassigned") return; // Skip
+
+                let teamsHtml = poolsData[pKey].map(tName => `
+                    <div class="assigned-team-pill">
+                        ${tName}
+                        <select style="background:#0f172a; color:white; border:none; outline:none; border-left:1px solid #334155; padding-left:5px; margin-left:5px;" onchange="moveTeam('${tName}', '${pKey}', this.value)">
+                            <option value="">Move...</option>
+                            <option value="Unassigned">Unassigned</option>
+                            ${Object.keys(poolsData).filter(k => k !== "Unassigned" && k !== pKey).map(otherKey => `<option value="${otherKey}">${otherKey}</option>`).join('')}
+                        </select>
+                    </div>
+                `).join('');
+
+                activePoolsHtml += `
+                    <div class="pool-box">
+                        <div class="pool-box-header">${pKey} <span style="float:right; color:#64748b; font-size:0.8rem;">${poolsData[pKey].length} Teams</span></div>
+                        <div style="min-height: 40px; color: #64748b; font-size: 0.85rem;">
+                            ${teamsHtml || "Empty Pool."}
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('dynamic-pools-area').innerHTML = activePoolsHtml;
+        }
+
+        function moveTeam(teamName, fromPool, toPool) {
+            if (!toPool || fromPool === toPool) return;
+            // Remove from source
+            poolsData[fromPool] = poolsData[fromPool].filter(t => t !== teamName);
+            // Add to destination
+            poolsData[toPool].push(teamName);
+            renderPools();
+        }
+
     </script>
 </body>
 </html>
