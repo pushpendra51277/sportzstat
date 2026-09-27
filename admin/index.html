@@ -133,6 +133,7 @@
                             <option value="">Loading tournaments...</option>
                         </select>
                     </div>
+                    <div id="tourney-status-badge" style="background: rgba(148, 163, 184, 0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid #94a3b8; color: #94a3b8; font-size: 0.85rem; font-weight: bold;">Unsaved</div>
                 </div>
 
                 <h3 style="margin-top: 0; margin-bottom: 15px; color:white; border-bottom: 1px solid #334155; padding-bottom: 10px;">1. Tournament Details & Teams</h3>
@@ -247,12 +248,14 @@
                     <div style="background: rgba(16, 185, 129, 0.05); padding: 20px; border-radius: 8px; border: 1px dashed #10b981; margin-bottom: 20px;">
                         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
                             <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Playoff Structure:</label>
+                            
+                            <!-- 🔥 REORDERED: Standard TBD Knockout is now the default option! -->
                             <select id="ko-template-select" class="postings-select" style="width: auto; flex:1;">
-                                <option value="direct">🔥 Standard Knockout Bracket (Auto-Calculates Byes & Uses Real Teams)</option>
-                                <option value="rolling">🔄 Rolling Knockout (Byes in every odd round)</option>
-                                <option value="standard">TBD Placeholders Knockout Bracket</option>
-                                <option value="ipl">IPL Style (Qualifier 1, Eliminator, Qualifier 2, Final)</option>
-                                <option value="super">Super League (Super Six / Super Eight)</option>
+                                <option value="standard">📌 Standard Knockout Bracket (TBD Placeholders)</option>
+                                <option value="direct">🔥 Auto-Fill Bracket (Calculates Byes & Plugs Real Teams)</option>
+                                <option value="rolling">🔄 Rolling Knockout (Passes odd team to next round)</option>
+                                <option value="ipl">🏏 IPL Style (Qualifier 1, Eliminator, Qualifier 2, Final)</option>
+                                <option value="super">🏆 Super League (Super Six / Super Eight)</option>
                             </select>
                         </div>
                         <div style="display: flex; align-items: center; gap: 15px;">
@@ -266,7 +269,7 @@
                             <button type="button" class="btn-success" style="margin-left:auto;" onclick="generateKnockoutBracket()">⚙️ Generate Bracket</button>
                         </div>
                     </div>
-                    <p style="color:#94a3b8; font-size:0.85rem; font-style:italic;">Note: Generating matches will instantly push them into the Master Canvas for review.</p>
+                    <p style="color:#94a3b8; font-size:0.85rem; font-style:italic;">Note: Generating matches will instantly push them into the Master Canvas where you can edit any TBD placeholders to real teams.</p>
                 </div>
 
                 <!-- THE MASTER CANVAS -->
@@ -409,7 +412,6 @@
         function syncActiveTeams() {
             let activeNames = selectedTourneyTeams.map(t => t.name);
             
-            // Wipe teams from pools if they are removed from the tournament
             Object.keys(poolsData).forEach(p => { 
                 poolsData[p] = poolsData[p].filter(t => activeNames.includes(t)); 
             });
@@ -449,7 +451,6 @@
             let team = allDbTeams.find(t => t.team_id === teamId);
             if (team) { 
                 selectedTourneyTeams.push(team); 
-                // Auto-drop into Single Pool if we are in 1-pool mode
                 if (poolCount === 1) {
                     if(!poolsData["Single Pool / League"]) poolsData["Single Pool / League"] = [];
                     if(!poolsData["Single Pool / League"].includes(team.name)) poolsData["Single Pool / League"].push(team.name);
@@ -499,6 +500,8 @@
 
         function toggleTournamentMode(mode) {
             const wrapper = document.getElementById('existing-tournament-wrapper');
+            let badge = document.getElementById('tourney-status-badge');
+            
             if (mode === 'edit') {
                 wrapper.style.display = 'block'; 
                 currentTournamentId = null; 
@@ -512,9 +515,10 @@
                 renderTeamPanes();
                 initPoolsWorkspace("1");
                 renderCanvas();
-                let badge = document.getElementById('tourney-status-badge');
-                badge.innerText = "Unsaved";
-                badge.style = "background: rgba(148, 163, 184, 0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid #94a3b8; color: #94a3b8; font-size: 0.85rem; font-weight: bold;";
+                if(badge) {
+                    badge.innerText = "Unsaved";
+                    badge.style = "background: rgba(148, 163, 184, 0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid #94a3b8; color: #94a3b8; font-size: 0.85rem; font-weight: bold;";
+                }
             }
         }
 
@@ -557,7 +561,7 @@
 
             selectedTourneyTeams = allDbTeams.filter(t => linkedTeamNames.has(t.name));
             renderTeamPanes();
-            initPoolsWorkspace("1"); // Throws all loaded teams into Single Pool automatically
+            initPoolsWorkspace("1");
             syncActiveTeams();
             alert(`✅ Loaded tournament "${tData.name}". \n\n${selectedTourneyTeams.length} Teams and ${masterFixtures.length} Matches were pulled from the cloud!`);
         }
@@ -598,12 +602,14 @@
                 if (tError) throw tError;
 
                 let badge = document.getElementById('tourney-status-badge');
-                badge.innerText = "Saved: Draft Mode";
-                badge.style.background = "rgba(16, 185, 129, 0.1)"; badge.style.borderColor = "#10b981"; badge.style.color = "#10b981";
+                if (badge) {
+                    badge.innerText = "Saved: Draft Mode";
+                    badge.style.background = "rgba(16, 185, 129, 0.1)"; 
+                    badge.style.borderColor = "#10b981"; 
+                    badge.style.color = "#10b981";
+                }
                 
                 btn.innerText = originalText;
-                
-                // Forcing navigation via robust function rather than clicking div
                 let navItem = document.getElementById('nav-fixtures');
                 switchTab('sec-fixtures', navItem);
                 
@@ -658,14 +664,9 @@
             let assigned = [].concat(...Object.values(poolsData)); 
             let activeNames = selectedTourneyTeams.map(t => t.name);
             
-            // Find teams that aren't in any pool yet
             let unassigned = activeNames.filter(t => !assigned.includes(t));
-            
-            // Merge newly found unassigned teams with the explicit Unassigned pool
             if (poolsData["Unassigned"]) {
-                unassigned.forEach(t => {
-                    if (!poolsData["Unassigned"].includes(t)) poolsData["Unassigned"].push(t);
-                });
+                unassigned.forEach(t => { if (!poolsData["Unassigned"].includes(t)) poolsData["Unassigned"].push(t); });
             }
             
             let unassignedHtml = "";
@@ -720,7 +721,7 @@
                 if(!poolsData["Unassigned"]) poolsData["Unassigned"] = [];
                 poolsData["Unassigned"].push(t);
             } else {
-                poolsData["Single Pool / League"].push(t); // Safety fallback
+                poolsData["Single Pool / League"].push(t); 
             }
             renderPoolsWorkspace(); 
         }
@@ -751,49 +752,72 @@
             renderCanvas();
         }
 
+        // 🔥 THE BRAND NEW KNOCKOUT MATH ENGINE 🔥
         function generateKnockoutBracket() {
             let template = document.getElementById('ko-template-select').value;
             let size = parseInt(document.getElementById('ko-size-select').value); 
             let count = 0;
             let activeNames = selectedTourneyTeams.map(t => t.name);
 
-            if (template === 'direct') {
+            // OPTION 1: THE TBD PLACEHOLDER (USER DEFAULT)
+            if (template === 'standard') {
+                if (size >= 16) { for(let i=1; i<=8; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Round of 16 - Match ${i}`, t1: "TBD", t2: "TBD" }); }
+                if (size >= 8) { for(let i=1; i<=4; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Quarter-Final ${i}`, t1: "TBD", t2: "TBD" }); }
+                if (size >= 4) { masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 1", t1: "TBD", t2: "TBD" }); masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 2", t1: "TBD", t2: "TBD" }); }
+                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "TBD", t2: "TBD" }); 
+                alert(`Generated Standard Placeholder Matches! Moved to Master Canvas.`);
+            
+            // OPTION 2: DIRECT BRACKET
+            } else if (template === 'direct') {
                 let totalTeams = activeNames.length;
                 if(totalTeams < 2) { alert("Not enough teams for a direct knockout."); return; }
                 
                 let nextPow2 = Math.pow(2, Math.ceil(Math.log2(totalTeams)));
                 if (nextPow2 === 1) nextPow2 = 2; 
                 
-                let byes = nextPow2 - totalTeams;
-                let r1MatchesCount = (totalTeams - byes) / 2;
+                let numByes = nextPow2 - totalTeams;
+                let numR1Matches = (totalTeams - numByes) / 2;
                 
                 let matchIdx = 0;
-                let roundName = (nextPow2 === 16) ? "Round of 16" : (nextPow2 === 8) ? "Quarter-Final" : (nextPow2 === 4) ? "Semi-Final" : (nextPow2 === 2) ? "Final" : `Round of ${nextPow2}`;
+                let roundTeams = []; 
+                let teamsGettingByes = [];
+
+                let r1RoundName = (nextPow2 === 16) ? "Round of 16" : (nextPow2 === 8) ? "Quarter-Final" : (nextPow2 === 4) ? "Semi-Final" : (nextPow2 === 2) ? "Final" : `Round of ${nextPow2}`;
                 
-                for(let i=0; i<r1MatchesCount; i++) {
-                    masterFixtures.push({ id: generateUniqueMatchID("M"), name: `${roundName} - Match ${i+1}`, t1: activeNames[matchIdx++], t2: activeNames[matchIdx++] });
-                    count++;
+                for(let i=0; i<numByes; i++) {
+                    roundTeams.push(activeNames[matchIdx]); 
+                    teamsGettingByes.push(activeNames[matchIdx]);
+                    matchIdx++;
                 }
                 
-                let teamsGettingByes = [];
-                while(matchIdx < totalTeams) { teamsGettingByes.push(activeNames[matchIdx++]); }
+                for(let i=0; i<numR1Matches; i++) {
+                    let mName = (r1RoundName === "Final") ? "Final" : `${r1RoundName} - Match ${i+1}`;
+                    masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: activeNames[matchIdx++], t2: activeNames[matchIdx++] });
+                    count++;
+                    roundTeams.push(`Winner of ${mName}`);
+                }
                 
-                let teamsInNextRound = r1MatchesCount + byes; 
-                while (teamsInNextRound >= 2) {
-                    let matchesThisRound = teamsInNextRound / 2;
-                    let rName = (matchesThisRound === 4) ? "Quarter-Final" : (matchesThisRound === 2) ? "Semi-Final" : (matchesThisRound === 1) ? "Final" : `Round of ${teamsInNextRound*2}`;
+                let teamsInRound = roundTeams.length;
+                while (teamsInRound >= 2) {
+                    let nextRoundTeams = [];
+                    let matchesThisRound = teamsInRound / 2;
+                    let rName = (matchesThisRound === 4) ? "Quarter-Final" : (matchesThisRound === 2) ? "Semi-Final" : (matchesThisRound === 1) ? "Final" : `Round of ${teamsInRound*2}`;
+                    
                     for(let i=0; i<matchesThisRound; i++) {
-                        let mName = (matchesThisRound === 1) ? "Final" : `${rName} ${i+1}`;
-                        masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: "TBD", t2: "TBD" });
+                        let mName = (matchesThisRound === 1) ? "Final" : `${rName} - Match ${i+1}`;
+                        masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: roundTeams[i*2], t2: roundTeams[i*2+1] });
                         count++;
+                        nextRoundTeams.push(`Winner of ${mName}`);
                     }
-                    teamsInNextRound = matchesThisRound;
+                    roundTeams = nextRoundTeams;
+                    teamsInRound = roundTeams.length;
                 }
 
                 let msg = `Generated ${count} Standard Bracket Matches!`;
-                if(byes > 0) msg += `\n\n🚨 NOTE: ${byes} team(s) received a mathematically calculated BYE to the next round to ensure perfect bracket numbers:\n${teamsGettingByes.join(', ')}`;
+                if(numByes > 0) msg += `\n\n🚨 NOTE: To mathematically balance the bracket, ${numByes} team(s) received a BYE into the second round:\n${teamsGettingByes.join(', ')}`;
                 alert(msg + "\n\nMoved to Master Canvas.");
             
+            // OPTION 3: ROLLING KNOCKOUT
             } else if (template === 'rolling') {
                 let totalTeams = activeNames.length;
                 if(totalTeams < 2) { alert("Not enough teams for a rolling knockout."); return; }
@@ -822,30 +846,27 @@
 
                     if(hasBye) {
                         let byeTeam = currentRoundTeams[currentRoundTeams.length - 1];
-                        nextRoundPlaceholders.push(byeTeam); // Carry the odd team over directly
+                        nextRoundPlaceholders.unshift(byeTeam);
                     }
 
                     currentRoundTeams = [...nextRoundPlaceholders];
                     nextRoundPlaceholders = [];
                     roundNum++;
                 }
-                alert(`Generated ${count} Rolling Knockout Matches!\n\nThis format automatically passed the single odd team into the next round as a Bye.\nMoved to Master Canvas.`);
+                alert(`Generated ${count} Rolling Knockout Matches!\n\nOdd teams automatically received byes and were carried forward.\nMoved to Master Canvas.`);
             
+            // OPTION 4: IPL STYLE
             } else if (template === 'ipl') {
                 masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Qualifier 1", t1: "Rank 1", t2: "Rank 2" });
                 masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Eliminator", t1: "Rank 3", t2: "Rank 4" });
-                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Qualifier 2", t1: "Loser Qualifier 1", t2: "Winner Eliminator" });
-                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "Winner Qualifier 1", t2: "Winner Qualifier 2" });
-                count = 4; alert(`Generated IPL Matches! Moved to Master Canvas.`);
+                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Qualifier 2", t1: "Loser of Qualifier 1", t2: "Winner of Eliminator" });
+                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "Winner of Qualifier 1", t2: "Winner of Qualifier 2" });
+                alert(`Generated 4 IPL Playoff Matches! Moved to Master Canvas.`);
+            
+            // OPTION 5: SUPER LEAGUE
             } else if (template === 'super') {
-                for(let i=1; i<=size; i++) { masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Super League Match`, t1: `Super Rank ${i}`, t2: "TBD" }); count++; }
+                for(let i=1; i<=size; i++) { masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Super League Match`, t1: `Super Rank ${i}`, t2: "TBD" }); }
                 alert(`Generated Super League Matches! Moved to Master Canvas.`);
-            } else {
-                if (size >= 16) { for(let i=1; i<=8; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Round of 16 - Match ${i}`, t1: "TBD", t2: "TBD" }); count+=8;}
-                if (size >= 8) { for(let i=1; i<=4; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Quarter-Final ${i}`, t1: "TBD", t2: "TBD" }); count+=4;}
-                if (size >= 4) { masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 1", t1: "TBD", t2: "TBD" }); masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 2", t1: "TBD", t2: "TBD" }); count+=2;}
-                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "TBD", t2: "TBD" }); count+=1;
-                alert(`Generated Standard Knockout Matches! Moved to Master Canvas.`);
             }
 
             document.querySelectorAll('.sub-tab-btn')[2].click(); 
@@ -872,7 +893,6 @@
                 if(p !== "Single Pool / League" && p !== "Unassigned") { poolRanks.push(`${p} - Rank 1`); poolRanks.push(`${p} - Rank 2`); poolRanks.push(`${p} - Rank 3`); }
             });
             
-            // Generate Winner placeholders dynamically based on current fixtures
             let dependencyPlaceholders = [];
             masterFixtures.forEach(m => {
                 dependencyPlaceholders.push(`Winner of ${m.name}`);
@@ -979,9 +999,7 @@
             }
 
             let safeTeamClass = teamName.replace(/\s+/g, '_');
-            
-            // 🔥 FIXED: Custom styling to ensure the Selected badge pops clearly
-            let html = `<h4 style="color:#10b981; margin-bottom:5px;">Select Tournament Squad <span id="squad-select-count" style="background:#020617; color:#38bdf8; border:1px solid #38bdf8; padding:3px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold; float:right;">0 Selected</span></h4><p style="font-size:0.8rem; color:#94a3b8; margin-bottom:15px; margin-top:0;">Uncheck players from the Master DB who are NOT participating in this specific tournament.</p><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:left;">`;
+            let html = `<h4 style="color:#10b981; margin-bottom:5px;">Select Tournament Squad <span id="squad-select-count" style="background:#0f172a; color:#38bdf8; border:1px solid #38bdf8; padding:3px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold; float:right;">0 Selected</span></h4><p style="font-size:0.8rem; color:#94a3b8; margin-bottom:15px; margin-top:0;">Uncheck players from the Master DB who are NOT participating in this specific tournament.</p><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:left;">`;
             
             let count = 1;
             data.forEach(row => {
