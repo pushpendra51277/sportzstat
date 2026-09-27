@@ -76,8 +76,8 @@
         .canvas-teams select { flex: 1; }
 
         .postings-grid { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.85rem; }
-        .postings-grid th { background: #1e293b; color: #94a3b8; padding: 10px; text-align: left; }
-        .postings-grid td { padding: 15px 10px; border-bottom: 1px solid #1e293b; background: #0f172a; vertical-align: top;}
+        .postings-grid th { background: #1e293b; color: #94a3b8; padding: 15px 20px; text-align: left; }
+        .postings-grid td { padding: 20px; border-bottom: 1px solid #1e293b; background: #0f172a; vertical-align: middle;}
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: 0.2s; }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
@@ -248,8 +248,6 @@
                     <div style="background: rgba(16, 185, 129, 0.05); padding: 20px; border-radius: 8px; border: 1px dashed #10b981; margin-bottom: 20px;">
                         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
                             <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Playoff Structure:</label>
-                            
-                            <!-- 🔥 REORDERED: Standard TBD Knockout is now the default option! -->
                             <select id="ko-template-select" class="postings-select" style="width: auto; flex:1;">
                                 <option value="standard">📌 Standard Knockout Bracket (TBD Placeholders)</option>
                                 <option value="direct">🔥 Auto-Fill Bracket (Calculates Byes & Plugs Real Teams)</option>
@@ -322,21 +320,22 @@
         <section id="sec-deploy" class="hub-section">
             <div class="admin-form" style="overflow-x: auto;">
                 <h3 style="margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 10px;">4. Official Postings & Deployment</h3>
-                <p style="color:#94a3b8; font-size:0.8rem; margin-bottom: 15px;">Review your generated fixtures. Existing matches will retain their original PINs.</p>
+                <p style="color:#94a3b8; font-size:0.8rem; margin-bottom: 15px;">Review your finalized fixtures and PINs. Once confirmed, inject them into the live cloud database.</p>
+                
                 <table class="postings-grid">
                     <thead>
-                        <tr><th style="width: 40%;">Match Details</th><th style="width: 60%;">Cloud Status</th></tr>
+                        <tr><th style="width: 60%; border-right: 1px solid #1e293b;">Fixture Details</th><th style="width: 40%; text-align: center;">Cloud Status & PIN</th></tr>
                     </thead>
                     <tbody id="postings-body">
-                        <tr><td colspan="2" style="text-align: center; padding: 30px; color: #94a3b8;">Build your fixtures in the Match Canvas to view postings.</td></tr>
+                        <tr><td colspan="2" style="text-align: center; padding: 40px; color: #64748b; font-style: italic;">Build your fixtures in the Match Canvas to view postings.</td></tr>
                     </tbody>
                 </table>
             </div>
 
-            <div class="card" style="border-color: #f59e0b; background: rgba(245, 158, 11, 0.05); text-align: center; padding: 40px;">
+            <div id="deploy-action-card" class="card" style="border-color: #f59e0b; background: rgba(245, 158, 11, 0.05); text-align: center; padding: 40px;">
                 <h3 style="color: #f59e0b; font-size: 1.5rem; margin-top: 0;">Ready to go live?</h3>
-                <p style="color: #cbd5e1; max-width: 600px; margin: 0 auto 25px auto;">Publishing will secure the database, generate unique Scorer PINs for all matches, and make the tournament visible on the Fan Portal.</p>
-                <button type="button" id="btnDeploy" class="btn-primary" style="background: #f59e0b; font-size: 1.2rem; padding: 15px 30px;" onclick="saveMatchesToCloud()">🚀 DEPLOY TO CLOUD</button>
+                <p style="color: #cbd5e1; max-width: 600px; margin: 0 auto 25px auto;">Review the PINs generated above. Publishing will secure the database and make these matches visible on the Fan Portal.</p>
+                <button type="button" id="btnDeploy" class="btn-primary" style="background: #f59e0b; font-size: 1.2rem; padding: 15px 30px;" onclick="saveMatchesToCloud()">🚀 CONFIRM & DEPLOY TO CLOUD</button>
             </div>
         </section>
 
@@ -380,6 +379,10 @@
             "Winner SF 1", "Winner SF 2", "Winner Qualifier 1", "Winner Eliminator", "Winner Qualifier 2",
             "Rank 1", "Rank 2", "Rank 3", "Rank 4"
         ];
+
+        // Unique ID and PIN Generators (Now fully accessible globally)
+        function generateUniqueMatchID(prefix) { return `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`; }
+        function generateUniquePin() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
         document.addEventListener('DOMContentLoaded', async () => { 
             await fetchAllMasterTeams();
@@ -542,7 +545,8 @@
                     let fs = m.full_state || {};
                     if(fs.team1 && fs.team1 !== "TBD" && !fs.team1.includes("Winner") && !fs.team1.includes("Rank")) linkedTeamNames.add(fs.team1);
                     if(fs.team2 && fs.team2 !== "TBD" && !fs.team2.includes("Winner") && !fs.team2.includes("Rank")) linkedTeamNames.add(fs.team2);
-                    masterFixtures.push({ id: m.match_id, name: fs.matchName || m.match_id, t1: fs.team1 || '', t2: fs.team2 || '', pin: m.scorer_pin });
+                    // Match loaded from DB is already Live
+                    masterFixtures.push({ id: m.match_id, name: fs.matchName || m.match_id, t1: fs.team1 || '', t2: fs.team2 || '', pin: m.scorer_pin, isLive: true });
                 });
             }
 
@@ -736,10 +740,10 @@
                 for(let i=0; i<teams.length; i++) { 
                     for(let j=i+1; j<teams.length; j++) { 
                         let mName = (poolName === "Single Pool / League") ? `League Match` : `${poolName} Match`;
-                        masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: teams[i], t2: teams[j] }); 
+                        masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: teams[i], t2: teams[j], pin: generateUniquePin(), isLive: false }); 
                         count++;
                         if(mode === 'double') {
-                            masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName + ` (Reverse)`, t1: teams[j], t2: teams[i] }); 
+                            masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName + ` (Reverse)`, t1: teams[j], t2: teams[i], pin: generateUniquePin(), isLive: false }); 
                             count++;
                         }
                     } 
@@ -752,19 +756,18 @@
             renderCanvas();
         }
 
-        // 🔥 THE BRAND NEW KNOCKOUT MATH ENGINE 🔥
         function generateKnockoutBracket() {
             let template = document.getElementById('ko-template-select').value;
             let size = parseInt(document.getElementById('ko-size-select').value); 
             let count = 0;
             let activeNames = selectedTourneyTeams.map(t => t.name);
 
-            // OPTION 1: THE TBD PLACEHOLDER (USER DEFAULT)
+            // OPTION 1: THE TBD PLACEHOLDER
             if (template === 'standard') {
-                if (size >= 16) { for(let i=1; i<=8; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Round of 16 - Match ${i}`, t1: "TBD", t2: "TBD" }); }
-                if (size >= 8) { for(let i=1; i<=4; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Quarter-Final ${i}`, t1: "TBD", t2: "TBD" }); }
-                if (size >= 4) { masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 1", t1: "TBD", t2: "TBD" }); masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 2", t1: "TBD", t2: "TBD" }); }
-                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "TBD", t2: "TBD" }); 
+                if (size >= 16) { for(let i=1; i<=8; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Round of 16 - Match ${i}`, t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); }
+                if (size >= 8) { for(let i=1; i<=4; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Quarter-Final ${i}`, t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); }
+                if (size >= 4) { masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 1", t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 2", t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); }
+                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); 
                 alert(`Generated Standard Placeholder Matches! Moved to Master Canvas.`);
             
             // OPTION 2: DIRECT BRACKET
@@ -792,7 +795,7 @@
                 
                 for(let i=0; i<numR1Matches; i++) {
                     let mName = (r1RoundName === "Final") ? "Final" : `${r1RoundName} - Match ${i+1}`;
-                    masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: activeNames[matchIdx++], t2: activeNames[matchIdx++] });
+                    masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: activeNames[matchIdx++], t2: activeNames[matchIdx++], pin: generateUniquePin(), isLive: false });
                     count++;
                     roundTeams.push(`Winner of ${mName}`);
                 }
@@ -805,7 +808,7 @@
                     
                     for(let i=0; i<matchesThisRound; i++) {
                         let mName = (matchesThisRound === 1) ? "Final" : `${rName} - Match ${i+1}`;
-                        masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: roundTeams[i*2], t2: roundTeams[i*2+1] });
+                        masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: roundTeams[i*2], t2: roundTeams[i*2+1], pin: generateUniquePin(), isLive: false });
                         count++;
                         nextRoundTeams.push(`Winner of ${mName}`);
                     }
@@ -839,7 +842,7 @@
                         let t1 = currentRoundTeams[i*2];
                         let t2 = currentRoundTeams[i*2 + 1];
                         let mName = (rName === "Final") ? "Final" : `${rName} - Match ${i+1}`;
-                        masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: t1, t2: t2 });
+                        masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: t1, t2: t2, pin: generateUniquePin(), isLive: false });
                         count++;
                         nextRoundPlaceholders.push(`Winner of ${mName}`);
                     }
@@ -857,15 +860,15 @@
             
             // OPTION 4: IPL STYLE
             } else if (template === 'ipl') {
-                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Qualifier 1", t1: "Rank 1", t2: "Rank 2" });
-                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Eliminator", t1: "Rank 3", t2: "Rank 4" });
-                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Qualifier 2", t1: "Loser of Qualifier 1", t2: "Winner of Eliminator" });
-                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "Winner of Qualifier 1", t2: "Winner of Qualifier 2" });
+                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Qualifier 1", t1: "Rank 1", t2: "Rank 2", pin: generateUniquePin(), isLive: false });
+                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Eliminator", t1: "Rank 3", t2: "Rank 4", pin: generateUniquePin(), isLive: false });
+                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Qualifier 2", t1: "Loser of Qualifier 1", t2: "Winner of Eliminator", pin: generateUniquePin(), isLive: false });
+                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "Winner of Qualifier 1", t2: "Winner of Qualifier 2", pin: generateUniquePin(), isLive: false });
                 alert(`Generated 4 IPL Playoff Matches! Moved to Master Canvas.`);
             
             // OPTION 5: SUPER LEAGUE
             } else if (template === 'super') {
-                for(let i=1; i<=size; i++) { masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Super League Match`, t1: `Super Rank ${i}`, t2: "TBD" }); }
+                for(let i=1; i<=size; i++) { masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Super League Match`, t1: `Super Rank ${i}`, t2: "TBD", pin: generateUniquePin(), isLive: false }); }
                 alert(`Generated Super League Matches! Moved to Master Canvas.`);
             }
 
@@ -874,7 +877,7 @@
         }
 
         // --- MASTER CANVAS ---
-        function addManualMatch() { masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Custom Match`, t1: "TBD", t2: "TBD" }); renderCanvas(); }
+        function addManualMatch() { masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Custom Match`, t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); renderCanvas(); }
         
         function handleTeamSelect(index, side, value) {
             let match = masterFixtures[index];
@@ -915,7 +918,7 @@
                 <div class="canvas-row">
                     <div style="flex:1; min-width:250px; text-align:left;">
                         <b style="color:#f59e0b">${i + 1}. ${m.id}</b><br>
-                        ${m.pin ? `<span style="background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-size:0.65rem;">LIVE</span>` : ''}
+                        ${m.isLive ? `<span style="background:#10b981; color:#020617; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:bold;">LIVE</span>` : `<span style="background:#f59e0b; color:#020617; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:bold;">DRAFT</span>`}
                         <input class="canvas-name-input" value="${m.name}" oninput="masterFixtures[${i}].name=this.value" style="margin-top:5px; width:100%;">
                     </div>
                     <div class="canvas-teams">
@@ -1041,25 +1044,28 @@
         function updateFinalLockedMatches() {
             let tName = document.getElementById('t-name').value || "Unnamed Tournament"; 
             let container = document.getElementById('postings-body');
+            
             if(masterFixtures.length === 0) {
                  container.innerHTML = `<tr><td colspan="2" style="text-align: center; padding: 30px; color: #94a3b8;">Build your fixtures in the Match Canvas to view postings.</td></tr>`;
                  return;
             }
+            
             container.innerHTML = masterFixtures.map((m, i) => `
                 <tr>
-                    <td style="font-weight: bold; color: #38bdf8; font-size: 1.1rem;">
+                    <td style="font-weight: bold; color: #38bdf8; font-size: 1.1rem; border-right: 1px solid #1e293b;">
                         <div style="font-size: 0.7rem; color: #eab308; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">🏆 ${tName}</div>
-                        ${i + 1}. ${m.name}<div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">${m.t1 || 'TBD'} vs ${m.t2 || 'TBD'}</div>
+                        ${i + 1}. ${m.name}
+                        <div style="font-size: 0.85rem; color: #cbd5e1; margin-top: 5px;">${m.t1 || 'TBD'} <span style="color:#64748b; font-weight:normal; margin:0 5px;">vs</span> ${m.t2 || 'TBD'}</div>
                     </td>
-                    <td>
-                        <div style="color:#10b981; font-weight:bold;">${m.pin ? 'Live on Cloud (PIN: ' + m.pin + ')' : 'Ready for Cloud Injection'}</div>
-                        <div style="font-size:0.75rem; color:#94a3b8;">${m.pin ? 'Edits will update the live match.' : 'Scorer PIN will be generated automatically.'}</div>
+                    <td style="text-align: center;">
+                        <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 5px;">Scorer PIN</div>
+                        <div style="font-size: 1.5rem; font-weight: bold; color: #f59e0b; letter-spacing: 3px;">${m.pin}</div>
+                        <div style="margin-top: 8px;">
+                            ${m.isLive ? '<span style="background:#10b981; color:#020617; padding:3px 8px; border-radius:12px; font-size:0.7rem; font-weight:bold;">✅ LIVE ON CLOUD</span>' : '<span style="background:#475569; color:white; padding:3px 8px; border-radius:12px; font-size:0.7rem; font-weight:bold;">⏳ PENDING DEPLOY</span>'}
+                        </div>
                     </td>
                 </tr>`).join('');
         }
-
-        function generateUniqueMatchID(prefix) { return `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`; }
-        function generateUniquePin() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
         async function saveMatchesToCloud() {
             if(!currentTournamentId) { alert("Tournament ID missing. Ensure Basic Settings are saved first."); return; }
@@ -1067,13 +1073,11 @@
 
             const btn = document.getElementById('btnDeploy');
             btn.innerText = "⏳ Injecting Fixtures to Supabase...";
-            let generatedOutput = [];
 
             let tName = document.getElementById('t-name').value;
             let tFormat = document.getElementById('t-format').value;
 
             for (let m of masterFixtures) {
-                let pin = m.pin || generateUniquePin();
                 let t1Obj = selectedTourneyTeams.find(t => t.name === m.t1);
                 let t2Obj = selectedTourneyTeams.find(t => t.name === m.t2);
                 let team1UUID = t1Obj ? t1Obj.team_id : null; 
@@ -1084,26 +1088,23 @@
                     tournament_id: currentTournamentId,
                     team_a_id: team1UUID,
                     team_b_id: team2UUID,
-                    scorer_pin: pin,
+                    scorer_pin: m.pin,
                     full_state: { tournament: tName, format: tFormat, team1: m.t1, team2: m.t2, matchName: m.name, match_status: 'upcoming' }
                 };
 
                 await db.from('matches').upsert([matchPayload]);
-                generatedOutput.push({ id: m.id, name: m.name, t1: m.t1, t2: m.t2, pin: pin });
+                m.isLive = true; 
             }
-
-            btn.style.display = 'none';
-            displayPins(generatedOutput);
-        }
-
-        function displayPins(matches) {
-            let tName = document.getElementById('t-name').value || "Unnamed Tournament"; 
-            let html = `<div style="background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #10b981; margin-top: 25px;"><h3 style="color: #10b981; margin-top: 0;">✅ Database Injected Successfully!</h3><p style="color: #94a3b8; font-size: 0.9rem;">Share these exact Match IDs and PINs with your Scorers.</p><table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem;"><tr style="background: #1e293b; color: #cbd5e1;"><th style="padding: 10px; text-align: left;">Match ID</th><th style="padding: 10px; text-align: left;">Teams</th><th style="padding: 10px; text-align: center; color: #f59e0b;">Scorer PIN</th></tr>`;
-            matches.forEach((m, index) => { 
-                html += `<tr style="border-bottom: 1px solid #1e293b;"><td style="padding: 10px; color: #38bdf8; font-weight:bold;">${index + 1}. ${m.id}</td><td style="padding: 10px; color: #94a3b8;"><div style="font-size:0.7rem; color:#eab308; text-transform:uppercase; font-weight:bold; margin-bottom:3px;">🏆 ${tName}</div>${m.t1} vs ${m.t2} <div style="font-size:0.75rem; color:white;">${m.name}</div></td><td style="padding: 10px; text-align: center; font-size: 1.5rem; font-weight: bold; color: #f59e0b; letter-spacing: 3px;">${m.pin}</td></tr>`; 
-            });
-            html += `</table></div>`;
-            document.getElementById('step4').innerHTML += html;
+            
+            // Re-render the table so tags change from DRAFT to LIVE
+            updateFinalLockedMatches();
+            renderCanvas(); 
+            
+            // Replace Action Card with Success Message
+            document.getElementById('deploy-action-card').innerHTML = `
+                <h3 style="color: #10b981; font-size: 1.5rem; margin-top: 0;">✅ Successfully Deployed!</h3>
+                <p style="color: #cbd5e1; max-width: 600px; margin: 0 auto;">Your tournament is now live. Scorers can log in using the exact Match IDs and PINs listed above.</p>
+            `;
         }
     </script>
 </body>
