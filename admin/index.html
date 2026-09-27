@@ -257,8 +257,8 @@
                         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
                             <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Playoff Structure:</label>
                             <select id="ko-template-select" class="postings-select" style="width: auto; flex:1;">
-                                <option value="direct">🔥 Direct Knockout (Auto-Calculates Byes & Uses Real Teams)</option>
-                                <option value="standard">Standard Knockout (TBD Placeholders)</option>
+                                <option value="direct">🔥 Direct Knockout Bracket (Auto-Calculates Byes & Uses Real Teams)</option>
+                                <option value="standard">Standard Knockout Bracket (TBD Placeholders)</option>
                                 <option value="ipl">IPL Style (Qualifier 1, Eliminator, Qualifier 2, Final)</option>
                                 <option value="super">Super League (Super Six / Super Eight)</option>
                             </select>
@@ -374,13 +374,11 @@
 
         let currentTournamentId = null;
         let allDbTeams = [];        
-        let tourneyTeams = [];      
+        let selectedTourneyTeams = [];      
         let poolCount = 1;          
-        let poolsData = { "Unassigned": [], "Single Pool / League": [] };
+        let poolsData = {}; 
         let masterFixtures = []; 
         let tournamentSquadsCache = {};
-        
-        let selectedTourneyTeams = [];
 
         const standardPlaceholders = [
             "TBD", "Winner QF 1", "Winner QF 2", "Winner QF 3", "Winner QF 4", 
@@ -389,7 +387,7 @@
         ];
 
         document.addEventListener('DOMContentLoaded', async () => { 
-            await loadExistingTeamsFromDB();
+            await fetchAllMasterTeams();
             await loadExistingTournamentsList();
             initPoolsWorkspace("1"); 
             renderCanvas();
@@ -418,7 +416,11 @@
         // --- LIVE SYNC & TEAMS ---
         function syncActiveTeams() {
             let activeNames = selectedTourneyTeams.map(t => t.name);
-            Object.keys(poolsData).forEach(p => { poolsData[p] = poolsData[p].filter(t => activeNames.includes(t)); });
+            
+            // Wipe teams from pools if they are removed from the tournament
+            Object.keys(poolsData).forEach(p => { 
+                poolsData[p] = poolsData[p].filter(t => activeNames.includes(t)); 
+            });
             
             const select = document.getElementById('squad-team-select');
             select.innerHTML = '<option value="">Select a team to verify squad...</option>' + activeNames.map(team => `<option value="${team}">${team}</option>`).join('');
@@ -427,7 +429,7 @@
             renderCanvas(); 
         }
 
-        async function loadExistingTeamsFromDB() {
+        async function fetchAllMasterTeams() {
             const { data, error } = await db.from('teams').select('*').order('name', { ascending: true });
             if (!error && data) {
                 allDbTeams = data;
@@ -455,7 +457,11 @@
             let team = allDbTeams.find(t => t.team_id === teamId);
             if (team) { 
                 selectedTourneyTeams.push(team); 
-                if(!poolsData["Unassigned"].includes(team.name)) poolsData["Unassigned"].push(team.name);
+                // Auto-drop into Single Pool if we are in 1-pool mode
+                if (poolCount === 1) {
+                    if(!poolsData["Single Pool / League"]) poolsData["Single Pool / League"] = [];
+                    if(!poolsData["Single Pool / League"].includes(team.name)) poolsData["Single Pool / League"].push(team.name);
+                }
                 renderTeamPanes(); 
                 syncActiveTeams(); 
             }
@@ -480,7 +486,10 @@
                 if (data && data.length > 0) {
                     allDbTeams.push(data[0]); 
                     selectedTourneyTeams.push(data[0]); 
-                    poolsData["Unassigned"].push(data[0].name);
+                    if (poolCount === 1) {
+                        if(!poolsData["Single Pool / League"]) poolsData["Single Pool / League"] = [];
+                        poolsData["Single Pool / League"].push(data[0].name);
+                    }
                     document.getElementById('newTeamName').value = "";
                     renderTeamPanes();
                     syncActiveTeams(); 
@@ -526,7 +535,6 @@
             document.getElementById('t-name').value = tData.name || '';
             document.getElementById('t-format').value = tData.format || 'T20';
             document.getElementById('t-date').value = tData.start_date ? tData.start_date.split('T')[0] : '';
-            
             if(tData.config && tData.config.winPoints) { document.getElementById('tWinPoints').value = tData.config.winPoints; }
 
             const { data: mData } = await db.from('matches').select('*').eq('tournament_id', tournId);
@@ -542,9 +550,22 @@
                 });
             }
 
+            const { data: squadData } = await db.from('tournament_squads').select('team_id, player_id').eq('tournament_id', tournId);
+            if (squadData) {
+                tournamentSquadsCache = {};
+                squadData.forEach(s => {
+                    let tName = Object.keys(activeTeamMap).find(name => activeTeamMap[name] === s.team_id);
+                    if (tName) {
+                        linkedTeamNames.add(tName);
+                        if(!tournamentSquadsCache[tName]) tournamentSquadsCache[tName] = [];
+                        tournamentSquadsCache[tName].push(s.player_id);
+                    }
+                });
+            }
+
             selectedTourneyTeams = allDbTeams.filter(t => linkedTeamNames.has(t.name));
             renderTeamPanes();
-            initPoolsWorkspace("1"); 
+            initPoolsWorkspace("1"); // Throws all loaded teams into Single Pool automatically
             syncActiveTeams();
             alert(`✅ Loaded tournament "${tData.name}". \n\n${selectedTourneyTeams.length} Teams and ${masterFixtures.length} Matches were pulled from the cloud!`);
         }
@@ -553,7 +574,6 @@
             let tName = document.getElementById('t-name').value.trim();
             let tFormat = document.getElementById('t-format').value;
             let tDate = document.getElementById('t-date').value;
-            // NOTE: We intentionally removed the status column here to prevent crashes if the user hasn't updated their DB.
             let configPayload = { winPoints: document.getElementById('tWinPoints').value }; 
 
             if (!tName || !tDate) { alert("Name and Starting Date are required."); return; }
@@ -578,7 +598,7 @@
             document.querySelectorAll('.nav-item')[1].click(); 
         }
 
-        // --- FIXTURE ENGINES ---
+        // --- POOL WORKSPACE ---
         function handlePoolSelection(selectEl) {
             if (selectEl.value === 'custom') {
                 let customCount = prompt("How many pools do you need? (Enter a number)");
@@ -596,21 +616,24 @@
         }
 
         function initPoolsWorkspace(countVal) { 
-            let count = parseInt(countVal) || 1;
-            if(count < 1) count = 1;
-            let previouslyAssigned = [];
-            Object.keys(poolsData).forEach(pKey => { if (pKey !== "Unassigned") previouslyAssigned = previouslyAssigned.concat(poolsData[pKey]); });
-
-            poolsData = { "Unassigned": poolsData["Unassigned"] || [] };
+            poolCount = parseInt(countVal) || 1;
+            if(poolCount < 1) poolCount = 1;
             
-            if(count === 1) { 
-                poolsData["Single Pool / League"] = previouslyAssigned; 
+            let previouslyAssigned = [];
+            Object.keys(poolsData).forEach(pKey => { 
+                previouslyAssigned = previouslyAssigned.concat(poolsData[pKey]); 
+            });
+
+            poolsData = {};
+            let allActiveNames = selectedTourneyTeams.map(t => t.name);
+
+            if(poolCount === 1) { 
+                poolsData["Single Pool / League"] = [...allActiveNames]; 
             } else { 
-                for(let i=0; i<count; i++) { 
+                for(let i=0; i<poolCount; i++) { 
                     let pName = i < 26 ? String.fromCharCode(65 + i) : (i + 1);
                     poolsData["Pool " + pName] = []; 
                 }
-                poolsData["Unassigned"] = poolsData["Unassigned"].concat(previouslyAssigned);
             }
             renderPoolsWorkspace(); 
         }
@@ -620,19 +643,47 @@
             let activeNames = selectedTourneyTeams.map(t => t.name);
             let unassigned = activeNames.filter(t => !assigned.includes(t));
             
-            document.getElementById('staging-teams-list').innerHTML = unassigned.length > 0 ? unassigned.map(t => `<div style="background:#0f172a; padding:8px; border-radius:4px; margin-bottom:5px; font-weight:bold;">${t} <select style="background:#1e293b; color:white; float:right; border-radius:4px; padding:2px; outline:none;" onchange="assignTeam('${t.replace(/'/g, "\\'")}', this.value)"><option value="">Move...</option>${Object.keys(poolsData).map(p => `<option value="${p}">${p}</option>`)}</select></div>`).join('') : '<div style="color:#64748b; font-size:0.8rem; font-style:italic;">All teams assigned to pools.</div>';
+            let unassignedHtml = unassigned.length > 0 
+                ? unassigned.map(t => `
+                    <div style="background:#0f172a; padding:8px; border-radius:4px; margin-bottom:5px; font-weight:bold; display:flex; justify-content:space-between; align-items:center;">
+                        ${t} 
+                        <select style="background:#1e293b; color:white; border-radius:4px; padding:2px; outline:none;" onchange="assignTeam('${t.replace(/'/g, "\\'")}', this.value)">
+                            <option value="">Move...</option>
+                            ${Object.keys(poolsData).map(p => `<option value="${p}">${p}</option>`).join('')}
+                        </select>
+                    </div>
+                  `).join('') 
+                : '<div style="color:#64748b; font-size:0.8rem; font-style:italic;">All teams assigned to pools.</div>';
+                
+            document.getElementById('staging-teams-list').innerHTML = unassignedHtml;
             
-            document.getElementById('pools-container-grid').innerHTML = Object.keys(poolsData).map(pName => `<div class="pool-card"><b style="color:#f59e0b;">${pName}</b><div class="pool-teams-box">${poolsData[pName].map(t => `<div class="team-pill">${t} <span style="cursor:pointer; margin-left:5px;" onclick="removeTeamFromPool('${pName}', '${t.replace(/'/g, "\\'")}')">×</span></div>`).join('')}</div></div>`).join('');
+            let poolsHtml = Object.keys(poolsData).map(pName => `
+                <div class="pool-card">
+                    <b style="color:#f59e0b;">${pName}</b> <span style="float:right; color:#64748b; font-size:0.8rem;">${poolsData[pName].length} Teams</span>
+                    <div class="pool-teams-box">
+                        ${poolsData[pName].length > 0 
+                            ? poolsData[pName].map(t => `
+                                <div class="team-pill">
+                                    ${t} <span style="cursor:pointer; margin-left:5px;" onclick="removeTeamFromPool('${pName}', '${t.replace(/'/g, "\\'")}')">×</span>
+                                </div>
+                              `).join('')
+                            : '<div style="color:#64748b; font-size:0.8rem; font-style:italic;">Empty Pool</div>'
+                        }
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('pools-container-grid').innerHTML = poolsHtml;
         }
         
         function assignTeam(t, p) { if(p) { poolsData[p].push(t); renderPoolsWorkspace(); } }
         function removeTeamFromPool(p, t) { poolsData[p] = poolsData[p].filter(x => x !== t); renderPoolsWorkspace(); }
         
+        // --- FIXTURE GENERATORS ---
         function generatePoolMatches() {
             let mode = document.getElementById('pool-round-select').value;
             let count = 0;
             Object.keys(poolsData).forEach(poolName => { 
-                if(poolName === "Unassigned") return;
                 let teams = poolsData[poolName]; 
                 for(let i=0; i<teams.length; i++) { 
                     for(let j=i+1; j<teams.length; j++) { 
@@ -646,7 +697,8 @@
                     } 
                 } 
             });
-            if(count === 0) { alert("No teams in pools to generate matches."); return; }
+            
+            if(count === 0) { alert("No teams in active pools to generate matches."); return; }
             alert(`Generated ${count} Group Matches! Moved to Master Canvas.`);
             document.querySelectorAll('.sub-tab-btn')[2].click(); 
             renderCanvas();
@@ -717,8 +769,11 @@
 
         // --- MASTER CANVAS ---
         function addManualMatch() { masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Custom Match`, t1: "TBD", t2: "TBD" }); renderCanvas(); }
-        function handleTeamSelect(index, side, value) { let match = masterFixtures[index]; if (side === 't1') { match.t1 = value; } else { match.t2 = value; } }
-        function deleteCanvasMatch(index) { masterFixtures.splice(index, 1); renderCanvas(); }
+        
+        function handleTeamSelect(index, side, value) {
+            let match = masterFixtures[index];
+            if (side === 't1') { match.t1 = value; } else { match.t2 = value; }
+        }
 
         function renderCanvas() {
             let container = document.getElementById('canvas-container');
@@ -729,7 +784,7 @@
 
             let poolRanks = [];
             Object.keys(poolsData).forEach(p => { 
-                if(p !== "Unassigned" && p !== "Single Pool / League") { poolRanks.push(`${p} - Rank 1`); poolRanks.push(`${p} - Rank 2`); poolRanks.push(`${p} - Rank 3`); }
+                if(p !== "Single Pool / League") { poolRanks.push(`${p} - Rank 1`); poolRanks.push(`${p} - Rank 2`); poolRanks.push(`${p} - Rank 3`); }
             });
             
             let activeNames = selectedTourneyTeams.map(t => t.name);
@@ -762,7 +817,9 @@
             updateFinalLockedMatches();
         }
 
-        function lockCanvasAndProceed() { updateFinalLockedMatches(); document.querySelectorAll('.nav-item')[2].click(); }
+        function deleteCanvasMatch(index) { masterFixtures.splice(index, 1); renderCanvas(); }
+        
+        function lockCanvasAndProceed() { updateFinalLockedMatches(); document.querySelectorAll('.nav-item')[3].click(); }
 
         // --- SQUADS & CLOUD DEPLOY ---
         function updateSquadSelectCount(safeTeamClass) {
@@ -857,7 +914,7 @@
             else { alert(`✅ Successfully synced ${selectedIds.length} players to the live tournament!`); btn.innerText = "✅ Synced Successfully!"; setTimeout(() => btn.innerText = originalText, 3000); }
         }
 
-        function finishSquadsAndProceed() { updateFinalLockedMatches(); document.querySelectorAll('.nav-item')[3].click(); }
+        function finishSquadsAndProceed() { updateFinalLockedMatches(); document.querySelectorAll('.nav-item')[4].click(); }
 
         function updateFinalLockedMatches() {
             let tName = document.getElementById('t-name').value || "Unnamed Tournament"; 
