@@ -179,12 +179,15 @@
                 <div class="card" style="border-color: #10b981;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #1e293b; padding-bottom:10px;">
                         <h3 class="card-title" style="border:none; margin:0; padding:0; color:#10b981;">Tournament Pools</h3>
-                        <select id="pool-count-select" onchange="initPools(this.value)" style="background: #020617; color: white; border: 1px solid #334155; padding: 6px 12px; border-radius: 4px; outline:none; font-weight:bold;">
+                        
+                        <!-- 🔥 DYNAMIC POOL SELECTOR -->
+                        <select id="pool-count-select" onchange="handlePoolSelection(this)" style="background: #020617; color: white; border: 1px solid #334155; padding: 6px 12px; border-radius: 4px; outline:none; font-weight:bold;">
                             <option value="1">1 Pool (Single League)</option>
                             <option value="2">2 Pools</option>
                             <option value="3">3 Pools</option>
                             <option value="4">4 Pools</option>
                             <option value="8">8 Pools</option>
+                            <option value="custom" style="color: #38bdf8; font-weight: bold;">⚙️ Custom Number...</option>
                         </select>
                     </div>
                     
@@ -229,7 +232,7 @@
                     <p class="section-desc">Click on empty nodes to assign teams that qualify from the Group Stage.</p>
                 </div>
             </div>
-            <div class="card" style="min-height: 400px; display: flex; align-items: center; justify-content: center; border: 1px dashed #38bdf8; background: rgba(56, 189, 248, 0.05);"><p style="color: #38bdf8; font-size: 1.1rem;">[Visual Bracket Tree in Phase 4]</p></div>
+            <div class="card" style="min-height: 400px; display: flex; align-items: center; justify-content: center; border: 1px dashed #38bdf8; background: rgba(56, 189, 248, 0.05);"><p style="color: #38bdf8; font-size: 1.1rem;">[Interactive Visual Bracket Tree Renders Here in Phase 4]</p></div>
         </section>
 
         <!-- MODULE 5: ROSTER STATUS (Placeholders for Phase 5) -->
@@ -434,7 +437,34 @@
             }
         }
 
-        // --- POOL UI RENDERING ---
+        // --- DYNAMIC POOL UI RENDERING ---
+        
+        // Handles the dropdown change, triggering prompt if "custom" is chosen
+        function handlePoolSelection(selectEl) {
+            if (selectEl.value === 'custom') {
+                let customCount = prompt("How many pools do you need? (Enter a number)");
+                let parsed = parseInt(customCount);
+                if (parsed && parsed > 0) {
+                    // Check if option already exists to prevent duplicate dropdown entries
+                    let exists = Array.from(selectEl.options).some(opt => opt.value == parsed);
+                    if (!exists) {
+                        let newOpt = document.createElement('option');
+                        newOpt.value = parsed;
+                        newOpt.text = parsed + " Pools (Custom)";
+                        // Insert right before the 'custom' option
+                        selectEl.insertBefore(newOpt, selectEl.lastElementChild);
+                    }
+                    selectEl.value = parsed;
+                    initPools(parsed);
+                } else {
+                    selectEl.value = "1"; // Revert to 1 if invalid input
+                    initPools(1);
+                }
+            } else {
+                initPools(selectEl.value);
+            }
+        }
+
         function initPools(countVal) {
             poolCount = parseInt(countVal) || 1;
             
@@ -453,7 +483,9 @@
                 poolsData["Single Pool / League"] = previouslyAssigned; 
             } else {
                 for(let i=0; i<poolCount; i++) {
-                    poolsData["Pool " + String.fromCharCode(65 + i)] = [];
+                    // Automatically wraps letters if > 26 pools (e.g. Pool 27, Pool 28)
+                    let pName = i < 26 ? String.fromCharCode(65 + i) : (i + 1);
+                    poolsData["Pool " + pName] = [];
                 }
                 // Dump all previously assigned teams back to Unassigned to avoid index errors
                 poolsData["Unassigned"] = poolsData["Unassigned"].concat(previouslyAssigned);
@@ -470,7 +502,7 @@
                         <option value="">Move...</option>
                         ${Object.keys(poolsData).filter(k => k !== "Unassigned").map(pKey => `<option value="${pKey}">${pKey}</option>`).join('')}
                     </select>
-                    <button class="btn-danger" style="margin-left:5px;" onclick="removeTeamFromTournament('${tName}')">X</button>
+                    <button class="btn-danger" style="margin-left:5px;" onclick="removeTeamFromTournament('${tName.replace(/'/g, "\\'")}')">X</button>
                 </div>
             `).join('');
             
