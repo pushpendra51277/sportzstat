@@ -13,7 +13,7 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
         /* SIDEBAR NAVIGATION */
-        .sidebar { width: 280px; background: #0f172a; border-right: 1px solid #1e293b; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar { width: 280px; background: #0f172a; border-right: 1px solid #1e293b; display: flex; flex-direction: column; flex-shrink: 0; z-index: 10; }
         .sidebar-header { padding: 25px 20px; border-bottom: 1px solid #1e293b; }
         .back-link { color: #94a3b8; text-decoration: none; font-size: 0.85rem; font-weight: bold; display: inline-block; margin-bottom: 15px; transition: 0.2s; }
         .back-link:hover { color: #38bdf8; }
@@ -30,10 +30,6 @@
         .content-area { flex: 1; padding: 40px; overflow-y: auto; background: #020617; }
         .hub-section { display: none; animation: fadeIn 0.3s ease; max-width: 1100px; margin: 0 auto; }
         .hub-section.active { display: block; }
-        
-        .section-header { margin-bottom: 30px; border-bottom: 1px solid #1e293b; padding-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-end; }
-        .section-title { margin: 0; font-size: 1.8rem; color: white; }
-        .section-desc { margin: 5px 0 0 0; color: #94a3b8; font-size: 0.9rem; }
         
         /* REUSABLE UI CARDS */
         .card { background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #1e293b; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
@@ -52,13 +48,16 @@
         .btn-danger { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.75rem;}
         .btn-outline { background: transparent; color: #38bdf8; border: 1px dashed #38bdf8; padding: 12px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         
-        /* GRID LAYOUTS */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         
         /* POOLS & TEAMS CSS */
-        .team-list-item { background: #1e293b; padding: 10px 15px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid transparent; transition: 0.2s; }
-        .team-list-item:hover { border-color: #38bdf8; }
-        .custom-scroll { overflow-y: auto; max-height: 400px; padding-right: 5px; }
+        .tourney-grid { display: grid; grid-template-columns: 1.2fr 2fr; gap: 20px; align-items: start; margin-top: 20px; }
+        .team-dual-pane { display: flex; gap: 10px; height: 300px; }
+        .team-list-box { flex: 1; background: #0f172a; border: 1px solid #475569; border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; }
+        .team-list-header { background: #334155; color: white; font-size: 0.8rem; padding: 8px; text-align: center; font-weight: bold; }
+        .team-list-item { background: #1e293b; padding: 8px 10px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; border: 1px solid transparent; transition: 0.2s; }
+        .team-list-item:hover { border-color: #38bdf8; background: rgba(56, 189, 248, 0.1); }
+        .custom-scroll { overflow-y: auto; padding: 5px; }
         .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
         
@@ -66,7 +65,7 @@
         .pool-box-header { color: #f59e0b; font-weight: bold; margin-bottom: 10px; font-size: 0.95rem; border-bottom: 1px dashed #334155; padding-bottom: 5px; }
         .assigned-team-pill { background: #1e293b; border: 1px solid #3b82f6; padding: 6px 12px; border-radius: 4px; display: inline-flex; align-items: center; gap: 8px; margin: 4px; font-size: 0.85rem; }
 
-        /* WIZARD TABS INSIDE SECTION */
+        /* ENGINE TABS */
         .sub-tab-nav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px; flex-wrap: wrap; }
         .sub-tab-btn { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
         .sub-tab-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
@@ -86,6 +85,13 @@
         .postings-grid { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.85rem; }
         .postings-grid th { background: #1e293b; color: #94a3b8; padding: 10px; text-align: left; }
         .postings-grid td { padding: 15px 10px; border-bottom: 1px solid #1e293b; background: #0f172a; vertical-align: top;}
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: 0.2s; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { background: #0f172a; border: 1px solid #38bdf8; border-radius: 12px; padding: 25px; width: 400px; max-width: 90%; text-align: left; transform: translateY(20px); transition: 0.3s; box-shadow: 0 15px 30px rgba(0,0,0,0.7); position: relative;}
+        .modal-overlay.active .modal-content { transform: translateY(0); }
+        .modal-close { background: transparent; border: none; color: #94a3b8; font-size: 1.5rem; position: absolute; top: 10px; right: 15px; cursor: pointer; }
+        .modal-close:hover { color: #ef4444; }
     </style>
 </head>
 <body>
@@ -100,14 +106,13 @@
         
         <div class="nav-menu">
             <div class="nav-group-title">Configuration</div>
-            <div class="nav-item active" onclick="switchTab('sec-settings', this)">⚙️ Basic Settings</div>
+            <div class="nav-item active" onclick="switchTab('sec-settings', this)">⚙️ Setup & Teams</div>
+            
+            <div class="nav-group-title">Scheduling</div>
+            <div class="nav-item" onclick="switchTab('sec-fixtures', this)">📅 Fixture Engine</div>
             
             <div class="nav-group-title">Participants</div>
-            <div class="nav-item" onclick="switchTab('sec-teams', this)">🛡️ Teams & Pools</div>
             <div class="nav-item" onclick="switchTab('sec-squads', this)">👥 Roster Verification</div>
-            
-            <div class="nav-group-title">Fixtures & Scheduling</div>
-            <div class="nav-item" onclick="switchTab('sec-matches', this)">📅 Fixture Engine</div>
             
             <div class="nav-group-title">Launch</div>
             <div class="nav-item" onclick="switchTab('sec-deploy', this)">🚀 Deploy to Cloud</div>
@@ -117,91 +122,107 @@
     <!-- 💻 MAIN CONTENT AREA -->
     <main class="content-area">
         
-        <!-- MODULE 1: SETTINGS -->
+        <!-- MODULE 1: SETUP & TEAMS -->
         <section id="sec-settings" class="hub-section active">
-            <div class="section-header">
-                <div>
-                    <h1 class="section-title">Basic Settings</h1>
-                    <p class="section-desc">Define the core rules and identity of this tournament.</p>
-                </div>
-                <div id="tourney-status-badge" style="background: rgba(148, 163, 184, 0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid #94a3b8; color: #94a3b8; font-size: 0.85rem; font-weight: bold;">Unsaved</div>
-            </div>
-
-            <div class="card" style="border-color: #3b82f6;">
-                <div class="grid-2">
-                    <div class="input-group" style="margin:0;">
-                        <label style="color: #38bdf8;">Mode Selection</label>
-                        <select id="tournament-mode-select" onchange="toggleTournamentMode(this.value)">
+            <div class="admin-form">
+                
+                <div style="background: rgba(59, 130, 246, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #3b82f6; display: flex; gap: 15px; align-items: center;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.8rem; color: #38bdf8; margin-bottom: 5px; font-weight: bold; display:block;">Mode Selection</label>
+                        <select id="tournament-mode-select" onchange="toggleTournamentMode(this.value)" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #3b82f6; color: white; border-radius: 6px; outline:none;">
                             <option value="new">➕ Create New Tournament</option>
                             <option value="edit">✏️ Edit Existing Tournament</option>
                         </select>
                     </div>
-                    <div class="input-group" id="existing-tournament-wrapper" style="display: none; margin:0;">
-                        <label style="color: #f59e0b;">Select Tournament to Edit</label>
-                        <select id="existing-tournament-select" onchange="loadExistingTournamentData(this.value)">
+                    <div id="existing-tournament-wrapper" style="flex: 1; display: none;">
+                        <label style="font-size: 0.8rem; color: #f59e0b; margin-bottom: 5px; font-weight: bold; display:block;">Select Tournament to Edit</label>
+                        <select id="existing-tournament-select" onchange="loadExistingTournamentData(this.value)" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #f59e0b; color: white; border-radius: 6px; outline:none;">
                             <option value="">Loading tournaments...</option>
                         </select>
                     </div>
                 </div>
-            </div>
 
-            <div class="card">
-                <h3 class="card-title">Tournament Identity</h3>
-                <div class="grid-2">
-                    <div class="input-group">
-                        <label>Tournament Name *</label>
-                        <input type="text" id="t-name" placeholder="e.g. Veda Premier League">
+                <h3 style="margin-top: 0; margin-bottom: 15px; color:white; border-bottom: 1px solid #334155; padding-bottom: 10px;">1. Tournament Details & Teams</h3>
+                
+                <div class="tourney-grid">
+                    <!-- Setup Details -->
+                    <div class="card" style="margin:0;">
+                        <div class="input-group">
+                            <label>Tournament Name *</label>
+                            <input type="text" id="t-name" placeholder="e.g. Veda Premier League">
+                        </div>
+                        <div class="input-group">
+                            <label>Format *</label>
+                            <select id="t-format">
+                                <option value="T20">T20 (20 Overs)</option>
+                                <option value="One Day">One Day (50 Overs)</option>
+                                <option value="Multi-Day">Multi-Day (Test)</option>
+                                <option value="T10">T10</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Starting Date *</label>
+                            <input type="date" id="t-date">
+                        </div>
+                        <div class="input-group">
+                            <label>Points System (Per Win)</label>
+                            <input type="number" id="tWinPoints" value="2">
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label>Format *</label>
-                        <select id="t-format">
-                            <option value="T20">T20 (20 Overs)</option>
-                            <option value="One Day">One Day (50 Overs)</option>
-                            <option value="Multi-Day">Multi-Day (Test)</option>
-                            <option value="T10">T10</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label>Starting Date *</label>
-                        <input type="date" id="t-date">
-                    </div>
-                    <div class="input-group">
-                        <label>Points System (Per Win)</label>
-                        <input type="number" id="tWinPoints" value="2">
+
+                    <!-- Team Selector -->
+                    <div class="card" style="margin:0;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <label style="color:#94a3b8; font-weight:bold; font-size:0.8rem; text-transform:uppercase;">Select Teams</label>
+                            <span id="teamCountBadge" style="background:#10b981; color:#020617; padding:3px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold;">0 Selected</span>
+                        </div>
+                        
+                        <input type="text" id="teamSearch" placeholder="🔍 Search database teams..." style="width:100%; padding:8px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:white; margin-bottom: 10px;" onkeyup="renderTeamPanes()">
+                        
+                        <div class="team-dual-pane">
+                            <div class="team-list-box">
+                                <div class="team-list-header">Available Teams</div>
+                                <div class="custom-scroll" id="available-teams-list" style="height: 250px;">
+                                    <div style="text-align:center; padding:20px; color:#64748b;">Loading DB...</div>
+                                </div>
+                            </div>
+                            
+                            <div class="team-list-box" style="border-color: #10b981;">
+                                <div class="team-list-header" style="background: #047857;">Selected Teams</div>
+                                <div class="custom-scroll" id="selected-teams-list" style="height: 250px;"></div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 5px; margin-top: 10px;">
+                            <input type="text" id="newTeamName" placeholder="Create new team..." style="flex:1; padding:8px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:white;">
+                            <button type="button" class="btn-success" style="padding: 8px 15px; font-size: 0.85rem;" onclick="createNewTeamNatively()">+ ADD</button>
+                        </div>
                     </div>
                 </div>
-                <button class="btn-primary" style="margin-top: 15px; width: 100%; font-size: 1.1rem; padding: 15px;" onclick="saveBasicSettings()">💾 Save Settings & Start Adding Teams ➡️</button>
+
+                <div style="border-top: 1px solid #334155; margin-top: 30px; padding-top: 20px;">
+                    <button type="button" style="background: linear-gradient(90deg, #f59e0b, #ea580c); width: 100%; padding: 18px; font-size: 1.2rem; font-weight: bold; border-radius: 8px; border: none; color: white; cursor:pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4);" onclick="saveTournamentAndProceed()">Save Tournament & Proceed to Fixtures ➡️</button>
+                </div>
             </div>
         </section>
 
-        <!-- MODULE 2: TEAMS & POOLS -->
-        <section id="sec-teams" class="hub-section">
-            <div class="section-header">
-                <div>
-                    <h1 class="section-title">Teams & Pools</h1>
-                    <p class="section-desc">Add teams from the Master DB and organize them into groups.</p>
-                </div>
-                <button class="btn-success" onclick="createNewTeamNatively()">+ Create Brand New Team</button>
-            </div>
-
-            <div class="grid-2">
-                <!-- Left Side: Database Teams -->
-                <div class="card">
-                    <h3 class="card-title">Master DB Teams</h3>
-                    <input type="text" id="teamSearch" placeholder="🔍 Search database teams..." style="width:100%; padding:10px; border-radius:6px; border:1px solid #334155; background:#020617; color:white; margin-bottom: 15px;" onkeyup="renderAvailableTeams()">
-                    
-                    <div class="custom-scroll" id="available-teams-list" style="height: 350px;">
-                        <div style="text-align: center; padding: 20px; color: #64748b;">Loading Master Database...</div>
-                    </div>
+        <!-- MODULE 2: FIXTURE ENGINE & MASTER CANVAS -->
+        <section id="sec-fixtures" class="hub-section">
+            <div class="admin-form">
+                <h3 style="margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">2. Multi-Stage Fixture Builder</h3>
+                <p style="color:#94a3b8; font-size:0.85rem; margin-top:0;">Use the Helper Engines to auto-generate matches, then review and edit them in the Master Canvas.</p>
+                
+                <div class="sub-tab-nav" style="background:#1e293b; margin:0 0 20px 0; padding:15px 20px 0 20px; border-radius: 8px;">
+                    <button type="button" class="sub-tab-btn active" onclick="switchSubTab('tab-pools', this)">1. Group Stage Engine</button>
+                    <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-knockouts', this)">2. Knockout Engine</button>
+                    <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-canvas', this)">3. Master Fixture Canvas</button>
                 </div>
 
-                <!-- Right Side: Active Pools -->
-                <div class="card" style="border-color: #10b981;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #1e293b; padding-bottom:10px;">
-                        <h3 class="card-title" style="border:none; margin:0; padding:0; color:#10b981;">Tournament Pools</h3>
-                        
-                        <!-- DYNAMIC POOL SELECTOR -->
-                        <select id="pool-count-select" onchange="handlePoolSelection(this)" style="background: #020617; color: white; border: 1px solid #334155; padding: 6px 12px; border-radius: 4px; outline:none; font-weight:bold;">
+                <!-- ENGINE 1: LEAGUES & DYNAMIC POOLS -->
+                <div id="tab-pools" class="sub-tab-pane active">
+                    <div style="background: rgba(56, 189, 248, 0.05); padding: 20px; border-radius: 8px; border: 1px dashed #38bdf8; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                        <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Number of Pools:</label>
+                        <select id="pool-count-select" onchange="handlePoolSelection(this)" class="postings-select" style="width: auto;">
                             <option value="1">1 Pool (Single League)</option>
                             <option value="2">2 Pools</option>
                             <option value="3">3 Pools</option>
@@ -209,115 +230,79 @@
                             <option value="8">8 Pools</option>
                             <option value="custom" style="color: #38bdf8; font-weight: bold;">⚙️ Custom Number...</option>
                         </select>
+                        
+                        <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem; margin-left: 20px;">Play Each Other:</label>
+                        <select id="pool-round-select" class="postings-select" style="width: auto;">
+                            <option value="single">Once (Single Header)</option>
+                            <option value="double">Twice (Double Header)</option>
+                        </select>
+                        <button type="button" class="btn-primary" style="margin-left: auto;" onclick="generatePoolMatches()">⚙️ Generate Group Matches</button>
                     </div>
-                    
-                    <div class="custom-scroll" id="pools-container" style="height: 350px;">
-                        <div class="pool-box" style="border-color: #f59e0b;">
-                            <div class="pool-box-header" style="color: #f59e0b;">Unassigned Teams</div>
-                            <div id="unassigned-box" style="min-height: 40px; color: #64748b; font-size: 0.85rem; font-style: italic;">Select teams from the left to add them here.</div>
+
+                    <div class="pools-workspace">
+                        <div class="staging-sidebar">
+                            <h4 style="color: #3b82f6; margin-top: 0; font-size: 0.95rem;">Unassigned Teams</h4>
+                            <div id="staging-teams-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;"></div>
                         </div>
-                        <div id="dynamic-pools-area"></div>
+                        <div>
+                            <h4 style="color: #10b981; margin: 0 0 10px 0; font-size: 0.95rem;">Active Pools</h4>
+                            <div id="pools-container-grid" class="pools-container-grid"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <div style="text-align: right;">
-                <button class="btn-primary" style="padding:15px 25px; font-size:1.05rem;" onclick="document.querySelectorAll('.nav-item')[4].click()">Teams Assigned - Build Fixtures ➡️</button>
-            </div>
-        </section>
 
-        <!-- MODULE 3: FIXTURE ENGINE & MASTER CANVAS -->
-        <section id="sec-matches" class="hub-section">
-            <div class="section-header">
-                <div>
-                    <h1 class="section-title">Fixture Engine</h1>
-                    <p class="section-desc">Auto-generate your base matches, then edit them or add manual knockouts in the Master Canvas.</p>
-                </div>
-            </div>
-
-            <div class="card" style="padding:0; overflow:hidden;">
-                <!-- Internal Navigation for Fixture Engine -->
-                <div class="sub-tab-nav" style="background:#1e293b; margin:0; padding:15px 20px 0 20px;">
-                    <button type="button" class="sub-tab-btn active" onclick="switchSubTab('tab-pools', this)">1. Group Stage / League Engine</button>
-                    <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-knockouts', this)">2. Playoff / Knockout Engine</button>
-                    <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-canvas', this)">3. Master Fixture Canvas (Edit All)</button>
-                </div>
-
-                <div style="padding: 25px;">
-                    
-                    <!-- ENGINE 1: LEAGUES & DYNAMIC POOLS -->
-                    <div id="tab-pools" class="sub-tab-pane active">
-                        <div style="background: rgba(56, 189, 248, 0.05); padding: 20px; border-radius: 8px; border: 1px dashed #38bdf8; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-                            <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Play Each Other:</label>
-                            <select id="pool-round-select" class="postings-select" style="width: auto;">
-                                <option value="single">Once (Single Header Round Robin)</option>
-                                <option value="double">Twice (Double Header Round Robin)</option>
+                <!-- ENGINE 2: PLAYOFFS & KNOCKOUTS -->
+                <div id="tab-knockouts" class="sub-tab-pane">
+                    <div style="background: rgba(16, 185, 129, 0.05); padding: 20px; border-radius: 8px; border: 1px dashed #10b981; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                            <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Playoff Structure:</label>
+                            <select id="ko-template-select" class="postings-select" style="width: auto; flex:1;">
+                                <option value="direct">🔥 Direct Knockout (Auto-Calculates Byes & Uses Real Teams)</option>
+                                <option value="standard">Standard Knockout (TBD Placeholders)</option>
+                                <option value="ipl">IPL Style (Qualifier 1, Eliminator, Qualifier 2, Final)</option>
+                                <option value="super">Super League (Super Six / Super Eight)</option>
                             </select>
-                            <button type="button" class="btn-primary" style="margin-left: auto;" onclick="generatePoolMatches()">⚙️ Generate Group Matches</button>
                         </div>
-                        <p style="color:#94a3b8; font-size:0.85rem;">This engine reads your current active pools from the "Teams & Pools" tab and mathematically pairs them up.</p>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Teams Involved:</label>
+                            <select id="ko-size-select" class="postings-select" style="width: auto;">
+                                <option value="2">Top 2 (Final Only)</option>
+                                <option value="4">Top 4 / Semi-Finals</option>
+                                <option value="8">Top 8 / Quarter-Finals</option>
+                                <option value="16">Top 16 / Round of 16</option>
+                            </select>
+                            <button type="button" class="btn-success" style="margin-left:auto;" onclick="generateKnockoutBracket()">⚙️ Generate Bracket</button>
+                        </div>
                     </div>
-
-                    <!-- ENGINE 2: PLAYOFFS & KNOCKOUTS -->
-                    <div id="tab-knockouts" class="sub-tab-pane">
-                        <div style="background: rgba(16, 185, 129, 0.05); padding: 20px; border-radius: 8px; border: 1px dashed #10b981; margin-bottom: 20px;">
-                            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
-                                <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Playoff Structure:</label>
-                                <select id="ko-template-select" class="postings-select" style="width: auto; flex:1;">
-                                    <option value="direct">🔥 Direct Knockout Bracket (Auto-Calculates Byes & Rounds)</option>
-                                    <option value="standard">Standard Knockout Bracket (TBD Placeholders)</option>
-                                    <option value="ipl">IPL Style (Qualifier 1, Eliminator, Qualifier 2, Final)</option>
-                                    <option value="super">Super League (Super Six / Super Eight)</option>
-                                </select>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 15px;">
-                                <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Teams Involved:</label>
-                                <select id="ko-size-select" class="postings-select" style="width: auto;">
-                                    <option value="2">Top 2 (Final Only)</option>
-                                    <option value="4">Top 4 / Semi-Finals</option>
-                                    <option value="8">Top 8 / Quarter-Finals</option>
-                                    <option value="16">Top 16 / Round of 16</option>
-                                </select>
-                                <button type="button" class="btn-success" style="margin-left:auto;" onclick="generateKnockoutBracket()">⚙️ Generate Bracket</button>
-                            </div>
-                        </div>
-                        <p style="color:#94a3b8; font-size:0.85rem; font-style:italic;">Note: Generating matches will instantly push them into the Master Canvas for review.</p>
-                    </div>
-
-                    <!-- THE MASTER CANVAS -->
-                    <div id="tab-canvas" class="sub-tab-pane">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                            <p style="color: #94a3b8; font-size: 0.85rem; margin:0;">The Single Source of Truth. You can manually edit any team, placeholder, or match name below.</p>
-                            <button type="button" class="btn-outline" style="padding: 8px 15px; font-size:0.85rem;" onclick="addManualMatch()">+ Add Custom Match Row</button>
-                        </div>
-                        
-                        <!-- Canvas Renders Here -->
-                        <div id="canvas-container">
-                            <div style="text-align: center; padding: 40px; color: #64748b;">
-                                <p style="font-size: 1.2rem; margin-bottom: 10px;">No Matches Generated Yet</p>
-                                <p style="font-size: 0.9rem;">Use the Group or Knockout engines above to auto-generate matches, or click the button above to add custom rows manually.</p>
-                            </div>
-                        </div>
-                        
-                    </div>
+                    <p style="color:#94a3b8; font-size:0.85rem; font-style:italic;">Note: Generating matches will instantly push them into the Master Canvas for review.</p>
                 </div>
-            </div>
-            
-            <div style="text-align: right;">
-                <button class="btn-primary" style="padding:15px 25px; font-size:1.05rem;" onclick="document.querySelectorAll('.nav-item')[5].click()">Fixtures Saved - Proceed to Deployment ➡️</button>
+
+                <!-- THE MASTER CANVAS -->
+                <div id="tab-canvas" class="sub-tab-pane">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <p style="color: #94a3b8; font-size: 0.85rem; margin:0;">The Single Source of Truth. You can manually edit any team, placeholder, or match name below.</p>
+                        <button type="button" class="btn-outline" style="padding: 8px 15px; font-size:0.85rem;" onclick="addManualMatch()">+ Add Custom Match Row</button>
+                    </div>
+                    
+                    <div id="canvas-container">
+                        <div style="text-align: center; padding: 40px; color: #64748b;">
+                            <p style="font-size: 1.2rem; margin-bottom: 10px;">No Matches Generated Yet</p>
+                            <p style="font-size: 0.9rem;">Use the engines above to auto-generate matches, or add rows manually.</p>
+                        </div>
+                    </div>
+                    
+                    <button type="button" style="background: #f59e0b; width:100%; padding:15px; border:none; border-radius:6px; color:black; font-size: 1.1rem; font-weight:bold; margin-top:20px; cursor:pointer;" onclick="lockCanvasAndProceed()">Save Fixtures & Proceed to Squads ➡️</button>
+                </div>
+
             </div>
         </section>
 
-        <!-- MODULE 4: SQUAD VERIFICATION -->
+        <!-- MODULE 3: SQUAD VERIFICATION -->
         <section id="sec-squads" class="hub-section">
-            <div class="section-header">
-                <div>
-                    <h1 class="section-title">Roster Verification</h1>
-                    <p class="section-desc">Select specific players from the Master DB for each team. (Can be done later)</p>
-                </div>
-            </div>
-
-            <div class="card">
+            <div class="admin-form">
+                <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px;">3. Verify & Select Squads</h3>
+                <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 0; margin-bottom: 15px;">Select the specific players from the Master DB who are allowed to play in this tournament.</p>
+                
                 <div style="margin-bottom: 20px; display: flex; gap: 15px; align-items: center;">
                     <div class="input-group" style="flex:1; margin:0;">
                         <label>Select Team to Review</label>
@@ -331,19 +316,18 @@
                 <div id="wizard-player-slots-container">
                     <div style="text-align: center; color: #475569; padding: 40px; font-style: italic;">Select a team above to view and assign players.</div>
                 </div>
+                
+                <div style="margin-top:25px; border-top: 1px solid #334155; padding-top:20px;">
+                    <button type="button" style="background: #3b82f6; width: 100%; padding: 15px; font-size: 1.1rem; font-weight: bold; border-radius: 6px; border: none; color: white; cursor:pointer;" onclick="finishSquadsAndProceed()">All Squads Verified - Proceed to Deploy ➡️</button>
+                </div>
             </div>
         </section>
 
-        <!-- MODULE 5: DEPLOYMENT -->
+        <!-- MODULE 4: DEPLOYMENT -->
         <section id="sec-deploy" class="hub-section">
-            <div class="section-header">
-                <div>
-                    <h1 class="section-title">Launch Tournament</h1>
-                    <p class="section-desc">Review your final schedule and deploy it to the live cloud.</p>
-                </div>
-            </div>
-
-            <div class="card">
+            <div class="admin-form" style="overflow-x: auto;">
+                <h3 style="margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 10px;">4. Official Postings & Deployment</h3>
+                <p style="color:#94a3b8; font-size:0.8rem; margin-bottom: 15px;">Review your generated fixtures. Existing matches will retain their original PINs.</p>
                 <table class="postings-grid">
                     <thead>
                         <tr><th style="width: 40%;">Match Details</th><th style="width: 60%;">Cloud Status</th></tr>
@@ -363,7 +347,7 @@
 
     </main>
 
-    <!-- QUICK-ADD MODALS -->
+    <!-- QUICK-ADD PLAYER MODAL -->
     <div class="modal-overlay" id="quick-player-modal" onclick="closeAllModals(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button type="button" class="modal-close" onclick="closeAllModals()">&times;</button>
@@ -382,9 +366,8 @@
         </div>
     </div>
 
-    <!-- LOGIC & SUPABASE INTEGRATION -->
+    <!-- MAIN LOGIC ENGINE -->
     <script>
-        // --- 1. INITIALIZATION & STATE ---
         const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
         const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -393,159 +376,96 @@
         let allDbTeams = [];        
         let tourneyTeams = [];      
         let poolCount = 1;          
-        
         let poolsData = { "Unassigned": [], "Single Pool / League": [] };
-        
-        let masterFixtures = []; // The Single Source of Truth for Matches
+        let masterFixtures = []; 
         let tournamentSquadsCache = {};
+        
+        let selectedTourneyTeams = [];
 
-        // Dynamic Placeholders for Dropdowns
         const standardPlaceholders = [
             "TBD", "Winner QF 1", "Winner QF 2", "Winner QF 3", "Winner QF 4", 
             "Winner SF 1", "Winner SF 2", "Winner Qualifier 1", "Winner Eliminator", "Winner Qualifier 2",
             "Rank 1", "Rank 2", "Rank 3", "Rank 4"
         ];
 
-        // Boot up
         document.addEventListener('DOMContentLoaded', async () => { 
-            await fetchAllMasterTeams();
+            await loadExistingTeamsFromDB();
             await loadExistingTournamentsList();
-            initPools(1); 
+            initPoolsWorkspace("1"); 
             renderCanvas();
         });
 
-        // Modals & SubTabs
-        function openModal(modalId) { document.getElementById(modalId).classList.add('active'); }
-        function closeAllModals(event) {
-            if (event && event.target && event.target.classList && !event.target.classList.contains('modal-overlay') && !event.target.classList.contains('modal-close')) return;
-            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+        // --- UI NAVIGATION ---
+        function switchTab(targetId, navElement) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            navElement.classList.add('active');
+            document.querySelectorAll('.hub-section').forEach(sec => sec.classList.remove('active'));
+            document.getElementById(targetId).classList.add('active');
         }
+
         function switchSubTab(tabId, btn) {
             document.querySelectorAll('.sub-tab-pane').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(tabId).classList.add('active'); btn.classList.add('active');
         }
 
-        // --- 2. LIVE SYNC FUNCTION ---
+        function openModal(modalId) { document.getElementById(modalId).classList.add('active'); }
+        function closeAllModals(event) {
+            if (event && event.target && event.target.classList && !event.target.classList.contains('modal-overlay') && !event.target.classList.contains('modal-close')) return;
+            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+        }
+
+        // --- LIVE SYNC & TEAMS ---
         function syncActiveTeams() {
-            let activeNames = tourneyTeams.map(t => t.name);
+            let activeNames = selectedTourneyTeams.map(t => t.name);
             Object.keys(poolsData).forEach(p => { poolsData[p] = poolsData[p].filter(t => activeNames.includes(t)); });
             
-            // Populate Squads Dropdown safely
             const select = document.getElementById('squad-team-select');
             select.innerHTML = '<option value="">Select a team to verify squad...</option>' + activeNames.map(team => `<option value="${team}">${team}</option>`).join('');
 
             renderPoolsWorkspace();
-            renderCanvas(); // Update canvas dropdowns with new real teams
+            renderCanvas(); 
         }
 
-        // --- 3. CONFIGURATION & SETTINGS SAVING ---
-        async function saveBasicSettings() {
-            let tName = document.getElementById('t-name').value.trim();
-            let tFormat = document.getElementById('t-format').value;
-            let tDate = document.getElementById('t-date').value;
-            let tWinPoints = document.getElementById('tWinPoints').value;
-
-            if (!tName || !tDate) { alert("Tournament Name and Starting Date are required."); return; }
-
-            let configPayload = { winPoints: tWinPoints };
-            let mode = document.getElementById('tournament-mode-select').value;
-            
-            try {
-                if (mode === 'edit' && currentTournamentId) {
-                    const { error } = await db.from('tournaments').update({ name: tName, format: tFormat, start_date: tDate, config: configPayload }).eq('tournament_id', currentTournamentId);
-                    if (error) throw error;
-                    alert("✅ Tournament Settings Updated!");
-                } else {
-                    const { data, error } = await db.from('tournaments').insert([{ name: tName, format: tFormat, start_date: tDate, config: configPayload, status: 'draft' }]).select();
-                    if (error) throw error;
-                    currentTournamentId = data[0].tournament_id;
-                    document.getElementById('tournament-mode-select').value = 'edit';
-                    alert("✅ New Tournament Created & Saved!");
-                }
-                
-                let badge = document.getElementById('tourney-status-badge');
-                badge.innerText = "Saved: Draft Mode";
-                badge.style.background = "rgba(16, 185, 129, 0.1)";
-                badge.style.borderColor = "#10b981";
-                badge.style.color = "#10b981";
-                
-                document.querySelectorAll('.nav-item')[2].click(); 
-            } catch (err) { alert("Error saving tournament: " + err.message); }
-        }
-
-        async function loadExistingTournamentsList() {
-            const { data, error } = await db.from('tournaments').select('tournament_id, name, format');
-            const select = document.getElementById('existing-tournament-select');
-            if (error || !data || data.length === 0) { select.innerHTML = '<option value="">No existing tournaments found</option>'; return; }
-            select.innerHTML = '<option value="">-- Choose tournament to edit --</option>' + data.map(t => `<option value="${t.tournament_id}">${t.name} (${t.format})</option>`).join('');
-        }
-
-        function toggleTournamentMode(mode) {
-            const wrapper = document.getElementById('existing-tournament-wrapper');
-            if (mode === 'edit') {
-                wrapper.style.display = 'block'; 
-            } else {
-                wrapper.style.display = 'none'; 
-                currentTournamentId = null; 
-                document.getElementById('t-name').value = '';
-                document.getElementById('t-date').value = '';
-                tourneyTeams = [];
-                masterFixtures = [];
-                initPools(1);
-                renderAvailableTeams();
-                renderCanvas();
-                
-                let badge = document.getElementById('tourney-status-badge');
-                badge.innerText = "Unsaved";
-                badge.style = "background: rgba(148, 163, 184, 0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid #94a3b8; color: #94a3b8; font-size: 0.85rem; font-weight: bold;";
-            }
-        }
-
-        // Placeholder for phase 5 mapped loading logic
-        async function loadExistingTournamentData(tournId) {
-            if(!tournId) return;
-            alert("Loading tournament data... (Will be mapped in next phase)");
-            currentTournamentId = tournId;
-        }
-
-        // --- 4. TEAM SELECTION & POOL ENGINE ---
-        async function fetchAllMasterTeams() {
+        async function loadExistingTeamsFromDB() {
             const { data, error } = await db.from('teams').select('*').order('name', { ascending: true });
             if (!error && data) {
                 allDbTeams = data;
-                renderAvailableTeams();
+                renderTeamPanes();
             }
         }
 
-        function renderAvailableTeams() {
+        function renderTeamPanes() {
             let searchStr = document.getElementById('teamSearch').value.toLowerCase();
-            let container = document.getElementById('available-teams-list');
             
-            let filteredTeams = allDbTeams
-                .filter(t => !tourneyTeams.some(sel => sel.team_id === t.team_id))
-                .filter(t => t.name.toLowerCase().includes(searchStr));
+            let availableHtml = allDbTeams
+                .filter(t => !selectedTourneyTeams.some(sel => sel.team_id === t.team_id))
+                .filter(t => t.name.toLowerCase().includes(searchStr))
+                .map(t => `<div class="team-list-item" onclick="selectTeam('${t.team_id}')"><span>${t.name}</span><button type="button" class="btn-success" style="padding:2px 8px;">+</button></div>`).join('');
+            
+            document.getElementById('available-teams-list').innerHTML = availableHtml || '<div style="text-align:center; padding:10px; color:#64748b; font-size:0.8rem;">No teams found.</div>';
 
-            if (filteredTeams.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">No teams found.</div>';
-                return;
+            let selectedHtml = selectedTourneyTeams.map(t => `<div class="team-list-item" style="border-left: 3px solid #10b981;"><span>${t.name}</span><button type="button" class="btn-danger" onclick="removeTeam('${t.team_id}', event)">✕</button></div>`).join('');
+            
+            document.getElementById('selected-teams-list').innerHTML = selectedHtml || '<div style="text-align:center; padding:10px; color:#64748b; font-size:0.8rem; font-style:italic;">No teams selected.</div>';
+            document.getElementById('teamCountBadge').innerText = selectedTourneyTeams.length + " Selected";
+        }
+
+        function selectTeam(teamId) {
+            let team = allDbTeams.find(t => t.team_id === teamId);
+            if (team) { 
+                selectedTourneyTeams.push(team); 
+                if(!poolsData["Unassigned"].includes(team.name)) poolsData["Unassigned"].push(team.name);
+                renderTeamPanes(); 
+                syncActiveTeams(); 
             }
-            container.innerHTML = filteredTeams.map(t => `<div class="team-list-item"><span>${t.name}</span><button class="btn-success" onclick="addTeamToTournament('${t.team_id}', '${t.name.replace(/'/g, "\\'")}')">+ Add</button></div>`).join('');
-            document.getElementById('teamCountBadge').innerText = tourneyTeams.length + " Selected";
-            document.getElementById('selectedTeamsList').innerHTML = tourneyTeams.length === 0 ? '<div style="text-align:center; padding:20px; color:#64748b; font-style:italic;">No teams selected.</div>' : tourneyTeams.map(t => `<div class="team-list-item" style="border-left: 3px solid #10b981;"><span>${t.name}</span><button class="btn-danger" onclick="removeTeamFromTournament('${t.name.replace(/'/g, "\\'")}')">✕</button></div>`).join('');
         }
 
-        function addTeamToTournament(id, name) {
-            tourneyTeams.push({ team_id: id, name: name });
-            poolsData["Unassigned"].push(name); 
-            renderAvailableTeams();
-            syncActiveTeams();
-        }
-
-        function removeTeamFromTournament(name) {
-            tourneyTeams = tourneyTeams.filter(t => t.name !== name);
-            renderAvailableTeams();
-            syncActiveTeams();
+        function removeTeam(teamId, event) {
+            event.stopPropagation();
+            selectedTourneyTeams = selectedTourneyTeams.filter(t => t.team_id !== teamId);
+            renderTeamPanes();
+            syncActiveTeams(); 
         }
 
         async function createNewTeamNatively() {
@@ -559,13 +479,106 @@
                 if (error) throw error;
                 if (data && data.length > 0) {
                     allDbTeams.push(data[0]); 
+                    selectedTourneyTeams.push(data[0]); 
+                    poolsData["Unassigned"].push(data[0].name);
                     document.getElementById('newTeamName').value = "";
-                    addTeamToTournament(data[0].team_id, data[0].name);
+                    renderTeamPanes();
+                    syncActiveTeams(); 
                 }
-            } catch(e) { alert("Error saving team to cloud: " + e.message); document.getElementById('newTeamName').value = tName; }
+            } catch(e) { alert("Error saving team to cloud."); document.getElementById('newTeamName').value = tName; }
         }
 
-        // --- POOL UI RENDERING ---
+        // --- TOURNAMENT SAVE & LOAD ---
+        async function loadExistingTournamentsList() {
+            const { data, error } = await db.from('tournaments').select('tournament_id, name, format');
+            const select = document.getElementById('existing-tournament-select');
+            if (error || !data || data.length === 0) { select.innerHTML = '<option value="">No existing tournaments found</option>'; return; }
+            select.innerHTML = '<option value="">-- Choose tournament to edit --</option>' + data.map(t => `<option value="${t.tournament_id}">${t.name} (${t.format})</option>`).join('');
+        }
+
+        function toggleTournamentMode(mode) {
+            const wrapper = document.getElementById('existing-tournament-wrapper');
+            if (mode === 'edit') {
+                wrapper.style.display = 'block'; 
+                currentTournamentId = null; 
+            } else {
+                wrapper.style.display = 'none'; 
+                currentTournamentId = null; 
+                selectedTourneyTeams = [];
+                masterFixtures = []; 
+                document.getElementById('t-name').value = '';
+                document.getElementById('t-date').value = '';
+                renderTeamPanes();
+                initPoolsWorkspace("1");
+                renderCanvas();
+                let badge = document.getElementById('tourney-status-badge');
+                badge.innerText = "Unsaved";
+                badge.style = "background: rgba(148, 163, 184, 0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid #94a3b8; color: #94a3b8; font-size: 0.85rem; font-weight: bold;";
+            }
+        }
+
+        async function loadExistingTournamentData(tournId) {
+            if (!tournId) return;
+            currentTournamentId = tournId;
+            const { data: tData, error: tErr } = await db.from('tournaments').select('*').eq('tournament_id', tournId).single();
+            if (tErr || !tData) { alert("Error loading tournament details."); return; }
+
+            document.getElementById('t-name').value = tData.name || '';
+            document.getElementById('t-format').value = tData.format || 'T20';
+            document.getElementById('t-date').value = tData.start_date ? tData.start_date.split('T')[0] : '';
+            
+            if(tData.config && tData.config.winPoints) { document.getElementById('tWinPoints').value = tData.config.winPoints; }
+
+            const { data: mData } = await db.from('matches').select('*').eq('tournament_id', tournId);
+            let linkedTeamNames = new Set();
+            masterFixtures = []; 
+            
+            if (mData && mData.length > 0) {
+                mData.forEach(m => {
+                    let fs = m.full_state || {};
+                    if(fs.team1 && fs.team1 !== "TBD" && !fs.team1.includes("Winner") && !fs.team1.includes("Rank")) linkedTeamNames.add(fs.team1);
+                    if(fs.team2 && fs.team2 !== "TBD" && !fs.team2.includes("Winner") && !fs.team2.includes("Rank")) linkedTeamNames.add(fs.team2);
+                    masterFixtures.push({ id: m.match_id, name: fs.matchName || m.match_id, t1: fs.team1 || '', t2: fs.team2 || '', pin: m.scorer_pin });
+                });
+            }
+
+            selectedTourneyTeams = allDbTeams.filter(t => linkedTeamNames.has(t.name));
+            renderTeamPanes();
+            initPoolsWorkspace("1"); 
+            syncActiveTeams();
+            alert(`✅ Loaded tournament "${tData.name}". \n\n${selectedTourneyTeams.length} Teams and ${masterFixtures.length} Matches were pulled from the cloud!`);
+        }
+
+        async function saveTournamentAndProceed() {
+            let tName = document.getElementById('t-name').value.trim();
+            let tFormat = document.getElementById('t-format').value;
+            let tDate = document.getElementById('t-date').value;
+            // NOTE: We intentionally removed the status column here to prevent crashes if the user hasn't updated their DB.
+            let configPayload = { winPoints: document.getElementById('tWinPoints').value }; 
+
+            if (!tName || !tDate) { alert("Name and Starting Date are required."); return; }
+            if (selectedTourneyTeams.length < 2) { alert("Select at least 2 teams."); return; }
+
+            const mode = document.getElementById('tournament-mode-select').value;
+            let tError = null;
+            if (mode === 'edit' && currentTournamentId) {
+                const { error } = await db.from('tournaments').update({ name: tName, format: tFormat, start_date: tDate, config: configPayload }).eq('tournament_id', currentTournamentId);
+                tError = error;
+            } else {
+                const { data: tData, error } = await db.from('tournaments').insert([{ name: tName, format: tFormat, start_date: tDate, config: configPayload }]).select();
+                tError = error; if (tData && tData.length > 0) currentTournamentId = tData[0].tournament_id;
+            }
+
+            if (tError) { alert("Error saving tournament: " + tError.message); return; }
+
+            let badge = document.getElementById('tourney-status-badge');
+            badge.innerText = "Saved: Draft Mode";
+            badge.style.background = "rgba(16, 185, 129, 0.1)"; badge.style.borderColor = "#10b981"; badge.style.color = "#10b981";
+            
+            document.querySelectorAll('.nav-item')[1].click(); 
+        }
+
+        // --- FIXTURE ENGINES ---
         function handlePoolSelection(selectEl) {
             if (selectEl.value === 'custom') {
                 let customCount = prompt("How many pools do you need? (Enter a number)");
@@ -577,79 +590,47 @@
                         newOpt.value = parsed; newOpt.text = parsed + " Pools (Custom)";
                         selectEl.insertBefore(newOpt, selectEl.lastElementChild);
                     }
-                    selectEl.value = parsed;
-                    initPools(parsed);
-                } else {
-                    selectEl.value = "1"; initPools(1);
-                }
-            } else { initPools(selectEl.value); }
+                    selectEl.value = parsed; initPoolsWorkspace(parsed);
+                } else { selectEl.value = "1"; initPoolsWorkspace(1); }
+            } else { initPoolsWorkspace(selectEl.value); }
         }
 
-        function initPools(countVal) {
-            poolCount = parseInt(countVal) || 1;
-            let currentUnassigned = poolsData["Unassigned"] || [];
+        function initPoolsWorkspace(countVal) { 
+            let count = parseInt(countVal) || 1;
+            if(count < 1) count = 1;
             let previouslyAssigned = [];
             Object.keys(poolsData).forEach(pKey => { if (pKey !== "Unassigned") previouslyAssigned = previouslyAssigned.concat(poolsData[pKey]); });
 
-            poolsData = { "Unassigned": currentUnassigned };
+            poolsData = { "Unassigned": poolsData["Unassigned"] || [] };
             
-            if(poolCount === 1) {
+            if(count === 1) { 
                 poolsData["Single Pool / League"] = previouslyAssigned; 
-            } else {
-                for(let i=0; i<poolCount; i++) {
+            } else { 
+                for(let i=0; i<count; i++) { 
                     let pName = i < 26 ? String.fromCharCode(65 + i) : (i + 1);
-                    poolsData["Pool " + pName] = [];
+                    poolsData["Pool " + pName] = []; 
                 }
                 poolsData["Unassigned"] = poolsData["Unassigned"].concat(previouslyAssigned);
             }
-            renderPoolsWorkspace();
+            renderPoolsWorkspace(); 
         }
-
+        
         function renderPoolsWorkspace() {
-            let unassignedHtml = poolsData["Unassigned"].map(tName => `
-                <div class="assigned-team-pill" style="border-color: #f59e0b;">
-                    ${tName}
-                    <select style="background:#0f172a; color:white; border:none; outline:none; border-left:1px solid #334155; padding-left:5px; margin-left:5px;" onchange="moveTeam('${tName}', 'Unassigned', this.value)">
-                        <option value="">Move...</option>
-                        ${Object.keys(poolsData).filter(k => k !== "Unassigned").map(pKey => `<option value="${pKey}">${pKey}</option>`).join('')}
-                    </select>
-                </div>
-            `).join('');
-            document.getElementById('unassigned-box').innerHTML = unassignedHtml || "No unassigned teams.";
-
-            let activePoolsHtml = "";
-            Object.keys(poolsData).forEach(pKey => {
-                if (pKey === "Unassigned") return; 
-                let teamsHtml = poolsData[pKey].map(tName => `
-                    <div class="assigned-team-pill">
-                        ${tName}
-                        <select style="background:#0f172a; color:white; border:none; outline:none; border-left:1px solid #334155; padding-left:5px; margin-left:5px;" onchange="moveTeam('${tName}', '${pKey}', this.value)">
-                            <option value="">Move...</option><option value="Unassigned">Unassigned</option>
-                            ${Object.keys(poolsData).filter(k => k !== "Unassigned" && k !== pKey).map(otherKey => `<option value="${otherKey}">${otherKey}</option>`).join('')}
-                        </select>
-                    </div>`).join('');
-
-                activePoolsHtml += `<div class="pool-box"><div class="pool-box-header">${pKey} <span style="float:right; color:#64748b; font-size:0.8rem;">${poolsData[pKey].length} Teams</span></div><div style="min-height: 40px; color: #64748b; font-size: 0.85rem;">${teamsHtml || "Empty Pool."}</div></div>`;
-            });
-            document.getElementById('dynamic-pools-area').innerHTML = activePoolsHtml;
+            let assigned = [].concat(...Object.values(poolsData)); 
+            let activeNames = selectedTourneyTeams.map(t => t.name);
+            let unassigned = activeNames.filter(t => !assigned.includes(t));
+            
+            document.getElementById('staging-teams-list').innerHTML = unassigned.length > 0 ? unassigned.map(t => `<div style="background:#0f172a; padding:8px; border-radius:4px; margin-bottom:5px; font-weight:bold;">${t} <select style="background:#1e293b; color:white; float:right; border-radius:4px; padding:2px; outline:none;" onchange="assignTeam('${t.replace(/'/g, "\\'")}', this.value)"><option value="">Move...</option>${Object.keys(poolsData).map(p => `<option value="${p}">${p}</option>`)}</select></div>`).join('') : '<div style="color:#64748b; font-size:0.8rem; font-style:italic;">All teams assigned to pools.</div>';
+            
+            document.getElementById('pools-container-grid').innerHTML = Object.keys(poolsData).map(pName => `<div class="pool-card"><b style="color:#f59e0b;">${pName}</b><div class="pool-teams-box">${poolsData[pName].map(t => `<div class="team-pill">${t} <span style="cursor:pointer; margin-left:5px;" onclick="removeTeamFromPool('${pName}', '${t.replace(/'/g, "\\'")}')">×</span></div>`).join('')}</div></div>`).join('');
         }
-
-        function moveTeam(teamName, fromPool, toPool) {
-            if (!toPool || fromPool === toPool) return;
-            poolsData[fromPool] = poolsData[fromPool].filter(t => t !== teamName);
-            poolsData[toPool].push(teamName);
-            renderPoolsWorkspace();
-        }
-
-        // ==========================================
-        // 🔥 PHASE 3: FIXTURE GENERATORS & CANVAS
-        // ==========================================
-        function generateUniqueMatchID(prefix) { return `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`; }
+        
+        function assignTeam(t, p) { if(p) { poolsData[p].push(t); renderPoolsWorkspace(); } }
+        function removeTeamFromPool(p, t) { poolsData[p] = poolsData[p].filter(x => x !== t); renderPoolsWorkspace(); }
         
         function generatePoolMatches() {
             let mode = document.getElementById('pool-round-select').value;
             let count = 0;
-            
             Object.keys(poolsData).forEach(poolName => { 
                 if(poolName === "Unassigned") return;
                 let teams = poolsData[poolName]; 
@@ -665,11 +646,8 @@
                     } 
                 } 
             });
-            
-            if(count === 0) { alert("No teams in pools to generate matches for."); return; }
-            alert(`Generated ${count} Matches! Moved to Master Canvas.`);
-            
-            // Switch to Master Canvas Tab
+            if(count === 0) { alert("No teams in pools to generate matches."); return; }
+            alert(`Generated ${count} Group Matches! Moved to Master Canvas.`);
             document.querySelectorAll('.sub-tab-btn')[2].click(); 
             renderCanvas();
         }
@@ -678,7 +656,7 @@
             let template = document.getElementById('ko-template-select').value;
             let size = parseInt(document.getElementById('ko-size-select').value); 
             let count = 0;
-            let activeNames = tourneyTeams.map(t => t.name);
+            let activeNames = selectedTourneyTeams.map(t => t.name);
 
             if (template === 'direct') {
                 let totalTeams = activeNames.length;
@@ -721,58 +699,40 @@
                 masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Eliminator", t1: "Rank 3", t2: "Rank 4" });
                 masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Qualifier 2", t1: "Loser Qualifier 1", t2: "Winner Eliminator" });
                 masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "Winner Qualifier 1", t2: "Winner Qualifier 2" });
-                count = 4;
-                alert(`Generated ${count} IPL Playoff Matches! Moved to Master Canvas.`);
+                count = 4; alert(`Generated IPL Matches! Moved to Master Canvas.`);
             } else if (template === 'super') {
-                for(let i=1; i<=size; i++) {
-                    masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Super League Match`, t1: `Super Rank ${i}`, t2: "TBD" });
-                    count++;
-                }
-                alert(`Generated ${count} Super League Matches! Moved to Master Canvas.`);
+                for(let i=1; i<=size; i++) { masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Super League Match`, t1: `Super Rank ${i}`, t2: "TBD" }); count++; }
+                alert(`Generated Super League Matches! Moved to Master Canvas.`);
             } else {
                 if (size >= 16) { for(let i=1; i<=8; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Round of 16 - Match ${i}`, t1: "TBD", t2: "TBD" }); count+=8;}
                 if (size >= 8) { for(let i=1; i<=4; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Quarter-Final ${i}`, t1: "TBD", t2: "TBD" }); count+=4;}
                 if (size >= 4) { masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 1", t1: "TBD", t2: "TBD" }); masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 2", t1: "TBD", t2: "TBD" }); count+=2;}
                 masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "TBD", t2: "TBD" }); count+=1;
-                alert(`Generated ${count} Standard Knockout Matches! Moved to Master Canvas.`);
+                alert(`Generated Standard Knockout Matches! Moved to Master Canvas.`);
             }
 
             document.querySelectorAll('.sub-tab-btn')[2].click(); 
             renderCanvas();
         }
 
-        function addManualMatch() { 
-            masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Custom Match`, t1: "TBD", t2: "TBD" }); 
-            renderCanvas(); 
-        }
-        
-        function handleTeamSelect(index, side, value) {
-            let match = masterFixtures[index];
-            if (side === 't1') { match.t1 = value; } else { match.t2 = value; }
-        }
-
-        function deleteCanvasMatch(index) { 
-            masterFixtures.splice(index, 1); 
-            renderCanvas(); 
-        }
+        // --- MASTER CANVAS ---
+        function addManualMatch() { masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Custom Match`, t1: "TBD", t2: "TBD" }); renderCanvas(); }
+        function handleTeamSelect(index, side, value) { let match = masterFixtures[index]; if (side === 't1') { match.t1 = value; } else { match.t2 = value; } }
+        function deleteCanvasMatch(index) { masterFixtures.splice(index, 1); renderCanvas(); }
 
         function renderCanvas() {
             let container = document.getElementById('canvas-container');
-            
             if (masterFixtures.length === 0) {
-                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;"><p style="font-size: 1.2rem; margin-bottom: 10px;">No Matches Generated Yet</p><p style="font-size: 0.9rem;">Use the Group or Knockout engines above to auto-generate matches, or click the button above to add custom rows manually.</p></div>';
-                updateFinalLockedMatches();
-                return;
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;"><p style="font-size: 1.2rem; margin-bottom: 10px;">No Matches Generated Yet</p><p style="font-size: 0.9rem;">Use the engines above to auto-generate matches, or add rows manually.</p></div>';
+                updateFinalLockedMatches(); return;
             }
 
             let poolRanks = [];
             Object.keys(poolsData).forEach(p => { 
-                if(p !== "Unassigned" && p !== "Single Pool / League") {
-                    poolRanks.push(`${p} - Rank 1`); poolRanks.push(`${p} - Rank 2`); poolRanks.push(`${p} - Rank 3`);
-                }
+                if(p !== "Unassigned" && p !== "Single Pool / League") { poolRanks.push(`${p} - Rank 1`); poolRanks.push(`${p} - Rank 2`); poolRanks.push(`${p} - Rank 3`); }
             });
             
-            let activeNames = tourneyTeams.map(t => t.name);
+            let activeNames = selectedTourneyTeams.map(t => t.name);
             let allOptsArray = [
                 `<optgroup label="Real Teams">`, ...activeNames.map(t => `<option value="${t}">${t}</option>`), `</optgroup>`,
                 `<optgroup label="Placeholders">`, ...standardPlaceholders.map(t => `<option value="${t}">${t}</option>`), ...poolRanks.map(t => `<option value="${t}">${t}</option>`), `</optgroup>`
@@ -802,86 +762,58 @@
             updateFinalLockedMatches();
         }
 
-        // --- 5. CLOUD DEPLOY (Step 4) ---
-        function updateFinalLockedMatches() {
-            let tName = document.getElementById('t-name').value || "Unnamed Tournament"; 
-            let container = document.getElementById('postings-body');
-            
-            if(masterFixtures.length === 0) {
-                 container.innerHTML = `<tr><td colspan="2" style="text-align: center; padding: 30px; color: #94a3b8;">Build your fixtures in the Match Canvas to view postings.</td></tr>`;
-                 return;
-            }
-            
-            container.innerHTML = masterFixtures.map((m, i) => `
-                <tr>
-                    <td style="font-weight: bold; color: #38bdf8; font-size: 1.1rem;">
-                        <div style="font-size: 0.7rem; color: #eab308; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">🏆 ${tName}</div>
-                        ${i + 1}. ${m.name}<div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">${m.t1 || 'TBD'} vs ${m.t2 || 'TBD'}</div>
-                    </td>
-                    <td>
-                        <div style="color:#10b981; font-weight:bold;">${m.pin ? 'Live on Cloud (PIN: ' + m.pin + ')' : 'Ready for Cloud Injection'}</div>
-                        <div style="font-size:0.75rem; color:#94a3b8;">${m.pin ? 'Edits will update the live match.' : 'Scorer PIN will be generated automatically.'}</div>
-                    </td>
-                </tr>`).join('');
+        function lockCanvasAndProceed() { updateFinalLockedMatches(); document.querySelectorAll('.nav-item')[2].click(); }
+
+        // --- SQUADS & CLOUD DEPLOY ---
+        function updateSquadSelectCount(safeTeamClass) {
+            let count = document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).length;
+            document.getElementById('squad-select-count').innerText = `${count} Selected`;
         }
 
-        function generateUniquePin() { return Math.floor(1000 + Math.random() * 9000).toString(); }
+        function openPlayerModal() {
+            const targetTeam = document.getElementById('squad-team-select').value;
+            if(!targetTeam) { alert("Please select a Team to Review from the dropdown first!"); return; }
+            document.getElementById('quick-player-target-team').innerText = targetTeam;
+            openModal('quick-player-modal');
+        }
 
-        async function saveMatchesToCloud() {
-            if(!currentTournamentId) { alert("Tournament ID missing. Ensure Basic Settings are saved first."); return; }
-            if(masterFixtures.length === 0) { alert("No matches found to deploy."); return; }
+        async function quickSavePlayer(btn) {
+            const teamName = document.getElementById('squad-team-select').value;
+            const name = document.getElementById('quick-p-name').value.trim();
+            const father = document.getElementById('quick-p-father').value.trim();
+            const dob = document.getElementById('quick-p-dob').value;
+            const role = document.getElementById('quick-p-role').value;
 
-            const btn = document.getElementById('btnDeploy');
-            btn.innerText = "⏳ Injecting Fixtures to Supabase...";
-            let generatedOutput = [];
+            if(!name || !father || !dob) { alert("Name, Father, and DOB are required."); return; }
+            btn.innerText = "Saving to Cloud..."; btn.disabled = true;
 
-            let tName = document.getElementById('t-name').value;
-            let tFormat = document.getElementById('t-format').value;
+            const { data: existing } = await db.from('players').select('player_id').ilike('full_name', name).eq('father_name', father).eq('dob', dob);
+            let playerIdToUse;
 
-            for (let m of masterFixtures) {
-                let pin = m.pin || generateUniquePin();
-                
-                // Fetch team IDs if they are real teams, otherwise let Supabase handle nulls for TBDs
-                let t1Obj = tourneyTeams.find(t => t.name === m.t1);
-                let t2Obj = tourneyTeams.find(t => t.name === m.t2);
-                let team1UUID = t1Obj ? t1Obj.team_id : null; 
-                let team2UUID = t2Obj ? t2Obj.team_id : null;
-
-                let matchPayload = {
-                    match_id: m.id,
-                    tournament_id: currentTournamentId,
-                    team_a_id: team1UUID,
-                    team_b_id: team2UUID,
-                    scorer_pin: pin,
-                    full_state: { tournament: tName, format: tFormat, team1: m.t1, team2: m.t2, matchName: m.name, match_status: 'upcoming' }
-                };
-
-                await db.from('matches').upsert([matchPayload]);
-                generatedOutput.push({ id: m.id, name: m.name, t1: m.t1, t2: m.t2, pin: pin });
+            if (existing && existing.length > 0) {
+                playerIdToUse = existing[0].player_id;
+            } else {
+                const { data: newP, error } = await db.from('players').insert([{ full_name: name, father_name: father, dob: dob, playing_role: role }]).select();
+                if (error) { alert("Player Insert Error: " + error.message); btn.innerText = "Save to Master & Add to Squad"; btn.disabled = false; return; }
+                playerIdToUse = newP[0].player_id;
             }
 
-            btn.style.display = 'none';
-            displayPins(generatedOutput);
+            let tObj = selectedTourneyTeams.find(t => t.name === teamName);
+            await db.from('team_rosters').upsert([{ team_name: teamName, player_id: playerIdToUse }], {onConflict: 'team_name, player_id'});
+
+            let safeTeamClass = teamName.replace(/\s+/g, '_');
+            let previouslyCheckedIds = [];
+            document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).forEach(chk => previouslyCheckedIds.push(chk.value));
             
-            // Mark tournament as published
-            await db.from('tournaments').update({ status: 'published' }).eq('tournament_id', currentTournamentId);
-            let badge = document.getElementById('tourney-status-badge');
-            badge.innerText = "LIVE"; badge.style.background = "#f59e0b"; badge.style.color = "#020617";
+            previouslyCheckedIds.push(playerIdToUse);
+            tournamentSquadsCache[teamName] = previouslyCheckedIds;
+            await loadWizardSquad(teamName);
+
+            closeAllModals(); document.getElementById('quick-p-name').value = ''; document.getElementById('quick-p-father').value = ''; document.getElementById('quick-p-dob').value = '';
+            btn.innerText = "Save to Master & Add to Squad"; btn.disabled = false;
         }
 
-        function displayPins(matches) {
-            let tName = document.getElementById('t-name').value || "Unnamed Tournament"; 
-            let html = `<div style="background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #10b981; margin-top: 25px;"><h3 style="color: #10b981; margin-top: 0;">✅ Database Injected Successfully!</h3><p style="color: #94a3b8; font-size: 0.9rem;">Share these exact Match IDs and PINs with your Scorers.</p><table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem;"><tr style="background: #1e293b; color: #cbd5e1;"><th style="padding: 10px; text-align: left;">Match ID</th><th style="padding: 10px; text-align: left;">Teams</th><th style="padding: 10px; text-align: center; color: #f59e0b;">Scorer PIN</th></tr>`;
-            matches.forEach((m, index) => { 
-                html += `<tr style="border-bottom: 1px solid #1e293b;"><td style="padding: 10px; color: #38bdf8; font-weight:bold;">${index + 1}. ${m.id}</td><td style="padding: 10px; color: #94a3b8;"><div style="font-size:0.7rem; color:#eab308; text-transform:uppercase; font-weight:bold; margin-bottom:3px;">🏆 ${tName}</div>${m.t1} vs ${m.t2} <div style="font-size:0.75rem; color:white;">${m.name}</div></td><td style="padding: 10px; text-align: center; font-size: 1.5rem; font-weight: bold; color: #f59e0b; letter-spacing: 3px;">${m.pin}</td></tr>`; 
-            });
-            html += `</table></div>`;
-            document.getElementById('step4').innerHTML += html;
-        }
-        
-        // --- 6. SQUAD VERIFICATION ---
         async function loadWizardSquad(teamName) {
-            // Function logic retained perfectly from your previous setup
             const container = document.getElementById('wizard-player-slots-container');
             if(!teamName) { container.innerHTML = '<div style="text-align: center; color: #475569; padding: 40px; font-style: italic;">Select a team above to view and assign players.</div>'; return; }
             container.innerHTML = `<div style="text-align: center; color: #94a3b8; padding: 20px;">Fetching Master Roster for ${teamName}...</div>`;
@@ -904,31 +836,95 @@
                 }
             });
             html += `</div>`;
-            html += `<button type="button" style="background:#10b981; width:100%; padding:12px; margin-top:20px; border:none; border-radius:6px; color:white; font-weight:bold; cursor:pointer;" onclick="syncSquadToTournament(event, '${teamName}', '${safeTeamClass}')">🔄 Sync & Save Squad to Live Tournament</button>`;
+            html += `<button type="button" style="background:#10b981; width:100%; padding:12px; margin-top:20px; border:none; border-radius:6px; color:white; font-weight:bold; cursor:pointer;" onclick="syncSquadToTournament(event, '${teamName.replace(/'/g, "\\'")}', '${safeTeamClass}')">🔄 Sync & Save Squad to Live Tournament</button>`;
             container.innerHTML = html; updateSquadSelectCount(safeTeamClass); 
-        }
-
-        function updateSquadSelectCount(safeTeamClass) {
-            let count = document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).length;
-            document.getElementById('squad-select-count').innerText = `${count} Selected`;
         }
 
         async function syncSquadToTournament(event, teamName, safeTeamClass) {
             if(!currentTournamentId) { alert("Tournament not saved yet."); return; }
-            let tObj = tourneyTeams.find(t => t.name === teamName);
+            let tObj = selectedTourneyTeams.find(t => t.name === teamName);
             if(!tObj) return;
-            let teamUUID = tObj.team_id;
             
             let selectedIds = []; document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).forEach(chk => selectedIds.push(chk.value));
             tournamentSquadsCache[teamName] = selectedIds;
             if(selectedIds.length === 0) { alert("Please select at least one player to sync."); return; }
             
             const btn = event.target; const originalText = btn.innerText; btn.innerText = "⏳ Syncing...";
-            let payload = selectedIds.map(pid => ({ tournament_id: currentTournamentId, team_id: teamUUID, player_id: pid }));
+            let payload = selectedIds.map(pid => ({ tournament_id: currentTournamentId, team_id: tObj.team_id, player_id: pid }));
             const { error } = await db.from('tournament_squads').upsert(payload, {onConflict: 'tournament_id, team_id, player_id'});
             
             if(error) { alert("Error syncing squad: " + error.message); btn.innerText = originalText; } 
             else { alert(`✅ Successfully synced ${selectedIds.length} players to the live tournament!`); btn.innerText = "✅ Synced Successfully!"; setTimeout(() => btn.innerText = originalText, 3000); }
+        }
+
+        function finishSquadsAndProceed() { updateFinalLockedMatches(); document.querySelectorAll('.nav-item')[3].click(); }
+
+        function updateFinalLockedMatches() {
+            let tName = document.getElementById('t-name').value || "Unnamed Tournament"; 
+            let container = document.getElementById('postings-body');
+            if(masterFixtures.length === 0) {
+                 container.innerHTML = `<tr><td colspan="2" style="text-align: center; padding: 30px; color: #94a3b8;">Build your fixtures in the Match Canvas to view postings.</td></tr>`;
+                 return;
+            }
+            container.innerHTML = masterFixtures.map((m, i) => `
+                <tr>
+                    <td style="font-weight: bold; color: #38bdf8; font-size: 1.1rem;">
+                        <div style="font-size: 0.7rem; color: #eab308; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">🏆 ${tName}</div>
+                        ${i + 1}. ${m.name}<div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">${m.t1 || 'TBD'} vs ${m.t2 || 'TBD'}</div>
+                    </td>
+                    <td>
+                        <div style="color:#10b981; font-weight:bold;">${m.pin ? 'Live on Cloud (PIN: ' + m.pin + ')' : 'Ready for Cloud Injection'}</div>
+                        <div style="font-size:0.75rem; color:#94a3b8;">${m.pin ? 'Edits will update the live match.' : 'Scorer PIN will be generated automatically.'}</div>
+                    </td>
+                </tr>`).join('');
+        }
+
+        function generateUniqueMatchID(prefix) { return `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`; }
+        function generateUniquePin() { return Math.floor(1000 + Math.random() * 9000).toString(); }
+
+        async function saveMatchesToCloud() {
+            if(!currentTournamentId) { alert("Tournament ID missing. Ensure Basic Settings are saved first."); return; }
+            if(masterFixtures.length === 0) { alert("No matches found to deploy."); return; }
+
+            const btn = document.getElementById('btnDeploy');
+            btn.innerText = "⏳ Injecting Fixtures to Supabase...";
+            let generatedOutput = [];
+
+            let tName = document.getElementById('t-name').value;
+            let tFormat = document.getElementById('t-format').value;
+
+            for (let m of masterFixtures) {
+                let pin = m.pin || generateUniquePin();
+                let t1Obj = selectedTourneyTeams.find(t => t.name === m.t1);
+                let t2Obj = selectedTourneyTeams.find(t => t.name === m.t2);
+                let team1UUID = t1Obj ? t1Obj.team_id : null; 
+                let team2UUID = t2Obj ? t2Obj.team_id : null;
+
+                let matchPayload = {
+                    match_id: m.id,
+                    tournament_id: currentTournamentId,
+                    team_a_id: team1UUID,
+                    team_b_id: team2UUID,
+                    scorer_pin: pin,
+                    full_state: { tournament: tName, format: tFormat, team1: m.t1, team2: m.t2, matchName: m.name, match_status: 'upcoming' }
+                };
+
+                await db.from('matches').upsert([matchPayload]);
+                generatedOutput.push({ id: m.id, name: m.name, t1: m.t1, t2: m.t2, pin: pin });
+            }
+
+            btn.style.display = 'none';
+            displayPins(generatedOutput);
+        }
+
+        function displayPins(matches) {
+            let tName = document.getElementById('t-name').value || "Unnamed Tournament"; 
+            let html = `<div style="background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #10b981; margin-top: 25px;"><h3 style="color: #10b981; margin-top: 0;">✅ Database Injected Successfully!</h3><p style="color: #94a3b8; font-size: 0.9rem;">Share these exact Match IDs and PINs with your Scorers.</p><table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem;"><tr style="background: #1e293b; color: #cbd5e1;"><th style="padding: 10px; text-align: left;">Match ID</th><th style="padding: 10px; text-align: left;">Teams</th><th style="padding: 10px; text-align: center; color: #f59e0b;">Scorer PIN</th></tr>`;
+            matches.forEach((m, index) => { 
+                html += `<tr style="border-bottom: 1px solid #1e293b;"><td style="padding: 10px; color: #38bdf8; font-weight:bold;">${index + 1}. ${m.id}</td><td style="padding: 10px; color: #94a3b8;"><div style="font-size:0.7rem; color:#eab308; text-transform:uppercase; font-weight:bold; margin-bottom:3px;">🏆 ${tName}</div>${m.t1} vs ${m.t2} <div style="font-size:0.75rem; color:white;">${m.name}</div></td><td style="padding: 10px; text-align: center; font-size: 1.5rem; font-weight: bold; color: #f59e0b; letter-spacing: 3px;">${m.pin}</td></tr>`; 
+            });
+            html += `</table></div>`;
+            document.getElementById('step4').innerHTML += html;
         }
     </script>
 </body>
