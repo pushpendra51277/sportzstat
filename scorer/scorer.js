@@ -556,6 +556,7 @@ function toggleFreeHit() {
     state.current.isFreeHit = !state.current.isFreeHit;
     updateUI();
 }
+
 function manualEndOver() {
     if (state.current.bIdx === null) { alert("No bowler is currently active!"); return; }
     
@@ -566,17 +567,32 @@ function manualEndOver() {
     
     if (currentOverBalls === 0) { alert("No legal deliveries bowled in this over yet!"); return; }
 
-    // 🔥 NEW HELPER: Wipes Free Hit before executing the end of over
     const confirmAndEndOver = () => {
-        if (state.free_hit_pending) {
-            state.free_hit_pending = false; // Note: Ensure this matches your exact state variable name
+        // 1. Wipe Free Hit if Umpire calls over
+        if (state.current.isFreeHit) {
+            state.current.isFreeHit = false;
             const fhBadge = document.getElementById('freeHitBadge');
             if (fhBadge) fhBadge.classList.add('hidden');
-            console.log("Free Hit wiped: Over ended manually by Umpire call.");
         }
+
+        // 2. THE GHOST TRIM: Fixes Umpire Miscounts (7-ball, 8-ball, etc.)
+        if (currentOverBalls > 6) {
+            let excess = currentOverBalls - 6;
+            
+            // Trim the raw ball counts so the math stays perfectly aligned
+            state.current.balls -= excess;
+            
+            // Trim the bowler's raw ball count so their stats show whole overs
+            let b = getBowlTeam().players[state.current.bIdx];
+            if (b) b.o -= excess;
+            
+            console.log(`Umpire miscount handled: Trimmed ${excess} excess balls. Runs & wickets kept.`);
+        }
+
         executeEndOver();
     };
 
+    // If Umpire calls over EARLY (e.g., 5 balls)
     if (currentOverBalls < 6) { 
         showModal(
             "⚠️ Early Over Call", 
@@ -584,7 +600,7 @@ function manualEndOver() {
              <div class="text-center text-muted" style="font-size:0.85rem;">Do you really want to end this over early?</div>`, 
             () => { 
                 closeModal(); 
-                confirmAndEndOver(); // Wipes free hit and ends over if modal confirmed
+                confirmAndEndOver(); 
             }, 
             false, 
             "360px", 
@@ -593,9 +609,9 @@ function manualEndOver() {
         return; 
     }
     
-    // Wipes free hit and ends over directly for 6+ balls (the 7th-ball scenario)
+    // If 6 balls (normal) or 7+ balls (Umpire miscount late call)
     confirmAndEndOver(); 
-}
+}  
 
 function checkAutoOverPrompt() {
     let cur = state.current;
