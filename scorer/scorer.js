@@ -536,10 +536,43 @@ function executeEndOver() {
 
 function manualEndOver() {
     if (state.current.bIdx === null) { alert("No bowler is currently active!"); return; }
-    let cur = state.current; let completedOvers = cur.overHistory.length; let ballsInPreviousOvers = completedOvers > 0 ? (cur.overHistory[completedOvers - 1].totalBallsAtEnd || (completedOvers * 6)) : 0; let currentOverBalls = Math.max(0, cur.balls - ballsInPreviousOvers);
+    
+    let cur = state.current; 
+    let completedOvers = cur.overHistory.length; 
+    let ballsInPreviousOvers = completedOvers > 0 ? (cur.overHistory[completedOvers - 1].totalBallsAtEnd || (completedOvers * 6)) : 0; 
+    let currentOverBalls = Math.max(0, cur.balls - ballsInPreviousOvers);
+    
     if (currentOverBalls === 0) { alert("No legal deliveries bowled in this over yet!"); return; }
-    if (currentOverBalls < 6) { showModal("⚠️ Early Over Call", `<div class="text-center mb-10 text-accent" style="font-size:1.1rem;">Only <b>${currentOverBalls}</b> legal deliveries bowled!</div><div class="text-center text-muted" style="font-size:0.85rem;">Do you really want to end this over early?</div>`, () => { closeModal(); executeEndOver(); }, false, "360px", "Yes, Call Over"); return; }
-    executeEndOver();
+
+    // 🔥 NEW HELPER: Wipes Free Hit before executing the end of over
+    const confirmAndEndOver = () => {
+        if (state.free_hit_pending) {
+            state.free_hit_pending = false; // Note: Ensure this matches your exact state variable name
+            const fhBadge = document.getElementById('freeHitBadge');
+            if (fhBadge) fhBadge.classList.add('hidden');
+            console.log("Free Hit wiped: Over ended manually by Umpire call.");
+        }
+        executeEndOver();
+    };
+
+    if (currentOverBalls < 6) { 
+        showModal(
+            "⚠️ Early Over Call", 
+            `<div class="text-center mb-10 text-accent" style="font-size:1.1rem;">Only <b>${currentOverBalls}</b> legal deliveries bowled!</div>
+             <div class="text-center text-muted" style="font-size:0.85rem;">Do you really want to end this over early?</div>`, 
+            () => { 
+                closeModal(); 
+                confirmAndEndOver(); // Wipes free hit and ends over if modal confirmed
+            }, 
+            false, 
+            "360px", 
+            "Yes, Call Over"
+        ); 
+        return; 
+    }
+    
+    // Wipes free hit and ends over directly for 6+ balls (the 7th-ball scenario)
+    confirmAndEndOver(); 
 }
 
 function checkAutoOverPrompt() {
