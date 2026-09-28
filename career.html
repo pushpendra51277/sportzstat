@@ -18,7 +18,7 @@
         .action-btn { background: #1e293b; border: 1px solid #38bdf8; color: #38bdf8; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: 0.2s; }
         .action-btn:hover { background: #38bdf8; color: #0f172a; }
 
-        /* 🔥 NEW: SPRINT-STYLE TAB NAVIGATION */
+        /* SPRINT-STYLE TAB NAVIGATION */
         .tab-nav { display: flex; gap: 30px; border-bottom: 2px solid #1e293b; margin-top: 15px; margin-bottom: 25px; }
         .tab-btn { background: none; border: none; color: #64748b; font-size: 1rem; font-weight: 800; cursor: pointer; padding: 10px 5px; position: relative; transition: 0.3s; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
         .tab-btn:hover { color: #cbd5e1; }
@@ -34,19 +34,14 @@
         .toggle-lbl { background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; cursor: pointer; display: flex; align-items: center; gap: 6px; border: 1px solid #334155; user-select: none; transition: 0.2s; font-weight: bold; }
         .toggle-lbl:hover { background: rgba(255,255,255,0.1); border-color: #475569; }
         .toggle-lbl input { cursor: pointer; margin: 0; width: 14px; height: 14px; accent-color: #38bdf8; }
+        .hidden { display: none !important; }
 
-        /* Dashboard Layout */
-        .dashboard-layout { display: flex; gap: 20px; align-items: flex-start; }
-        .table-section { flex: 1; min-width: 0; }
-        .side-panel { width: 380px; flex-shrink: 0; display: flex; flex-direction: column; gap: 20px; max-height: 520px; overflow-y: auto; padding-right: 5px; }
-        .side-panel::-webkit-scrollbar { width: 6px; }
-        .side-panel::-webkit-scrollbar-track { background: transparent; }
-        .side-panel::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
-
-        /* Table Setup */
-        .table-container { background: #1e293b; border-radius: 10px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.3); overflow: hidden; }
+        /* Full Width Table Setup */
+        .table-container { background: #1e293b; border-radius: 10px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.3); overflow: hidden; width: 100%; }
         .table-header { padding: 15px 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
-        .table-scroll-wrapper { max-height: 450px; overflow-y: auto; overflow-x: auto; position: relative; }
+        
+        /* 🔥 NEW: Much taller table wrapper so you can see more players at once */
+        .table-scroll-wrapper { max-height: 75vh; overflow-y: auto; overflow-x: auto; position: relative; }
         .table-scroll-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
         .table-scroll-wrapper::-webkit-scrollbar-track { background: #0f172a; }
         .table-scroll-wrapper::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
@@ -101,15 +96,13 @@
         table.hide-stumpings .col-stumpings { display: none !important; }
         table.hide-runouts .col-runouts { display: none !important; }
 
-        /* Chart Cards Setup */
-        .chart-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); position: relative; }
-        .chart-title { font-size: 1rem; font-weight: bold; margin-top: 0; margin-bottom: 5px; color: #f8fafc; }
-        .chart-subtitle { font-size: 0.7rem; color: #94a3b8; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
-        .canvas-container { position: relative; height: 260px; width: 100%; }
-
         /* Advanced Analytics Grid */
         .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 25px; margin-bottom: 40px; }
+        .chart-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); position: relative; overflow: hidden; }
+        
         .adv-canvas-container { position: relative; height: 320px; width: 100%; }
+        .chart-title { font-size: 1.1rem; font-weight: bold; margin-top: 0; margin-bottom: 5px; color: #f8fafc; display: flex; align-items: center; gap: 8px; }
+        .chart-subtitle { font-size: 0.75rem; color: #94a3b8; margin-top: 0; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
         
         /* Advanced Card Glows */
         .card-glow-purple::before { content: ''; position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(168, 85, 247, 0.2); filter: blur(40px); border-radius: 50%; pointer-events: none; }
@@ -172,11 +165,6 @@
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         
-        @media (max-width: 1024px) { 
-            .dashboard-layout { flex-direction: column; }
-            .side-panel { width: 100%; max-height: none; flex-direction: row; flex-wrap: wrap; }
-            .side-panel .chart-card { flex: 1; min-width: 300px; }
-        }
         @media (max-width: 768px) {
             .analytics-grid { grid-template-columns: 1fr; }
             .filter-select, .filter-input { min-width: 100%; }
@@ -196,7 +184,7 @@
         </div>
     </div>
 
-    <!-- 🔥 NEW: TAB NAVIGATION -->
+    <!-- TAB NAVIGATION -->
     <div class="tab-nav">
         <button id="btn-tab-career" class="tab-btn active" onclick="switchTab('career')">📊 Career Stats</button>
         <button id="btn-tab-analytics" class="tab-btn" onclick="switchTab('analytics')">📈 Advanced Analytics</button>
@@ -212,10 +200,11 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- VIEW 1: CAREER STATS TABLE & SIDE PANEL    -->
+    <!-- VIEW 1: CAREER STATS TABLE (Full Width)    -->
     <!-- ========================================== -->
     <div id="view-career">
-        <!-- COLUMN TOGGLE PANEL -->
+        
+        <!-- COLUMN TOGGLE PANEL (HIDDEN BY DEFAULT) -->
         <div id="col-toggles" class="toggle-panel hidden">
             <div style="width: 100%; color: #38bdf8; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">GENERAL</div>
             <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('mat', this.checked)"> Matches</label>
@@ -251,70 +240,72 @@
             <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('runouts', this.checked)"> Run Outs</label>
         </div>
 
-        <div class="dashboard-layout">
-            <div class="table-section">
-                <div class="table-container">
-                    <div class="table-header">
-                        <h3 style="margin:0; color:#38bdf8;">📊 Career Aggregation Table</h3>
-                        <span style="font-size:0.75rem; color:#94a3b8;">Click any column header to sort</span>
-                    </div>
-                    <div class="table-scroll-wrapper">
-                        <table id="career-table">
-                            <thead>
-                                <tr>
-                                    <th class="col-name" onclick="sortTable('name')">Player Name ↕</th>
-                                    <th class="col-team" onclick="sortTable('team')">Team ↕</th>
-                                    <th class="col-mat" onclick="sortTable('mat')">Mat ↕</th>
-                                    
-                                    <th class="bat-hdr col-inn" onclick="sortTable('inn')">Inn ↕</th>
-                                    <th class="bat-hdr col-runs" onclick="sortTable('runs')">Runs ↕</th>
-                                    <th class="bat-hdr col-best" onclick="sortTable('best')">Best ↕</th>
-                                    <th class="bat-hdr col-bf" onclick="sortTable('bf')">BF ↕</th>
-                                    <th class="bat-hdr col-avg" onclick="sortTable('avg')">Avg ↕</th>
-                                    <th class="bat-hdr col-sr" onclick="sortTable('sr')">SR ↕</th>
-                                    <th class="bat-hdr col-hundreds" onclick="sortTable('hundreds')">100s ↕</th>
-                                    <th class="bat-hdr col-fifties" onclick="sortTable('fifties')">50s ↕</th>
-                                    <th class="bat-hdr col-fours" onclick="sortTable('fours')">4s ↕</th>
-                                    <th class="bat-hdr col-sixes" onclick="sortTable('sixes')">6s ↕</th>
-                                    <th class="bat-hdr col-no" onclick="sortTable('no')">NO ↕</th>
-                                    <th class="bat-hdr col-ducks" onclick="sortTable('ducks')">Ducks ↕</th>
-                                    
-                                    <th class="bowl-hdr col-overs" onclick="sortTable('overs')">Overs ↕</th>
-                                    <th class="bowl-hdr col-mdn" onclick="sortTable('mdn')">Mdn ↕</th>
-                                    <th class="bowl-hdr col-rc" onclick="sortTable('rc')">RC ↕</th>
-                                    <th class="bowl-hdr col-wkts" onclick="sortTable('wkts')">Wkts ↕</th>
-                                    <th class="bowl-hdr col-bbi" onclick="sortTable('bbiW')">BBI ↕</th>
-                                    <th class="bowl-hdr col-bavg" onclick="sortTable('bAvg')">B.Avg ↕</th>
-                                    <th class="bowl-hdr col-econ" onclick="sortTable('econ')">Econ ↕</th>
-                                    <th class="bowl-hdr col-w4" onclick="sortTable('w4')">4W ↕</th>
-                                    <th class="bowl-hdr col-w5" onclick="sortTable('w5')">5W ↕</th>
-
-                                    <th class="field-hdr col-catches" onclick="sortTable('catches')">Ct ↕</th>
-                                    <th class="field-hdr col-stumpings" onclick="sortTable('stumpings')">St ↕</th>
-                                    <th class="field-hdr col-runouts" onclick="sortTable('runouts')">RO ↕</th>
-                                </tr>
-                            </thead>
-                            <tbody id="career-tbody">
-                                <tr><td colspan="27" style="text-align:center;">Loading cloud data...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+        <div class="table-container">
+            <div class="table-header">
+                <h3 style="margin:0; color:#38bdf8;">📊 Career Aggregation Table</h3>
+                <span style="font-size:0.75rem; color:#94a3b8;">Click any column header to sort</span>
             </div>
+            <div class="table-scroll-wrapper">
+                <table id="career-table">
+                    <thead>
+                        <tr>
+                            <th class="col-name" onclick="sortTable('name')">Player Name ↕</th>
+                            <th class="col-team" onclick="sortTable('team')">Team ↕</th>
+                            <th class="col-mat" onclick="sortTable('mat')">Mat ↕</th>
+                            
+                            <th class="bat-hdr col-inn" onclick="sortTable('inn')">Inn ↕</th>
+                            <th class="bat-hdr col-runs" onclick="sortTable('runs')">Runs ↕</th>
+                            <th class="bat-hdr col-best" onclick="sortTable('best')">Best ↕</th>
+                            <th class="bat-hdr col-bf" onclick="sortTable('bf')">BF ↕</th>
+                            <th class="bat-hdr col-avg" onclick="sortTable('avg')">Avg ↕</th>
+                            <th class="bat-hdr col-sr" onclick="sortTable('sr')">SR ↕</th>
+                            <th class="bat-hdr col-hundreds" onclick="sortTable('hundreds')">100s ↕</th>
+                            <th class="bat-hdr col-fifties" onclick="sortTable('fifties')">50s ↕</th>
+                            <th class="bat-hdr col-fours" onclick="sortTable('fours')">4s ↕</th>
+                            <th class="bat-hdr col-sixes" onclick="sortTable('sixes')">6s ↕</th>
+                            <th class="bat-hdr col-no" onclick="sortTable('no')">NO ↕</th>
+                            <th class="bat-hdr col-ducks" onclick="sortTable('ducks')">Ducks ↕</th>
+                            
+                            <th class="bowl-hdr col-overs" onclick="sortTable('overs')">Overs ↕</th>
+                            <th class="bowl-hdr col-mdn" onclick="sortTable('mdn')">Mdn ↕</th>
+                            <th class="bowl-hdr col-rc" onclick="sortTable('rc')">RC ↕</th>
+                            <th class="bowl-hdr col-wkts" onclick="sortTable('wkts')">Wkts ↕</th>
+                            <th class="bowl-hdr col-bbi" onclick="sortTable('bbiW')">BBI ↕</th>
+                            <th class="bowl-hdr col-bavg" onclick="sortTable('bAvg')">B.Avg ↕</th>
+                            <th class="bowl-hdr col-econ" onclick="sortTable('econ')">Econ ↕</th>
+                            <th class="bowl-hdr col-w4" onclick="sortTable('w4')">4W ↕</th>
+                            <th class="bowl-hdr col-w5" onclick="sortTable('w5')">5W ↕</th>
 
-            <div class="side-panel">
-                <div class="chart-card"><h3 class="chart-title" style="color:#f59e0b; text-align:center;">🔥 Top Scorers</h3><div class="canvas-container"><canvas id="chartRuns"></canvas></div></div>
-                <div class="chart-card"><h3 class="chart-title" style="color:#10b981; text-align:center;">🎯 Top Wickets</h3><div class="canvas-container"><canvas id="chartWickets"></canvas></div></div>
-                <div class="chart-card"><h3 class="chart-title" style="color:#38bdf8; text-align:center;">💥 Boundary Breakers</h3><div class="canvas-container"><canvas id="chartBoundaries"></canvas></div></div>
+                            <th class="field-hdr col-catches" onclick="sortTable('catches')">Ct ↕</th>
+                            <th class="field-hdr col-stumpings" onclick="sortTable('stumpings')">St ↕</th>
+                            <th class="field-hdr col-runouts" onclick="sortTable('runouts')">RO ↕</th>
+                        </tr>
+                    </thead>
+                    <tbody id="career-tbody">
+                        <tr><td colspan="27" style="text-align:center;">Loading cloud data...</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
     <!-- ========================================== -->
-    <!-- VIEW 2: ADVANCED ANALYTICS                 -->
+    <!-- VIEW 2: MEGA ADVANCED ANALYTICS (12 CHARTS)-->
     <!-- ========================================== -->
     <div id="view-analytics" class="hidden-view">
         <div class="analytics-grid">
+            
+            <!-- Basic Visuals -->
+            <div class="chart-card card-glow-amber"><h3 class="chart-title"><span style="color:#f59e0b;">🔥</span> Top 10 Run Scorers</h3><div class="adv-canvas-container"><canvas id="chartRuns"></canvas></div></div>
+            <div class="chart-card card-glow-emerald"><h3 class="chart-title"><span style="color:#10b981;">🎯</span> Top 10 Wicket Takers</h3><div class="adv-canvas-container"><canvas id="chartWickets"></canvas></div></div>
+            <div class="chart-card card-glow-blue"><h3 class="chart-title"><span style="color:#38bdf8;">💥</span> Boundary Breakdown</h3><p class="chart-subtitle">Top 10 Batters</p><div class="adv-canvas-container"><canvas id="chartBoundaries"></canvas></div></div>
+            
+            <!-- Weightage Polar Charts -->
+            <div class="chart-card card-glow-purple"><h3 class="chart-title"><span style="color:#a855f7;">🏆</span> Runs Weightage</h3><p class="chart-subtitle">Distribution across team</p><div class="adv-canvas-container"><canvas id="chartWeightRuns"></canvas></div></div>
+            <div class="chart-card card-glow-rose"><h3 class="chart-title"><span style="color:#ec4899;">☄️</span> Boundary Weightage</h3><p class="chart-subtitle">Total 4s & 6s hit</p><div class="adv-canvas-container"><canvas id="chartWeightBounds"></canvas></div></div>
+            <div class="chart-card card-glow-cyan"><h3 class="chart-title"><span style="color:#06b6d4;">🎳</span> Wicket Weightage</h3><p class="chart-subtitle">Distribution across team</p><div class="adv-canvas-container"><canvas id="chartWeightWkts"></canvas></div></div>
+
+            <!-- Deep Analytics -->
             <div class="chart-card card-glow-amber">
                 <h3 class="chart-title"><span style="color:#f59e0b;">⚔️</span> The Batting Matrix</h3>
                 <p class="chart-subtitle">Strike Rate (X) vs Average (Y) • Min 30 Runs</p>
@@ -427,17 +418,14 @@
 
         // 🔥 TAB SWITCHING LOGIC
         function switchTab(tabId) {
-            // Update Tab Buttons
             document.getElementById('btn-tab-career').classList.remove('active');
             document.getElementById('btn-tab-analytics').classList.remove('active');
             document.getElementById('btn-tab-' + tabId).classList.add('active');
 
-            // Toggle Views
             document.getElementById('view-career').classList.add('hidden-view');
             document.getElementById('view-analytics').classList.add('hidden-view');
             document.getElementById('view-' + tabId).classList.remove('hidden-view');
 
-            // Force charts to re-render in case the canvas size was 0 when hidden
             renderCharts();
         }
 
@@ -592,7 +580,6 @@
                 p.econ = p.bowlBalls > 0 ? ((p.rc / p.bowlBalls) * 6) : 0;
                 p.bAvg = p.wkts > 0 ? (p.rc / p.wkts) : 0;
                 
-                // Advanced Calculated Stats
                 let boundaryRuns = (p.fours * 4) + (p.sixes * 6);
                 p.brc = p.runs > 0 ? (boundaryRuns / p.runs) * 100 : 0;
                 let totalBoundaries = p.fours + p.sixes;
@@ -744,7 +731,7 @@
             }).join('');
         }
 
-        // 🔥 Renders ALL charts (both Career and Advanced views)
+        // 🔥 Master Chart Renderer for both tabs
         function renderCharts() {
             const createChart = (id, type, data, options) => {
                 const ctx = document.getElementById(id);
@@ -754,26 +741,41 @@
             };
 
             const barOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: { beginAtZero: true, grid:{color:'#334155'} }, x:{ grid:{display:false} } } };
-            const stackedBarOptions = { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, grid:{display:false} }, y: { stacked: true, grid:{color:'#334155'} } } };
-            
-            // Format labels for clean axis display
+            const stackedBarOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { x: { stacked: true, grid:{display:false} }, y: { stacked: true, grid:{color:'#334155'} } } };
+            const polarOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels:{color:'#cbd5e1'} } } };
+            const scatterTooltip = { callbacks: { label: function(context) { return `${context.raw.player}: (${context.raw.x.toFixed(1)}, ${context.raw.y.toFixed(1)})`; } } };
+
             let formatChartLabels = (players) => players.map(p => p.name.length > 15 ? p.name.substring(0,15) + '...' : p.name);
 
-            // ==========================================
-            // VIEW 1 CHARTS (Career Stats Side Panel)
-            // ==========================================
+            // Chart Data Prep
             let topBatters = [...aggregatedData].sort((a,b) => b.runs - a.runs).slice(0, 10);
             let topBowlers = [...aggregatedData].sort((a,b) => b.wkts - a.wkts).slice(0, 10);
+            const polarColors = ['#3b82f6', '#f59e0b', '#10b981', '#a855f7', '#ec4899', 'rgba(255,255,255,0.1)'];
 
+            // 1. Basic Bar Charts
             createChart('chartRuns', 'bar', { labels: formatChartLabels(topBatters), datasets: [{ label: 'Runs', data: topBatters.map(p => p.runs), backgroundColor: '#f59e0b', borderRadius: 4 }] }, barOptions);
             createChart('chartBoundaries', 'bar', { labels: formatChartLabels(topBatters), datasets: [{ label: 'Sixes (6s)', data: topBatters.map(p => p.sixes), backgroundColor: '#ec4899' }, { label: 'Fours (4s)', data: topBatters.map(p => p.fours), backgroundColor: '#a855f7' }] }, stackedBarOptions);
             createChart('chartWickets', 'bar', { labels: formatChartLabels(topBowlers), datasets: [{ label: 'Wickets', data: topBowlers.map(p => p.wkts), backgroundColor: '#10b981', borderRadius: 4 }] }, barOptions);
 
-            // ==========================================
-            // VIEW 2 CHARTS (Advanced Analytics Tab)
-            // ==========================================
-            const scatterTooltip = { callbacks: { label: function(context) { return `${context.raw.player}: (${context.raw.x.toFixed(1)}, ${context.raw.y.toFixed(1)})`; } } };
+            // 2. Polar Weightage Charts
+            let getPolarData = (sortKey) => {
+                let sorted = [...aggregatedData].sort((a,b) => b[sortKey] - a[sortKey]);
+                let top5 = sorted.slice(0,5); let othersSum = sorted.slice(5).reduce((sum, p) => sum + p[sortKey], 0);
+                let labels = formatChartLabels(top5); let data = top5.map(p => p[sortKey]);
+                if (othersSum > 0) { labels.push('Rest of Players'); data.push(othersSum); }
+                return { labels, data };
+            };
+            let rW = getPolarData('runs');
+            createChart('chartWeightRuns', 'polarArea', { labels: rW.labels, datasets: [{ data: rW.data, backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, polarOptions);
 
+            let trueBounds = [...aggregatedData].map(p => ({name: p.name, b: p.fours+p.sixes})).sort((a,b) => b.b - a.b);
+            let tbTop = trueBounds.slice(0,5); let tbOth = trueBounds.slice(5).reduce((s,p)=>s+p.b,0);
+            createChart('chartWeightBounds', 'polarArea', { labels: [...formatChartLabels(tbTop), ...(tbOth>0?['Rest of Players']:[])], datasets: [{ data: [...tbTop.map(p=>p.b), ...(tbOth>0?[tbOth]:[])], backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, polarOptions);
+
+            let wW = getPolarData('wkts');
+            createChart('chartWeightWkts', 'polarArea', { labels: wW.labels, datasets: [{ data: wW.data, backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, polarOptions);
+
+            // 3. Advanced Matrices (Scatter)
             let batMatrixData = aggregatedData.filter(p => p.runs >= 30).map(p => ({ x: p.sr, y: p.avg, player: p.dispName }));
             createChart('battingMatrix', 'scatter', { datasets: [{ label: 'Batters', data: batMatrixData, backgroundColor: '#f59e0b', pointRadius: 6, pointHoverRadius: 8 }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: {display:false}, tooltip: scatterTooltip }, scales: { x: { title: { display: true, text: 'Strike Rate', color: '#94a3b8' } }, y: { title: { display: true, text: 'Batting Average', color: '#94a3b8' } } } });
 
@@ -783,6 +785,7 @@
             let mvpData = aggregatedData.filter(p => p.runs > 0 || p.wkts > 0).map(p => ({ x: p.runs, y: p.wkts, r: Math.min((p.mat * 3) + 3, 20), player: p.dispName }));
             createChart('mvpTracker', 'bubble', { datasets: [{ label: 'Players', data: mvpData, backgroundColor: 'rgba(168, 85, 247, 0.7)', borderColor: '#a855f7' }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: {display:false}, tooltip: scatterTooltip }, scales: { x: { title: { display: true, text: 'Total Runs', color: '#94a3b8' } }, y: { title: { display: true, text: 'Total Wickets', color: '#94a3b8' } } } });
 
+            // 4. Advanced Bars
             let topBRC = [...aggregatedData].filter(p => p.runs >= 20).sort((a,b) => b.brc - a.brc).slice(0, 10);
             createChart('boundaryReliance', 'bar', { labels: formatChartLabels(topBRC), datasets: [{ label: '% Runs from Boundaries', data: topBRC.map(p => p.brc), backgroundColor: '#f43f5e', borderRadius: 4 }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: { title: {display:true, text: 'Percentage (%)', color:'#94a3b8'}, max: 100, grid:{color:'#334155'} }, x:{grid:{display:false}} } });
 
