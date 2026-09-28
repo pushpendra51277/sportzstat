@@ -108,7 +108,7 @@ function buildFanPortalSummary() {
         venue: state.matchSettings.venue || "Unknown Venue",
         match_type: state.matchSettings.matchType,
         officials: state.matchSettings.officials,
-        toss: state.matchSettings.tossStr || "Toss not recorded", // 🔥 Added Toss
+        toss: state.matchSettings.tossStr || "Toss not recorded",
         result: state.matchResult || calculateResultText() || "Match in Progress",
         team_points: {
             [state.teams.A.name]: state.teams.A.points || 0,
@@ -123,7 +123,7 @@ function buildFanPortalSummary() {
 async function triggerCloudSync() {
     if (!supabaseClient || !state.matchId) return;
     
-    let fps = buildFanPortalSummary(); // Generate once to use in both tables
+    let fps = buildFanPortalSummary();
     
     let fullStatePayload = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
     fullStatePayload.match_status = 'live'; fullStatePayload.team1 = state.teams.A.name; fullStatePayload.team2 = state.teams.B.name;
@@ -134,7 +134,6 @@ async function triggerCloudSync() {
     
     let cur = state.current; let effBalls = getEffectiveBalls(cur); let crrVal = effBalls > 0 ? ((cur.runs / effBalls) * 6).toFixed(2) : "0.00";
     
-    // 🔥 NEW: Inject fan_portal_summary directly into the live_matches table
     let lightWeightLiveData = { matchId: state.matchId, batTeam: getBatTeam() ? getBatTeam().name : "", bowlTeam: getBowlTeam() ? getBowlTeam().name : "", runs: cur.runs, wkts: cur.wkts, overs: formatOver(cur.balls), crr: crrVal, target: el('dispTargetText') ? el('dispTargetText').innerText : "", batters: [ cur.sIdx !== null ? { name: getBatTeam().players[cur.sIdx].name, r: getBatTeam().players[cur.sIdx].r, b: getBatTeam().players[cur.sIdx].b, isStriker: true } : null, cur.nsIdx !== null ? { name: getBatTeam().players[cur.nsIdx].name, r: getBatTeam().players[cur.nsIdx].r, b: getBatTeam().players[cur.nsIdx].b, isStriker: false } : null ], bowler: cur.bIdx !== null ? { name: getBowlTeam().players[cur.bIdx].name, o: formatOver(getBowlTeam().players[cur.bIdx].o), r: getBowlTeam().players[cur.bIdx].rc, w: getBowlTeam().players[cur.bIdx].w } : null, recentBalls: cur.recentBalls, fan_portal_summary: fps };
     
     try { await supabaseClient.from('live_matches').upsert({ match_id: state.matchId, live_data: lightWeightLiveData }, { onConflict: 'match_id' }); } catch(e) {}
@@ -143,10 +142,8 @@ async function triggerCloudSync() {
 async function logCareerStats() {
     if (!supabaseClient || !state.matchId) return;
     
-    // 1. Generate the absolute final summary (Toss, Points, Final Result)
     let fps = buildFanPortalSummary(); 
     
-    // 2. Update the main matches table metadata
     let finalState = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
     finalState.match_status = 'completed'; 
     finalState.team1 = state.teams.A.name; 
@@ -156,7 +153,6 @@ async function logCareerStats() {
     
     try { await supabaseClient.from('matches').update({ full_state: finalState }).eq('match_id', state.matchId); } catch(e){}
 
-    // 3. 🔥 NEW: Inject fan_portal_summary into the completed_matches table!
     let completedPayload = {
         inningsSummaries: state.inningsSummaries,
         fan_portal_summary: fps
@@ -165,16 +161,14 @@ async function logCareerStats() {
     
     try { await supabaseClient.from('completed_matches').upsert({ match_id: state.matchId, final_data: payloadStr }, { onConflict: 'match_id' }); } catch (e) {}
     
-    // 4. 🔥 NEW: Clean up the live_matches table so it drops off the Live banner tab
     try { await supabaseClient.from('live_matches').delete().eq('match_id', state.matchId); } catch(e) {}
 }
+
 async function logBallEvent(batterObj, bowlerObj, runsBat, runsExtra, extraType, isWicket, wicketType, dismissedObj) {
     if (!supabaseClient || !state.matchId) return;
     let ballData = { match_id: state.matchId, innings_no: state.inningsNum, over_no: Math.floor(state.current.balls / 6), ball_no: (state.current.balls % 6) + 1, batter_name: batterObj ? batterObj.name : "Unknown", bowler_name: bowlerObj ? bowlerObj.name : "Unknown", runs_batter: runsBat, runs_extra: runsExtra, is_valid_ball: (extraType !== 'Wide' && extraType !== 'No-Ball'), extra_type: extraType, is_wicket: isWicket, wicket_type: wicketType || null, dismissed_player_name: dismissedObj ? dismissedObj.name : null };
     try { await supabaseClient.from('ball_by_ball').insert([ballData]); } catch(e) {}
 }
-
-
 
 function ballScored(runs, isB) {
     saveState(); markOpenerTimes(); let cur = state.current; if(cur.bIdx === null) return openSelector('bowler', "Select Bowler");
@@ -187,6 +181,7 @@ function ballScored(runs, isB) {
     if (checkTargetReached()) { finalizeOver(true); setTimeout(endInnings, 100); return; }
     updateUI(); checkAutoOverPrompt();
 }
+
 function getTeamOversDisplay() {
     let cur = state.current; let completedOvers = cur.overHistory.length; let ballsInPreviousOvers = completedOvers > 0 ? (cur.overHistory[completedOvers - 1].totalBallsAtEnd || (completedOvers * 6)) : 0; let currentOverBalls = Math.max(0, cur.balls - ballsInPreviousOvers);
     return completedOvers + "." + currentOverBalls;
@@ -275,7 +270,7 @@ function showMatchSummary() {
         state.matchResult = el('finalMatchResult') ? el('finalMatchResult').value : autoRes; 
         if(el('inningAllowancesInput')) { let val = parseInt(el('inningAllowancesInput').value) || 0; state.current.allowances = val; if (state.inningsSummaries.length > 0 && state.inningsNum === state.inningsSummaries.length) { state.inningsSummaries[state.inningsSummaries.length - 1].allowances = val; } }
         
-        // 🔥 NEW: Capture the points and save them to the state before ending the match
+        // 🔥 Capture the points and save them to the state before ending the match
         if(isGameOver && el('teamAPoints') && el('teamBPoints')) { 
             state.teams.A.points = parseFloat(el('teamAPoints').value) || 0; 
             state.teams.B.points = parseFloat(el('teamBPoints').value) || 0; 
@@ -432,12 +427,62 @@ function openEditSquad() { let html = `<select id="editSqTeam" class="modal-inpu
 function buildEditSq() { let k = el('editSqTeam').value, t = state.teams[k].players; let html = `<table class="roster-table" style="color:white; margin-top:0; min-width:100%;"><thead style="position:sticky; top:0; background:#020617; z-index:5;"><tr><th style="width:10%;">#</th><th style="width:65%;">Player Name</th><th style="width:25%; text-align:center;">Playing 11</th></tr></thead><tbody>`; t.forEach((p, i) => { html += `<tr><td style="text-align:center; color:var(--text-muted);">${i+1}</td><td><input type="text" id="es-n-${i}" value="${p.name}" class="w-100" style="padding:6px; font-size:0.85rem; border:none; background:transparent; border-bottom:1px solid #334155; border-radius:0;"></td><td style="text-align:center;"><input type="checkbox" id="es-p-${i}" ${p.isPlayingXI ? 'checked' : ''} style="width:18px;height:18px; cursor:pointer;"></td></tr>`; }); html += `</tbody></table>`; el('editSqDiv').innerHTML = html; }
 function saveEditSquad() { let k = el('editSqTeam').value, t = state.teams[k].players; let activeIdxs = []; if (k === state.battingKey) { if(state.current.sIdx !== null) activeIdxs.push(state.current.sIdx); if(state.current.nsIdx !== null) activeIdxs.push(state.current.nsIdx); } if (k === state.bowlingKey) { if(state.current.bIdx !== null) activeIdxs.push(state.current.bIdx); } for(let i=0; i<t.length; i++) { let isChecked = el(`es-p-${i}`).checked; if (!isChecked && activeIdxs.includes(i)) { alert(`Cannot remove ${t[i].name} from Playing XI because they are active!`); return; } } for(let i=0; i<t.length; i++) { t[i].name = el(`es-n-${i}`).value.trim(); t[i].isPlayingXI = el(`es-p-${i}`).checked; } syncMetadataToHistory(true); closeModal(); updateUI(); }
 
+// 🔥 UPDATED: Includes Soft-Warnings and Deadlock Protection
 function openSelector(typ, title) { 
     let cur = state.current, lst = typ === 'bowler' ? getBowlTeam().players : getBatTeam().players; 
-    let opt = lst.map((p, i) => { if (!p.isPlayingXI) return ''; let s = typ === 'bowler' ? (!cur.lastOverBowlers.has(i) && i !== cur.bIdx && p.quotaOvers < state.matchSettings.bowlerQuota) : ((!p.hasBatted || p.out === 'retiredHurt') && i !== cur.sIdx && i !== cur.nsIdx); return s ? `<option value="${i}">${p.name}</option>` : ''; }).join(''); 
+    
+    let opt = lst.map((p, i) => { 
+        if (!p.isPlayingXI) return ''; 
+        let s = false;
+        
+        if (typ === 'bowler') {
+            // Soft-Restriction: Only hide the active bowler. 
+            // Allows over-quota and last-over bowlers to appear in case of umpire mistakes.
+            s = (i !== cur.bIdx); 
+        } else {
+            s = ((!p.hasBatted || p.out === 'retiredHurt') && i !== cur.sIdx && i !== cur.nsIdx);
+        }
+        
+        if (!s) return '';
+        
+        let label = p.name;
+        if (typ === 'bowler') {
+            if (p.quotaOvers >= state.matchSettings.bowlerQuota) label += ' ⚠️ (Quota Full)';
+            if (cur.lastOverBowlers.has(i)) label += ' 🛑 (Bowled Last Over)';
+        }
+        return `<option value="${i}">${label}</option>`; 
+    }).join(''); 
+
+    // 🔥 DEADLOCK FIX: If no batters are left (due to retirements/injuries), end innings instantly.
+    if (typ !== 'bowler' && !opt) {
+        alert("No more batters available! The innings will now end automatically.");
+        setTimeout(endInnings, 500);
+        return;
+    }
+
     showModal(title, `<select id="gSel" class="modal-input w-100">${opt}</select>`, () => { 
         saveState(); let val = parseInt(el('gSel').value); 
-        if(typ === 'bowler') { cur.bIdx = val; cur.bowlersInCurrentOver.add(val); } else { cur[typ === 'striker' ? 'sIdx' : 'nsIdx'] = val; let nB = getBatTeam().players[val]; if (nB.out === 'retiredHurt') { nB.out = false; nB.dismissalInfo = ""; } else { nB.inTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); } nB.hasBatted = true; } 
+        
+        if(typ === 'bowler') { 
+            let selectedBowler = getBowlTeam().players[val];
+            
+            // 🚨 SOFT WARNING 1: Bowler Exceeded Quota
+            if (selectedBowler.quotaOvers >= state.matchSettings.bowlerQuota) {
+                if(!confirm(`⚠️ WARNING: ${selectedBowler.name} has already bowled their quota of ${state.matchSettings.bowlerQuota} overs!\n\nAre you absolutely sure the umpire is allowing them to bowl an extra over?`)) return;
+            }
+            
+            // 🚨 SOFT WARNING 2: Consecutive Overs (Umpire mistake)
+            if (cur.lastOverBowlers.has(val)) {
+                if(!confirm(`🛑 RULE BREACH WARNING: ${selectedBowler.name} bowled the previous over!\n\nBowlers cannot bowl consecutive overs. Are you sure the umpire is allowing this?`)) return;
+            }
+
+            cur.bIdx = val; cur.bowlersInCurrentOver.add(val); 
+        } else { 
+            cur[typ === 'striker' ? 'sIdx' : 'nsIdx'] = val; 
+            let nB = getBatTeam().players[val]; 
+            if (nB.out === 'retiredHurt') { nB.out = false; nB.dismissalInfo = ""; } else { nB.inTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); } 
+            nB.hasBatted = true; 
+        } 
         closeModal(); updateUI(); 
         if (typ !== 'bowler' && cur.bIdx === null && cur.wkts < 10) { setTimeout(() => openSelector('bowler', "Select Next Bowler"), 50); } else if (typ !== 'bowler') { checkAutoOverPrompt(); }
     }, false, "360px", "Confirm"); 
@@ -509,8 +554,17 @@ function updateUI() {
     el('miniLiveBatters').innerHTML = miniBatHtml;
     
     if(cur.bIdx !== null) { 
-        let actB = bwT[cur.bIdx]; let bName = actB.name; if(actB.desig === 'C' || actB.desig === 'C/WK' || actB.desig.includes('C')) bName += ' (C)'; if(actB.skill && actB.skill.includes('WK')) bName += ' *'; 
-        el('activeBowlerNameRight').innerText = bName; el('activeBowlerNameRight').title = bName; el('activeBowlerProgress').innerHTML = cur.currentOverLog.map(getBadgeHtml).join(''); 
+        let actB = bwT[cur.bIdx]; 
+        let bName = actB.name; 
+        if(actB.desig === 'C' || actB.desig === 'C/WK' || actB.desig.includes('C')) bName += ' (C)'; 
+        if(actB.skill && actB.skill.includes('WK')) bName += ' *'; 
+        
+        // 🔥 NEW: Add warning star to active bowler if over quota
+        if(actB.quotaOvers > state.matchSettings.bowlerQuota) bName += ' <span style="color:#f59e0b;" title="Exceeded Quota">⚠️</span>';
+        
+        el('activeBowlerNameRight').innerHTML = bName; 
+        el('activeBowlerNameRight').title = actB.name; 
+        el('activeBowlerProgress').innerHTML = cur.currentOverLog.map(getBadgeHtml).join(''); 
         let totalRuns = (actB.rc || 0); 
         let miniBowlHtml = `<div style="display:flex; justify-content:flex-end; align-items:center; width:100%; margin-bottom:2px;"><div style="flex: 0 0 auto; margin-right:4px;">⚾</div><div style="color:white; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex: 0 1 auto; text-align:right;">${actB.name}</div></div>`; miniBowlHtml += `<div style="color:var(--text-muted); font-size:0.75rem; text-align:right; white-space:nowrap;">${formatOver(actB.o)}-${actB.m}-${totalRuns}-<span class="text-danger" style="font-weight:bold;">${actB.w}</span></div>`; el('miniLiveBowler').innerHTML = miniBowlHtml;
     } else {
@@ -519,7 +573,13 @@ function updateUI() {
     
     el('recentBallsData').innerHTML = cur.recentBalls.map(getBadgeHtml).join(''); 
     el('bowlStatsBody').innerHTML = bwT.filter(p => p.o > 0 || p.rc > 0).map(p => { 
-        let bName = p.name; if(p.desig === 'C' || p.desig === 'C/WK' || p.desig.includes('C')) bName += ' (C)'; if(p.skill && p.skill.includes('WK')) bName += ' *'; 
+        let bName = p.name; 
+        if(p.desig === 'C' || p.desig === 'C/WK' || p.desig.includes('C')) bName += ' (C)'; 
+        if(p.skill && p.skill.includes('WK')) bName += ' *'; 
+        
+        // 🔥 NEW: Add warning star to table list if over quota
+        if(p.quotaOvers > state.matchSettings.bowlerQuota) bName += ' <span style="color:#f59e0b;" title="Exceeded Quota">⚠️</span>';
+        
         let totalRuns = p.rc || 0; 
         let exStr = `${p.byes||0}b, ${p.legbyes||0}lb`; let noBalls = p.nb || 0; let wides = p.wd || 0;
         return `<tr><td style="max-width: 85px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.name}">${bName}</td><td>${formatOver(p.o)}</td><td>${p.m}</td><td>${totalRuns}</td><td style="color:var(--danger); font-weight:bold;">${p.w}</td><td style="font-size:0.7rem; color:var(--text-muted);">${exStr}</td><td>${noBalls}</td><td>${wides}</td></tr>`; 
