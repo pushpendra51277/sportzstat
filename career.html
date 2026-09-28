@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sportzstat - Career Analytics Hub</title>
+    <title>Sportzstat - Scouting & Analytics Hub</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -19,8 +19,9 @@
         .action-btn:hover { background: #38bdf8; color: #0f172a; }
 
         /* SPRINT-STYLE TAB NAVIGATION */
-        .tab-nav { display: flex; gap: 30px; border-bottom: 2px solid #1e293b; margin-top: 15px; margin-bottom: 25px; }
-        .tab-btn { background: none; border: none; color: #64748b; font-size: 1rem; font-weight: 800; cursor: pointer; padding: 10px 5px; position: relative; transition: 0.3s; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .tab-nav { display: flex; gap: 20px; border-bottom: 2px solid #1e293b; margin-top: 15px; margin-bottom: 25px; overflow-x: auto; scrollbar-width: none; }
+        .tab-nav::-webkit-scrollbar { display: none; }
+        .tab-btn { background: none; border: none; color: #64748b; font-size: 0.95rem; font-weight: 800; cursor: pointer; padding: 10px 5px; position: relative; transition: 0.3s; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
         .tab-btn:hover { color: #cbd5e1; }
         .tab-btn.active { color: #f8fafc; }
         .tab-btn.active::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 100%; height: 3px; background: #38bdf8; border-radius: 3px 3px 0 0; }
@@ -34,12 +35,10 @@
         .toggle-lbl { background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; cursor: pointer; display: flex; align-items: center; gap: 6px; border: 1px solid #334155; user-select: none; transition: 0.2s; font-weight: bold; }
         .toggle-lbl:hover { background: rgba(255,255,255,0.1); border-color: #475569; }
         .toggle-lbl input { cursor: pointer; margin: 0; width: 14px; height: 14px; accent-color: #38bdf8; }
-        .hidden { display: none !important; }
 
         /* Full Width Table Setup */
-        .table-container { background: #1e293b; border-radius: 10px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.3); overflow: hidden; width: 100%; }
+        .table-container { background: #1e293b; border-radius: 10px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.3); overflow: hidden; width: 100%; margin-bottom: 30px; }
         .table-header { padding: 15px 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
-        
         .table-scroll-wrapper { max-height: 75vh; overflow-y: auto; overflow-x: auto; position: relative; }
         .table-scroll-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
         .table-scroll-wrapper::-webkit-scrollbar-track { background: #0f172a; }
@@ -95,17 +94,26 @@
         table.hide-stumpings .col-stumpings { display: none !important; }
         table.hide-runouts .col-runouts { display: none !important; }
 
-        /* Advanced Analytics Grid */
+        /* General Grids & Cards */
         .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 25px; margin-bottom: 40px; }
         .chart-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 22px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); position: relative; overflow: hidden; display: flex; flex-direction: column; }
-        
         .adv-canvas-container { position: relative; height: 320px; width: 100%; flex-grow: 1; }
         .chart-title { font-size: 1.1rem; font-weight: bold; margin-top: 0; margin-bottom: 5px; color: #f8fafc; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
         .chart-subtitle { font-size: 0.75rem; color: #94a3b8; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* H2H Specific Styles */
+        .h2h-controls { background: #1e293b; padding: 20px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 25px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
+        .pill-container { display: flex; flex-wrap: wrap; gap: 10px; flex: 1; }
+        .player-pill { background: rgba(56, 189, 248, 0.1); border: 1px solid #38bdf8; color: #f8fafc; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+        .player-pill span { cursor: pointer; color: #ef4444; font-size: 1.1rem; line-height: 1; }
+        .player-pill span:hover { color: #b91c1c; }
         
-        /* Interactive Radar Selector Dropdown */
-        .radar-select { background: #0f172a; border: 1px solid #475569; color: #38bdf8; font-size: 0.8rem; font-weight: bold; border-radius: 4px; padding: 4px 8px; outline: none; }
-        
+        .vs-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: center; }
+        .vs-table th { background: #0f172a; color: #94a3b8; padding: 12px; border-bottom: 2px solid #334155; text-align: center; position: relative; z-index: 1; box-shadow: none; text-transform: uppercase; font-size: 0.8rem; }
+        .vs-table th:first-child { text-align: left; color: #f8fafc; }
+        .vs-table td { padding: 12px; border-bottom: 1px solid #334155; color: white; font-weight: bold; text-align: center; background: #1e293b; }
+        .vs-table td:first-child { text-align: left; color: #94a3b8; font-weight: normal; }
+
         /* Glow Accents */
         .card-glow-purple::before { content: ''; position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(168, 85, 247, 0.2); filter: blur(40px); border-radius: 50%; pointer-events: none; }
         .card-glow-emerald::before { content: ''; position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(16, 185, 129, 0.2); filter: blur(40px); border-radius: 50%; pointer-events: none; }
@@ -114,20 +122,12 @@
         .card-glow-cyan::before { content: ''; position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(6, 182, 212, 0.2); filter: blur(40px); border-radius: 50%; pointer-events: none; }
         .card-glow-blue::before { content: ''; position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(56, 189, 248, 0.2); filter: blur(40px); border-radius: 50%; pointer-events: none; }
 
-        /* Dynamic Theme Modals */
-        .theme-blue { --theme-color: #38bdf8; --theme-grad: linear-gradient(90deg, #0ea5e9, #2563eb); --theme-glow: rgba(56, 189, 248, 0.2); }
-        .theme-emerald { --theme-color: #10b981; --theme-grad: linear-gradient(90deg, #10b981, #059669); --theme-glow: rgba(16, 185, 129, 0.2); }
-        .theme-amber { --theme-color: #f59e0b; --theme-grad: linear-gradient(90deg, #f59e0b, #ea580c); --theme-glow: rgba(245, 158, 11, 0.2); }
-        .theme-purple { --theme-color: #a855f7; --theme-grad: linear-gradient(90deg, #a855f7, #7e22ce); --theme-glow: rgba(168, 85, 247, 0.2); }
-        .theme-rose { --theme-color: #f43f5e; --theme-grad: linear-gradient(90deg, #f43f5e, #be123c); --theme-glow: rgba(244, 63, 94, 0.2); }
-        .theme-cyan { --theme-color: #06b6d4; --theme-grad: linear-gradient(90deg, #06b6d4, #0369a1); --theme-glow: rgba(6, 182, 212, 0.2); }
-
+        /* Modal Styles */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: 0.2s; padding: 10px; }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
         .modal-box { background: transparent; padding: 0; width: 420px; max-width: 100%; max-height: 95vh; overflow-y: auto; position: relative; transform: translateY(20px); transition: 0.3s; }
         .modal-box::-webkit-scrollbar { display: none; }
         .modal-overlay.active .modal-box { transform: translateY(0); }
-        
         .modal-close { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); border: 1px solid #475569; color: white; font-size: 1.2rem; cursor: pointer; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; z-index: 10; transition: 0.2s; }
         .modal-close:hover { background: #ef4444; border-color: #ef4444; }
 
@@ -135,7 +135,6 @@
         .player-card-ui { background: linear-gradient(145deg, #0f172a, #1e293b); border-radius: 16px; border: 2px solid var(--theme-color, #38bdf8); box-shadow: 0 15px 35px rgba(0,0,0,0.8), inset 0 0 25px var(--theme-glow, rgba(56, 189, 248, 0.2)); overflow: hidden; padding: 18px 20px; position: relative; }
         .card-header-grid { display: flex; gap: 15px; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #334155; padding-bottom: 12px; }
         .avatar-wrapper { position: relative; width: 75px; height: 75px; border-radius: 12px; border: 2px dashed #475569; cursor: pointer; overflow: hidden; background: #020617; display: flex; align-items: center; justify-content: center; transition: 0.3s; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .avatar-wrapper:hover { border-color: var(--theme-color, #38bdf8); }
         .avatar-img { width: 100%; height: 100%; object-fit: cover; z-index: 1; }
         .avatar-overlay { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7); color: white; font-size: 0.6rem; text-align: center; padding: 4px 0; z-index: 2; opacity: 0; transition: 0.3s; text-transform: uppercase; font-weight: bold; }
         .avatar-wrapper:hover .avatar-overlay { opacity: 1; }
@@ -151,7 +150,6 @@
         .stat-panel.bat h4 { color: #f59e0b; }
         .stat-panel.bowl h4 { color: #10b981; }
         .stat-panel.field h4 { color: #8b5cf6; }
-        
         .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; border-radius: 4px; }
         .stat-row:nth-child(even) { background: rgba(255,255,255,0.03); }
         .stat-lbl { color: #94a3b8; font-size: 0.75rem; }
@@ -163,14 +161,10 @@
         .field-box-val { font-size: 1.1rem; color: white; font-weight: bold; }
 
         .card-footer { text-align: center; font-size: 0.55rem; color: #475569; margin-top: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
-        .download-btn { width: 100%; margin-top: 10px; padding: 12px; font-size: 0.95rem; background: var(--theme-grad, linear-gradient(90deg, #38bdf8, #2563eb)); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); text-transform: uppercase; transition: 0.2s; }
-        .download-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6); filter: brightness(1.1); }
-
+        .download-btn { width: 100%; margin-top: 10px; padding: 12px; font-size: 0.95rem; background: linear-gradient(90deg, #38bdf8, #2563eb); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
+        
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        @media (max-width: 768px) {
-            .analytics-grid { grid-template-columns: 1fr; }
-            .filter-select, .filter-input { min-width: 100%; }
-        }
+        @media (max-width: 768px) { .analytics-grid { grid-template-columns: 1fr; } .filter-select, .filter-input { min-width: 100%; } }
     </style>
 </head>
 <body>
@@ -188,8 +182,10 @@
 
     <!-- TAB NAVIGATION -->
     <div class="tab-nav">
-        <button id="btn-tab-career" class="tab-btn active" onclick="switchTab('career')">📊 Career Stats</button>
+        <button id="btn-tab-career" class="tab-btn active" onclick="switchTab('career')">📊 Master Stats</button>
         <button id="btn-tab-analytics" class="tab-btn" onclick="switchTab('analytics')">📈 Advanced Analytics</button>
+        <button id="btn-tab-h2h" class="tab-btn" onclick="switchTab('h2h')">⚔️ Player H2H</button>
+        <button id="btn-tab-live" class="tab-btn" onclick="switchTab('live')">🔴 Live Scouting</button>
     </div>
 
     <!-- SHARED FILTER BAR -->
@@ -206,7 +202,6 @@
     <!-- ========================================== -->
     <div id="view-career">
         
-        <!-- COLUMN TOGGLE PANEL (HIDDEN BY DEFAULT) -->
         <div id="col-toggles" class="toggle-panel hidden">
             <div style="width: 100%; color: #38bdf8; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">GENERAL</div>
             <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('mat', this.checked)"> Matches</label>
@@ -244,7 +239,7 @@
 
         <div class="table-container">
             <div class="table-header">
-                <h3 style="margin:0; color:#38bdf8;">📊 Career Aggregation Table</h3>
+                <h3 style="margin:0; color:#38bdf8;">📊 Master Aggregation Table</h3>
                 <span style="font-size:0.75rem; color:#94a3b8;">Click any column header to sort</span>
             </div>
             <div class="table-scroll-wrapper">
@@ -292,91 +287,130 @@
     </div>
 
     <!-- ==================================================== -->
-    <!-- VIEW 2: MEGA ADVANCED ANALYTICS (NOVEL SCOUT ENGINE) -->
+    <!-- VIEW 2: MEGA ADVANCED ANALYTICS (12 CHARTS)          -->
     <!-- ==================================================== -->
     <div id="view-analytics" class="hidden-view">
         <div class="analytics-grid">
             
-            <!-- NOVEL 1: Five-Tool Talent Radar Chart with Live Selector -->
             <div class="chart-card card-glow-purple">
                 <div class="chart-title">
                     <span><span>🎯</span> The Five-Tool Radar Profile</span>
-                    <select id="radarPlayerSelect" class="radar-select" onchange="updateRadarChart()"></select>
+                    <select id="radarPlayerSelect" class="radar-select" style="background:#0f172a; border:1px solid #475569; color:#38bdf8; padding:4px; border-radius:4px;" onchange="updateRadarChart()"></select>
                 </div>
                 <p class="chart-subtitle">Normalized Balance (0-100): Power, Stability, Restraint, Penetration, Athleticism</p>
                 <div class="adv-canvas-container"><canvas id="fiveToolRadar"></canvas></div>
             </div>
 
-            <!-- NOVEL 2: Fielding Impact Value (FIV) Net Runs Saved -->
             <div class="chart-card card-glow-emerald">
                 <h3 class="chart-title"><span>🛡️</span> Fielding Impact Value (FIV)</h3>
                 <p class="chart-subtitle">Weighted Net Runs Saved: (Ct × 12) + (RO × 18) + (St × 14)</p>
                 <div class="adv-canvas-container"><canvas id="fieldingImpactChart"></canvas></div>
             </div>
 
-            <!-- NOVEL 3: The "Boom-or-Bust" Volatility Matrix -->
             <div class="chart-card card-glow-amber">
                 <h3 class="chart-title"><span>💥</span> "Boom-or-Bust" Volatility Matrix</h3>
                 <p class="chart-subtitle">Boundary Run % (X) vs Deliveries Per Dismissal (Y)</p>
                 <div class="adv-canvas-container"><canvas id="boomBustMatrix"></canvas></div>
             </div>
 
-            <!-- NOVEL 4: Glovework & Safe Hands Breakdown -->
             <div class="chart-card card-glow-cyan">
                 <h3 class="chart-title"><span>🧤</span> Safe-Hands & Glovework Breakdown</h3>
                 <p class="chart-subtitle">Total In-Field Dismissals (Catches + Stumpings + Run Outs)</p>
                 <div class="adv-canvas-container"><canvas id="safeHandsChart"></canvas></div>
             </div>
 
-            <!-- Deep Scout Scatter: Batting Matrix -->
             <div class="chart-card card-glow-amber">
                 <h3 class="chart-title"><span>⚔️</span> The Batting Matrix</h3>
                 <p class="chart-subtitle">Strike Rate (X) vs Average (Y) • Min 30 Runs</p>
                 <div class="adv-canvas-container"><canvas id="battingMatrix"></canvas></div>
             </div>
 
-            <!-- Deep Scout Scatter: Bowling Matrix -->
             <div class="chart-card card-glow-emerald">
                 <h3 class="chart-title"><span>🎯</span> The Bowling Matrix</h3>
                 <p class="chart-subtitle">Economy (X) vs Bowling Average (Y) • Min 2 Wkts</p>
                 <div class="adv-canvas-container"><canvas id="bowlingMatrix"></canvas></div>
             </div>
 
-            <!-- All-Rounder MVP Bubble Tracker -->
             <div class="chart-card card-glow-purple">
                 <h3 class="chart-title"><span>🌟</span> All-Rounder MVP Tracker</h3>
                 <p class="chart-subtitle">Runs (X) vs Wickets (Y) • Bubble Size = Matches</p>
                 <div class="adv-canvas-container"><canvas id="mvpTracker"></canvas></div>
             </div>
 
-            <!-- Boundary Reliance (BRC %) -->
             <div class="chart-card card-glow-rose">
                 <h3 class="chart-title"><span>☄️</span> Boundary Reliance (BRC %)</h3>
                 <p class="chart-subtitle">% of Total Runs scored via 4s and 6s</p>
                 <div class="adv-canvas-container"><canvas id="boundaryReliance"></canvas></div>
             </div>
 
-            <!-- Balls Per Boundary (BPB) -->
             <div class="chart-card card-glow-cyan">
                 <h3 class="chart-title"><span>⏱️</span> Balls Per Boundary (BPB)</h3>
                 <p class="chart-subtitle">Balls faced per boundary hit • Lower is Better</p>
                 <div class="adv-canvas-container"><canvas id="ballsPerBoundary"></canvas></div>
             </div>
 
-            <!-- True Strike Rate Leaders -->
             <div class="chart-card card-glow-blue">
                 <h3 class="chart-title"><span>🔥</span> True Strike Rate Leaders</h3>
                 <p class="chart-subtitle">Highest Strike Rates • Filtered: Min 30 Runs</p>
                 <div class="adv-canvas-container"><canvas id="trueStrikeRate"></canvas></div>
             </div>
 
-            <!-- Classic Aggregates: Top Scorers & Wickets -->
             <div class="chart-card card-glow-amber"><h3 class="chart-title"><span>🏏</span> Top 10 Run Scorers</h3><div class="adv-canvas-container"><canvas id="chartRuns"></canvas></div></div>
             <div class="chart-card card-glow-emerald"><h3 class="chart-title"><span>🎳</span> Top 10 Wicket Takers</h3><div class="adv-canvas-container"><canvas id="chartWickets"></canvas></div></div>
             <div class="chart-card card-glow-blue"><h3 class="chart-title"><span>💥</span> Boundary Breakdown</h3><p class="chart-subtitle">Top 10 Batters (4s & 6s)</p><div class="adv-canvas-container"><canvas id="chartBoundaries"></canvas></div></div>
             <div class="chart-card card-glow-purple"><h3 class="chart-title"><span>🏆</span> Run Weightage Distribution</h3><div class="adv-canvas-container"><canvas id="chartWeightRuns"></canvas></div></div>
             <div class="chart-card card-glow-rose"><h3 class="chart-title"><span>☄️</span> Boundary Weightage</h3><div class="adv-canvas-container"><canvas id="chartWeightBounds"></canvas></div></div>
             <div class="chart-card card-glow-cyan"><h3 class="chart-title"><span>🎳</span> Wicket Weightage Distribution</h3><div class="adv-canvas-container"><canvas id="chartWeightWkts"></canvas></div></div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- VIEW 3: MULTI-PLAYER BATTING H2H (Up to 5) -->
+    <!-- ========================================== -->
+    <div id="view-h2h" class="hidden-view">
+        <div class="h2h-controls">
+            <div style="display:flex; gap:10px; align-items:center;">
+                <select id="h2h-select" class="filter-select" style="min-width: 200px;">
+                    <option value="">Select a Batter...</option>
+                </select>
+                <button class="action-btn" onclick="addH2HPlayer()">+ Add</button>
+            </div>
+            <div class="pill-container" id="h2h-pill-box">
+                <!-- Selected players will appear here as chips -->
+            </div>
+        </div>
+
+        <div class="analytics-grid">
+            <div class="chart-card card-glow-blue">
+                <h3 class="chart-title"><span>📊</span> Core Batting Comparison</h3>
+                <div class="adv-canvas-container"><canvas id="h2hBarChart"></canvas></div>
+            </div>
+            
+            <div class="chart-card">
+                <h3 class="chart-title"><span>📋</span> Batting Metrics Breakdown</h3>
+                <div style="overflow-x: auto;">
+                    <table class="vs-table">
+                        <thead>
+                            <tr id="h2h-th-row">
+                                <th>Metric</th>
+                            </tr>
+                        </thead>
+                        <tbody id="h2h-tbody">
+                            <tr><td colspan="6" style="color:#94a3b8; text-align:center;">Add players to begin comparison (Max 5)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- VIEW 4: LIVE SCOUTING                      -->
+    <!-- ========================================== -->
+    <div id="view-live" class="hidden-view">
+        <p style="color:#94a3b8; margin-top:0;">Real-time match data or the most recent historical match if no live games are active.</p>
+        <div class="analytics-grid" id="live-scouting-grid" style="grid-template-columns: 1fr; max-width: 800px; margin: 0 auto;">
+            <!-- Live Data will be injected here -->
         </div>
     </div>
 
@@ -392,10 +426,9 @@
                         <img id="player-avatar" class="avatar-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>" alt="Avatar">
                         <div class="avatar-overlay">📷 Upload</div>
                     </div>
-                    
                     <div class="card-title-area">
-                        <h2 id="pc-name" class="pc-title-name" title="Player Name">Player Name</h2>
-                        <div id="pc-team" class="pc-title-team" title="Team Name">Team Name</div>
+                        <h2 id="pc-name" class="pc-title-name">Player Name</h2>
+                        <div id="pc-team" class="pc-title-team">Team Name</div>
                         <div class="pc-badge-mat">Matches: <span id="pc-mat" style="color: white;">0</span></div>
                     </div>
                 </div>
@@ -410,7 +443,6 @@
                         <div class="stat-row"><span class="stat-lbl">100s / 50s</span> <span class="stat-val" id="pc-10050">0/0</span></div>
                         <div class="stat-row"><span class="stat-lbl">4s / 6s</span> <span class="stat-val" id="pc-4s6s">0/0</span></div>
                     </div>
-                    
                     <div class="stat-panel bowl">
                         <h4>Bowling</h4>
                         <div class="stat-row"><span class="stat-lbl">Wickets</span> <span class="stat-val" id="pc-wkts">0</span></div>
@@ -433,7 +465,6 @@
                 
                 <div class="card-footer">Official Player Card • Generated by Sportzstat</div>
             </div>
-            
             <button type="button" class="download-btn" onclick="downloadPlayerCard()">📸 Download & Share Card</button>
         </div>
     </div>
@@ -448,20 +479,29 @@
         let currentSortCol = 'runs';
         let currentSortAsc = false;
         let charts = {};
+        
+        // H2H Array (Max 5)
+        let selectedH2HPlayers = [];
+        const h2hColors = ['#38bdf8', '#f59e0b', '#10b981', '#a855f7', '#ec4899'];
 
         const DEFAULT_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
         const themes = ['theme-blue', 'theme-emerald', 'theme-amber', 'theme-purple', 'theme-rose', 'theme-cyan'];
 
+        // 🔥 TAB SWITCHING LOGIC
         function switchTab(tabId) {
-            document.getElementById('btn-tab-career').classList.remove('active');
-            document.getElementById('btn-tab-analytics').classList.remove('active');
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('btn-tab-' + tabId).classList.add('active');
 
             document.getElementById('view-career').classList.add('hidden-view');
             document.getElementById('view-analytics').classList.add('hidden-view');
+            document.getElementById('view-h2h').classList.add('hidden-view');
+            document.getElementById('view-live').classList.add('hidden-view');
+            
             document.getElementById('view-' + tabId).classList.remove('hidden-view');
 
-            renderCharts();
+            if(tabId === 'analytics') renderCharts();
+            if(tabId === 'h2h') renderH2H();
+            if(tabId === 'live') fetchLiveScouting();
         }
 
         function toggleCol(colName, isChecked) {
@@ -474,7 +514,7 @@
             Chart.defaults.color = '#94a3b8';
             Chart.defaults.borderColor = 'rgba(51, 65, 85, 0.5)';
             await fetchMatches();
-            setInterval(fetchMatches, 15000); 
+            setInterval(fetchLiveScouting, 15000); 
         };
 
         async function fetchMatches() {
@@ -505,9 +545,10 @@
                                 bowlers: fs.teams?.[fs.bowlingKey]?.players || []
                             });
                         }
-                        rawMatches.push({ tourney: tName, format: format, year: year, teams: fs.teams, innings: allInnings });
+                        // Save the full original object for Live Scouting fallback
+                        rawMatches.push({ rawData: m, tourney: tName, format: format, year: year, teams: fs.teams, innings: allInnings });
                     }
-                } catch(err) { console.warn("Skipped corrupted match."); }
+                } catch(err) {}
             });
 
             let updateDropdown = (id, set) => { 
@@ -615,36 +656,39 @@
                 p.econ = p.bowlBalls > 0 ? ((p.rc / p.bowlBalls) * 6) : 0;
                 p.bAvg = p.wkts > 0 ? (p.rc / p.wkts) : 0;
                 
-                // Advanced Scout Formulas
                 let boundaryRuns = (p.fours * 4) + (p.sixes * 6);
                 p.brc = p.runs > 0 ? (boundaryRuns / p.runs) * 100 : 0;
                 let totalBoundaries = p.fours + p.sixes;
                 p.bpb = totalBoundaries > 0 ? (p.bf / totalBoundaries) : 0;
                 
-                // Novel: Fielding Impact Value (FIV)
                 p.fiv = (p.catches * 12) + (p.runouts * 18) + (p.stumpings * 14);
                 p.totalFieldDismissals = p.catches + p.stumpings + p.runouts;
-                
-                // Novel: Balls per dismissal (Staying Power)
                 p.bpd = p.dismissals > 0 ? (p.bf / p.dismissals) : p.bf;
                 
                 p.dispName = p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name;
                 return p;
             });
 
-            // Populate the Five-Tool Radar Selector with the top 15 players by match count
-            let radarSel = document.getElementById('radarPlayerSelect');
-            if (radarSel) {
-                let prevVal = radarSel.value;
-                radarSel.innerHTML = '';
-                let topCandidates = [...aggregatedData].sort((a,b) => (b.runs + b.wkts * 20) - (a.runs + a.wkts * 20)).slice(0, 20);
-                topCandidates.forEach((cand, i) => {
-                    radarSel.innerHTML += `<option value="${cand.name}">${cand.name}</option>`;
-                });
-                if (topCandidates.some(c => c.name === prevVal)) radarSel.value = prevVal;
+            // Update H2H Dropdown & Radar Dropdown based on filters
+            let h2hSelect = document.getElementById('h2h-select');
+            let radarSelect = document.getElementById('radarPlayerSelect');
+            
+            let sortedNames = [...aggregatedData].sort((a,b) => a.name.localeCompare(b.name));
+            let opts = `<option value="">Select a Player...</option>` + sortedNames.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+            
+            h2hSelect.innerHTML = opts;
+            
+            if(radarSelect) {
+                let prevRad = radarSelect.value;
+                radarSelect.innerHTML = [...aggregatedData].sort((a,b) => (b.runs + b.wkts*20) - (a.runs + a.wkts*20)).slice(0, 20).map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+                if([...aggregatedData].some(c=>c.name===prevRad)) radarSelect.value = prevRad;
             }
 
+            // Cleanup invalid H2H selected players if they get filtered out
+            selectedH2HPlayers = selectedH2HPlayers.filter(name => aggregatedData.some(p => p.name === name));
+
             executeSort();
+            if(!document.getElementById('view-h2h').classList.contains('hidden-view')) renderH2H();
         }
 
         function initPlayer(obj, name, team) {
@@ -669,131 +713,207 @@
                 return 0;
             });
             renderTable();
-            renderCharts();
+            if(!document.getElementById('view-analytics').classList.contains('hidden-view')) renderCharts();
         }
 
-        function openPlayerCard(index) {
-            let p = aggregatedData[index];
-            if(!p) return;
+        // ==========================================
+        // TAB 3: H2H ENGINE (Max 5 Players)
+        // ==========================================
+        function addH2HPlayer() {
+            let select = document.getElementById('h2h-select');
+            let name = select.value;
+            if(!name) return;
+            if(selectedH2HPlayers.includes(name)) { alert("Player already selected."); return; }
+            if(selectedH2HPlayers.length >= 5) { alert("Maximum 5 players can be compared."); return; }
             
-            let randomTheme = themes[Math.floor(Math.random() * themes.length)];
-            let modalElement = document.getElementById('cardCaptureArea');
-            themes.forEach(t => modalElement.classList.remove(t));
-            modalElement.classList.add(randomTheme);
-            
-            document.getElementById('player-avatar').src = DEFAULT_AVATAR;
-            document.getElementById('playerPicUpload').value = "";
-            
-            document.getElementById('pc-name').innerText = p.name.length > 20 ? p.name.substring(0, 20) + '...' : p.name;
-            document.getElementById('pc-name').title = p.name; 
-            
-            document.getElementById('pc-team').innerText = p.team.length > 25 ? p.team.substring(0, 25) + '...' : p.team;
-            document.getElementById('pc-team').title = p.team;
-            
-            document.getElementById('pc-mat').innerText = p.mat;
-            
-            document.getElementById('pc-runs').innerText = p.runs;
-            document.getElementById('pc-avg').innerText = (p.dismissals === 0 && p.runs > 0) ? '-' : p.avg.toFixed(2);
-            document.getElementById('pc-sr').innerText = p.sr.toFixed(2);
-            document.getElementById('pc-best').innerText = p.bestRuns > 0 ? `${p.bestRuns}${p.bestNotOut ? '*' : ''}` : '-';
-            document.getElementById('pc-10050').innerText = `${p.hundreds}/${p.fifties}`;
-            document.getElementById('pc-4s6s').innerText = `${p.fours}/${p.sixes}`;
-            
-            document.getElementById('pc-wkts').innerText = p.wkts;
-            document.getElementById('pc-econ').innerText = p.econ.toFixed(2);
-            document.getElementById('pc-bbi').innerText = p.bbiW > 0 ? `${p.bbiW}-${p.bbiR}` : '-';
-            document.getElementById('pc-bavg').innerText = p.wkts === 0 ? '-' : p.bAvg.toFixed(2);
-            document.getElementById('pc-overs').innerText = p.overs.toFixed(1);
-            document.getElementById('pc-mdn').innerText = p.mdn;
-            
-            document.getElementById('pc-catches').innerText = p.catches;
-            document.getElementById('pc-stumpings').innerText = p.stumpings;
-            document.getElementById('pc-runouts').innerText = p.runouts;
-
-            document.getElementById('playerCardModal').classList.add('active');
+            selectedH2HPlayers.push(name);
+            select.value = "";
+            renderH2H();
         }
 
-        function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) { document.getElementById('player-avatar').src = e.target.result; }
-                reader.readAsDataURL(file);
+        function removeH2HPlayer(index) {
+            selectedH2HPlayers.splice(index, 1);
+            renderH2H();
+        }
+
+        function renderH2H() {
+            // Render Pills
+            let pillBox = document.getElementById('h2h-pill-box');
+            pillBox.innerHTML = selectedH2HPlayers.map((name, i) => {
+                let color = h2hColors[i % h2hColors.length];
+                return `<div class="player-pill" style="border-color:${color}; background:${color}15;">
+                            <div style="color:${color};">${name.length>15?name.substring(0,15)+'...':name}</div>
+                            <span onclick="removeH2HPlayer(${i})">×</span>
+                        </div>`;
+            }).join('');
+
+            // Grab player objects
+            let playersToCompare = selectedH2HPlayers.map(name => aggregatedData.find(p => p.name === name)).filter(p => p);
+
+            // Render Table Header
+            let thRow = `<th>Metric</th>` + playersToCompare.map((p, i) => {
+                let color = h2hColors[i % h2hColors.length];
+                return `<th style="color:${color}; border-bottom-color:${color};">${p.dispName}</th>`;
+            }).join('');
+            document.getElementById('h2h-th-row').innerHTML = thRow;
+
+            // Render Table Body (Batting Only)
+            let tbody = document.getElementById('h2h-tbody');
+            if(playersToCompare.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="color:#94a3b8; text-align:center;">Add players to begin comparison (Max 5)</td></tr>`;
+                if(charts['h2hBarChart']) charts['h2hBarChart'].destroy();
+                return;
             }
-        }
 
-        function closePlayerCard(e) {
-            if(e && e.target.id !== 'playerCardModal') return;
-            document.getElementById('playerCardModal').classList.remove('active');
-        }
+            let trInnings = `<td style="text-align:left;">Innings Batted</td>` + playersToCompare.map(p => `<td>${p.inn}</td>`).join('');
+            let trRuns = `<td style="text-align:left; color:#10b981; font-weight:bold;">Total Runs</td>` + playersToCompare.map(p => `<td style="color:#10b981; font-weight:bold;">${p.runs}</td>`).join('');
+            let trAvg = `<td style="text-align:left;">Batting Average</td>` + playersToCompare.map(p => `<td>${p.dismissals===0 && p.runs>0 ? '-' : p.avg.toFixed(1)}</td>`).join('');
+            let trSR = `<td style="text-align:left;">Strike Rate</td>` + playersToCompare.map(p => `<td>${p.sr.toFixed(1)}</td>`).join('');
+            let trBest = `<td style="text-align:left;">High Score</td>` + playersToCompare.map(p => `<td>${p.bestRuns > 0 ? p.bestRuns + (p.bestNotOut?'*':'') : '-'}</td>`).join('');
+            let trBounds = `<td style="text-align:left;">Boundaries (4s/6s)</td>` + playersToCompare.map(p => `<td>${p.fours} / ${p.sixes}</td>`).join('');
 
-        function downloadPlayerCard() {
-            let captureElement = document.getElementById('cardCaptureArea');
-            html2canvas(captureElement, { backgroundColor: null, scale: 2, useCORS: true }).then(canvas => {
-                let link = document.createElement('a');
-                let safeName = document.getElementById('pc-name').innerText.replace(/\s+/g, '_');
-                link.download = `${safeName}_Sportzstat_Card.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
+            tbody.innerHTML = `<tr>${trInnings}</tr><tr>${trRuns}</tr><tr>${trAvg}</tr><tr>${trSR}</tr><tr>${trBest}</tr><tr>${trBounds}</tr>`;
+
+            // Render Bar Chart
+            let datasets = playersToCompare.map((p, i) => {
+                let avg = p.dismissals===0 && p.runs>0 ? p.runs : p.avg; 
+                return {
+                    label: p.dispName,
+                    data: [p.runs, avg.toFixed(1), p.sr.toFixed(1)],
+                    backgroundColor: h2hColors[i % h2hColors.length],
+                    borderRadius: 4
+                }
+            });
+
+            const ctx = document.getElementById('h2hBarChart');
+            if(charts['h2hBarChart']) charts['h2hBarChart'].destroy();
+            charts['h2hBarChart'] = new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Runs', 'Average', 'Strike Rate'],
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, grid:{color:'#334155'} }, x:{ grid:{display:false} } },
+                    plugins: { legend: { position: 'bottom', labels: {color: 'white'} } }
+                }
             });
         }
 
-        function renderTable() {
-            let tbody = document.getElementById('career-tbody');
-            if(aggregatedData.length === 0) { tbody.innerHTML = `<tr><td colspan="27" style="text-align:center; color:#ef4444;">No players match the selected filters.</td></tr>`; return; }
+        // ==========================================
+        // TAB 4: LIVE SCOUTING (With Historical Fallback)
+        // ==========================================
+        async function fetchLiveScouting() {
+            if (!document.getElementById('btn-tab-live').classList.contains('active')) return;
+            
+            const { data, error } = await db.from('live_matches').select('*');
+            
+            // Check if there's no live data
+            if (error || !data || data.length === 0) {
+                renderHistoricalFallback();
+                return;
+            }
 
-            tbody.innerHTML = aggregatedData.map((p, index) => {
-                let bestStr = p.bestRuns > 0 ? `${p.bestRuns}${p.bestNotOut ? '*' : ''}` : '-';
-                let bbiStr = p.bbiW > 0 ? `${p.bbiW}-${p.bbiR}` : '-';
-                let avgStr = p.dismissals === 0 && p.runs > 0 ? '-' : p.avg.toFixed(2);
-                let bAvgStr = p.wkts === 0 ? '-' : p.bAvg.toFixed(2);
-                
-                let dispName = p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name;
-                let dispTeam = p.team.length > 15 ? p.team.substring(0, 15) + '...' : p.team;
+            // Render True Live Match
+            let html = "";
+            data.forEach(m => {
+                let d = m.live_data;
+                if(!d) return;
 
-                return `<tr>
-                    <td class="col-name"><span class="player-link" title="${p.name}" onclick="openPlayerCard(${index})">${dispName}</span></td>
-                    <td class="col-team" title="${p.team}">${dispTeam}</td>
-                    <td class="col-mat">${p.mat}</td>
+                let b1 = d.batters && d.batters[0]; let b2 = d.batters && d.batters[1];
+                let bStr = "";
+                if(b1) { let sr = b1.b>0?((b1.r/b1.b)*100).toFixed(1):"0.0"; bStr += `<div><span style="color:white; font-weight:bold;">${b1.name}</span>: ${b1.r}(${b1.b}) <span style="color:#8b5cf6; font-size:0.8rem;">[SR: ${sr}]</span></div>`; }
+                if(b2) { let sr = b2.b>0?((b2.r/b2.b)*100).toFixed(1):"0.0"; bStr += `<div style="margin-top:5px;"><span style="color:white; font-weight:bold;">${b2.name}</span>: ${b2.r}(${b2.b}) <span style="color:#8b5cf6; font-size:0.8rem;">[SR: ${sr}]</span></div>`; }
+
+                let bowlStr = "";
+                if(d.bowler) {
+                    let er = parseFloat(d.bowler.o)>0 ? ((d.bowler.r/parseFloat(d.bowler.o))*6).toFixed(1) : "0.0";
+                    bowlStr = `<div><span style="color:white; font-weight:bold;">${d.bowler.name}</span>: ${d.bowler.o} Ov | ${d.bowler.w}/${d.bowler.r} <span style="color:#ef4444; font-size:0.8rem;">[ER: ${er}]</span></div>`;
+                }
+
+                html += `
+                <div class="chart-card" style="border-color:#10b981; box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #334155; padding-bottom:10px;">
+                        <h3 style="margin:0; border:none; padding:0; color:#10b981; font-size: 1.3rem;">${d.batTeam} vs ${d.bowlTeam}</h3>
+                        <span style="background:rgba(16,185,129,0.2); color:#10b981; padding:4px 10px; border-radius:4px; font-size:0.8rem; font-weight:bold; border: 1px solid #10b981; animation: pulse 2s infinite;">🔴 LIVE</span>
+                    </div>
+                    <div style="font-size:2.2rem; font-weight:900; color:white; margin-bottom:5px;">${d.runs}/${d.wkts} <span style="font-size:1.1rem; color:#94a3b8;">(${d.overs} ov)</span></div>
+                    <div style="font-size:0.95rem; color:#f59e0b; font-weight:bold; margin-bottom:20px;">CRR: ${d.crr} ${d.rrr && d.rrr !== "0.00" ? `<span style="color:#94a3b8; margin:0 5px;">|</span> RRR: <span style="color:#ef4444;">${d.rrr}</span>` : ''}</div>
                     
-                    <td class="bat-col col-inn">${p.inn}</td>
-                    <td class="bat-col col-runs">${p.runs}</td>
-                    <td class="col-best" style="color:#ef4444; font-weight:bold;">${bestStr}</td>
-                    <td class="col-bf">${p.bf}</td>
-                    <td class="col-avg" style="color:#38bdf8;">${avgStr}</td>
-                    <td class="col-sr">${p.sr.toFixed(2)}</td>
-                    <td class="col-hundreds">${p.hundreds}</td>
-                    <td class="col-fifties">${p.fifties}</td>
-                    <td class="col-fours">${p.fours}</td>
-                    <td class="col-sixes">${p.sixes}</td>
-                    <td class="col-no">${p.no}</td>
-                    <td class="col-ducks">${p.ducks}</td>
+                    <div style="background:#0f172a; padding:15px; border-radius:8px; margin-bottom:12px; font-size:1rem; border: 1px solid #334155;">
+                        <div style="color:#94a3b8; font-size:0.8rem; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">At The Crease</div>
+                        ${bStr || '<span style="color:#475569;">Waiting for batters...</span>'}
+                    </div>
                     
-                    <td class="bowl-col col-overs">${p.overs.toFixed(1)}</td>
-                    <td class="bowl-col col-mdn">${p.mdn}</td>
-                    <td class="col-rc">${p.rc}</td>
-                    <td class="bowl-col col-wkts" style="color:#10b981;">${p.wkts}</td>
-                    <td class="col-bbi" style="color:#ef4444;">${bbiStr}</td>
-                    <td class="col-bavg" style="color:#38bdf8;">${bAvgStr}</td>
-                    <td class="col-econ">${p.econ.toFixed(2)}</td>
-                    <td class="col-w4">${p.w4}</td>
-                    <td class="col-w5">${p.w5}</td>
+                    <div style="background:#0f172a; padding:15px; border-radius:8px; font-size:1rem; border: 1px solid #334155;">
+                        <div style="color:#94a3b8; font-size:0.8rem; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">Bowling Attack</div>
+                        ${bowlStr || '<span style="color:#475569;">Waiting for bowler...</span>'}
+                    </div>
+                </div>`;
+            });
 
-                    <td class="field-col col-catches">${p.catches}</td>
-                    <td class="field-col col-stumpings">${p.stumpings}</td>
-                    <td class="field-col col-runouts">${p.runouts}</td>
-                </tr>`;
-            }).join('');
+            document.getElementById('live-scouting-grid').innerHTML = html;
         }
 
-        // 🔥 Separate method to update the 5-Tool Radar dynamically
+        // Feature: Show most recent match if live is empty
+        function renderHistoricalFallback() {
+            let grid = document.getElementById('live-scouting-grid');
+            
+            // Sort by created_at descending (latest first)
+            let sortedMatches = [...rawMatches].sort((a,b) => new Date(b.rawData.created_at) - new Date(a.rawData.created_at));
+            
+            if (sortedMatches.length === 0) {
+                grid.innerHTML = `<div class="chart-card" style="text-align:center; color:#94a3b8; padding:30px;">No match data available in database.</div>`;
+                return;
+            }
+
+            let latest = sortedMatches[0];
+            let fs = latest.rawData.full_state;
+            
+            if (!fs || !fs.teams || !fs.teams.A || !fs.teams.B) {
+                grid.innerHTML = `<div class="chart-card" style="text-align:center; color:#94a3b8; padding:30px;">Match data corrupted.</div>`;
+                return;
+            }
+
+            let html = `
+            <div style="text-align:center; margin-bottom: 15px; color: #a855f7; font-weight:bold; letter-spacing: 1px; text-transform: uppercase;">
+                No Live Matches Active. Showing Latest Completed Match:
+            </div>
+            <div class="chart-card" style="border-color:#38bdf8; box-shadow: 0 0 20px rgba(56, 189, 248, 0.1);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #334155; padding-bottom:10px;">
+                    <h3 style="margin:0; border:none; padding:0; color:#38bdf8; font-size: 1.3rem;">${fs.teams.A.name} vs ${fs.teams.B.name}</h3>
+                    <span style="background:rgba(148, 163, 184, 0.2); color:#cbd5e1; padding:4px 10px; border-radius:4px; font-size:0.8rem; font-weight:bold; border: 1px solid #475569;">COMPLETED</span>
+                </div>
+                
+                <div style="margin-bottom:20px;">
+                    <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 5px;">Tournament: <span style="color:white; font-weight:bold;">${latest.tourney}</span></div>
+                    <div style="font-size: 0.9rem; color: #94a3b8;">Format: <span style="color:white; font-weight:bold;">${latest.format}</span></div>
+                </div>
+                
+                <div style="display:flex; flex-direction:column; gap: 15px;">
+                    ${fs.inningsSummaries.map((inn, i) => `
+                        <div style="background:#0f172a; padding:15px; border-radius:8px; border: 1px solid #334155;">
+                            <div style="color:#38bdf8; font-size:0.85rem; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">Innings ${i+1}:${inn.batTeam}</div>
+                            <div style="font-size:1.5rem; font-weight:bold; color:white;">${inn.r}/${inn.w} <span style="font-size:0.9rem; color:#94a3b8; font-weight:normal;">(${inn.o} ov)</span></div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+
+            grid.innerHTML = html;
+        }
+
+        // ==========================================
+        // UI UTILS
+        // ==========================================
         function updateRadarChart() {
             let radarSel = document.getElementById('radarPlayerSelect');
             if (!radarSel || aggregatedData.length === 0) return;
             let targetPlayer = aggregatedData.find(p => p.name === radarSel.value) || aggregatedData[0];
             if (!targetPlayer) return;
 
-            // Normalized Radar Scores (0 to 100)
             let power = Math.min((targetPlayer.sr / 200) * 100, 100);
             let stability = Math.min((targetPlayer.avg / 50) * 100, 100);
             let restraint = targetPlayer.bowlBalls > 0 ? Math.max(100 - (targetPlayer.econ * 8), 0) : 0;
@@ -820,22 +940,13 @@
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        r: {
-                            angleLines: { color: 'rgba(51, 65, 85, 0.6)' },
-                            grid: { color: 'rgba(51, 65, 85, 0.6)' },
-                            pointLabels: { color: '#cbd5e1', font: { size: 11, weight: 'bold' } },
-                            ticks: { display: false, min: 0, max: 100 }
-                        }
-                    },
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { r: { angleLines: { color: 'rgba(51, 65, 85, 0.6)' }, grid: { color: 'rgba(51, 65, 85, 0.6)' }, pointLabels: { color: '#cbd5e1', font: { size: 11, weight: 'bold' } }, ticks: { display: false, min: 0, max: 100 } } },
                     plugins: { legend: { display: false } }
                 }
             });
         }
 
-        // Master Chart Renderer for all analytics widgets
         function renderCharts() {
             const createChart = (id, type, data, options) => {
                 const ctx = document.getElementById(id);
@@ -851,48 +962,17 @@
 
             let formatChartLabels = (players) => players.map(p => p.name.length > 15 ? p.name.substring(0,15) + '...' : p.name);
 
-            // ==========================================
-            // NOVEL SCOUT WIDGETS
-            // ==========================================
-            
-            // 1. Five-Tool Radar Polygon
             updateRadarChart();
 
-            // 2. Fielding Impact Value (FIV)
             let topFIV = [...aggregatedData].filter(p => p.fiv > 0).sort((a,b) => b.fiv - a.fiv).slice(0, 10);
-            createChart('fieldingImpactChart', 'bar', {
-                labels: formatChartLabels(topFIV),
-                datasets: [{ label: 'Fielding Net Runs', data: topFIV.map(p => p.fiv), backgroundColor: '#10b981', borderRadius: 4 }]
-            }, barOptions);
+            createChart('fieldingImpactChart', 'bar', { labels: formatChartLabels(topFIV), datasets: [{ label: 'Fielding Net Runs', data: topFIV.map(p => p.fiv), backgroundColor: '#10b981', borderRadius: 4 }] }, barOptions);
 
-            // 3. Boom-or-Bust Volatility Matrix (Scatter)
             let volatilityData = aggregatedData.filter(p => p.runs >= 25).map(p => ({ x: p.brc, y: p.bpd, player: p.dispName }));
-            createChart('boomBustMatrix', 'scatter', {
-                datasets: [{ label: 'Batters', data: volatilityData, backgroundColor: '#f59e0b', pointRadius: 6, pointHoverRadius: 8 }]
-            }, {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: scatterTooltip },
-                scales: {
-                    x: { title: { display: true, text: 'Boundary Run % (Aggression)', color: '#94a3b8' }, grid: { color: '#334155' } },
-                    y: { title: { display: true, text: 'Balls Faced Per Dismissal (Longevity)', color: '#94a3b8' }, grid: { color: '#334155' } }
-                }
-            });
+            createChart('boomBustMatrix', 'scatter', { datasets: [{ label: 'Batters', data: volatilityData, backgroundColor: '#f59e0b', pointRadius: 6, pointHoverRadius: 8 }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: scatterTooltip }, scales: { x: { title: { display: true, text: 'Boundary Run %', color: '#94a3b8' }, grid: { color: '#334155' } }, y: { title: { display: true, text: 'Balls Faced Per Dismissal', color: '#94a3b8' }, grid: { color: '#334155' } } } });
 
-            // 4. Safe-Hands & Glovework Breakdown (Stacked Bar)
             let topHands = [...aggregatedData].filter(p => p.totalFieldDismissals > 0).sort((a,b) => b.totalFieldDismissals - a.totalFieldDismissals).slice(0, 10);
-            createChart('safeHandsChart', 'bar', {
-                labels: formatChartLabels(topHands),
-                datasets: [
-                    { label: 'Catches', data: topHands.map(p => p.catches), backgroundColor: '#38bdf8' },
-                    { label: 'Stumpings', data: topHands.map(p => p.stumpings), backgroundColor: '#a855f7' },
-                    { label: 'Run Outs', data: topHands.map(p => p.runouts), backgroundColor: '#ec4899' }
-                ]
-            }, stackedBarOptions);
+            createChart('safeHandsChart', 'bar', { labels: formatChartLabels(topHands), datasets: [ { label: 'Catches', data: topHands.map(p => p.catches), backgroundColor: '#38bdf8' }, { label: 'Stumpings', data: topHands.map(p => p.stumpings), backgroundColor: '#a855f7' }, { label: 'Run Outs', data: topHands.map(p => p.runouts), backgroundColor: '#ec4899' } ] }, stackedBarOptions);
 
-            // ==========================================
-            // DEEP ANALYTICS MATRICES
-            // ==========================================
             let batMatrixData = aggregatedData.filter(p => p.runs >= 30).map(p => ({ x: p.sr, y: p.avg, player: p.dispName }));
             createChart('battingMatrix', 'scatter', { datasets: [{ label: 'Batters', data: batMatrixData, backgroundColor: '#f59e0b', pointRadius: 6, pointHoverRadius: 8 }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: {display:false}, tooltip: scatterTooltip }, scales: { x: { title: { display: true, text: 'Strike Rate', color: '#94a3b8' } }, y: { title: { display: true, text: 'Batting Average', color: '#94a3b8' } } } });
 
@@ -911,9 +991,6 @@
             let topSR = [...aggregatedData].filter(p => p.runs >= 30).sort((a,b) => b.sr - a.sr).slice(0, 10);
             createChart('trueStrikeRate', 'bar', { labels: formatChartLabels(topSR), datasets: [{ label: 'Strike Rate', data: topSR.map(p => p.sr), backgroundColor: '#38bdf8', borderRadius: 4 }] }, barOptions);
 
-            // ==========================================
-            // CORE AGGREGATES & WEIGHTAGE
-            // ==========================================
             let topBatters = [...aggregatedData].sort((a,b) => b.runs - a.runs).slice(0, 10);
             let topBowlers = [...aggregatedData].sort((a,b) => b.wkts - a.wkts).slice(0, 10);
             const polarColors = ['#3b82f6', '#f59e0b', '#10b981', '#a855f7', '#ec4899', 'rgba(255,255,255,0.1)'];
