@@ -29,6 +29,9 @@
         }
         .scorer-btn:active { transform: scale(0.96); }
         
+        /* 🔥 +30% Size Boost exclusively for the scoring numbers */
+        .num-btn { font-size: 1.4rem !important; }
+        
         .grid-label { 
             grid-column: span 4; text-align: center; text-transform: uppercase; font-size: 0.75rem; 
             color: #94a3b8; border-bottom: 1px solid #334155; padding-bottom: 5px; 
@@ -38,6 +41,7 @@
         /* Fat-Finger Mobile Adjustments */
         @media (max-width: 500px) {
             .scorer-btn { font-size: 0.8rem; padding: 14px 2px; }
+            .num-btn { font-size: 1.25rem !important; } /* Boosted on mobile */
             .scorer-btn-grid { gap: 6px; }
         }
     </style>
@@ -190,21 +194,21 @@
                         <div class="grid-label">Scoring Events</div>
                         
                         <!-- Row 1: 1+1+1+1 = 4 -->
-                        <button type="button" class="scorer-btn col-1" style="background:#334155;" onclick="ballScored(0, false)">0</button>
-                        <button type="button" class="scorer-btn col-1" style="background:#475569;" onclick="ballScored(1, false)">1</button>
-                        <button type="button" class="scorer-btn col-1" style="background:#475569;" onclick="ballScored(2, false)">2</button>
-                        <button type="button" class="scorer-btn col-1" style="background:#475569;" onclick="ballScored(3, false)">3</button>
+                        <button type="button" class="scorer-btn num-btn col-1" style="background:#334155;" onclick="ballScored(0, false)">0</button>
+                        <button type="button" class="scorer-btn num-btn col-1" style="background:#475569;" onclick="ballScored(1, false)">1</button>
+                        <button type="button" class="scorer-btn num-btn col-1" style="background:#475569;" onclick="ballScored(2, false)">2</button>
+                        <button type="button" class="scorer-btn num-btn col-1" style="background:#475569;" onclick="ballScored(3, false)">3</button>
                         
                         <!-- Row 2: 2+1+1 = 4 -->
                         <button type="button" class="scorer-btn col-2" style="background:var(--manual, #64748b);" onclick="openManualRun()">Manual Run</button>
-                        <button type="button" class="scorer-btn col-1" style="background:var(--b4, #a855f7);" onclick="ballScored(4, true)">4</button>
-                        <button type="button" class="scorer-btn col-1" style="background:var(--b6, #ec4899);" onclick="ballScored(6, true)">6</button>
+                        <button type="button" class="scorer-btn num-btn col-1" style="background:var(--b4, #a855f7);" onclick="ballScored(4, true)">4</button>
+                        <button type="button" class="scorer-btn num-btn col-1" style="background:var(--b6, #ec4899);" onclick="ballScored(6, true)">6</button>
                         
                         <!-- Row 3: 1+1+1+1 = 4 -->
-                        <button type="button" class="scorer-btn col-1" style="background:#0284c7;" onclick="openExtra('W')">WD</button>
-                        <button type="button" class="scorer-btn col-1" style="background:#0284c7;" onclick="openExtra('NB')">NB</button>
+                        <button type="button" class="scorer-btn col-1" style="background:#0284c7;" onclick="openExtra('W')">WIDE</button>
+                        <button type="button" class="scorer-btn col-1" style="background:#0284c7;" onclick="openExtra('NB')">NO BALL</button>
                         <button type="button" class="scorer-btn col-1" style="background:#0284c7;" onclick="openExtra('B')">BYES</button>
-                        <button type="button" class="scorer-btn col-1" style="background:#0284c7;" onclick="openExtra('LB')">L.BYES</button>
+                        <button type="button" class="scorer-btn col-1" style="background:#0284c7;" onclick="openExtra('LB')">LEG BYES</button>
                         
                         <!-- Row 4: 2+1+1 = 4 -->
                         <button type="button" class="scorer-btn col-2" style="background:var(--danger, #ef4444);" onclick="openWicket()">🚨 WICKET</button>
@@ -213,33 +217,37 @@
                         
                         <div class="grid-label">Match Control</div>
                         
-                        <!-- Row 5: 1+1+1+1 = 4 -->
-                        <button type="button" class="scorer-btn col-1" style="background:#eab308; color:#020617; text-shadow:none;" onclick="toggleFreeHit()">🚨 FH</button>
-                        <button type="button" class="scorer-btn col-1" style="background:#475569;" onclick="manualRotateUI()">ROTATE 🔄</button>
-                        <button type="button" class="scorer-btn col-1" style="background:#8b5cf6;" onclick="openRemarkModal()">📝 RMK</button>
-                        <button type="button" class="scorer-btn col-1" style="background:#b91c1c;" onclick="openPenalty()">⚠️ PEN</button>
+                        <!-- Row 5: 2+2 = 4 -->
+                        <button type="button" class="scorer-btn col-2" style="background:#eab308; color:#020617; text-shadow:none;" onclick="toggleFreeHit()">🚨 FREE HIT</button>
+                        <button type="button" class="scorer-btn col-2" style="background:#475569;" onclick="manualRotateUI()">ROTATE 🔄</button>
                         
-                        <!-- Row 6: 1+2+1 = 4 -->
+                        <!-- Row 6: 2+2 = 4 -->
+                        <button type="button" class="scorer-btn col-2" style="background:#8b5cf6;" onclick="openRemarkModal()">📝 REMARK</button>
+                        <button type="button" class="scorer-btn col-2" style="background:#b91c1c;" onclick="openPenalty()">⚠️ 5 PENALTY</button>
+                        
+                        <!-- Row 7: 1+1+2 = 4 (UNDO Swap with FULL SCREEN applied) -->
                         <button type="button" class="scorer-btn col-1" style="background:#0f766e;" onclick="openChangeWK()">🧤 WK</button>
-                        <button type="button" class="scorer-btn col-2" style="background:#1e293b; border:1px solid #475569;" onclick="undoLastAction()">↩️ UNDO</button>
-                        <button type="button" id="fsBtn" class="scorer-btn col-1" style="background:#334155;" onclick="toggleFullScreen()">🔲 FULL</button>
-                        
-                        <!-- Row 7: 1+1+2 = 4 -->
-                        <button type="button" class="scorer-btn col-1" style="background:#2563eb;" onclick="showMatchGraphs()">📈 Graph</button>
-                        <button type="button" class="scorer-btn col-1" style="background:#0ea5e9;" onclick="showMatchSummary()">📊 Sum</button>
-                        <button type="button" class="scorer-btn col-2" style="background:#ca8a04;" onclick="openPlayerSwap()">🔄 INJURY SUB</button>
+                        <button type="button" class="scorer-btn col-1" style="background:#1e293b; border:1px solid #475569;" onclick="undoLastAction()">↩️ UNDO</button>
+                        <button type="button" id="fsBtn" class="scorer-btn col-2" style="background:#334155;" onclick="toggleFullScreen()">🔲 FULL SCREEN</button>
                         
                         <!-- Row 8: 2+2 = 4 -->
+                        <button type="button" class="scorer-btn col-2" style="background:#2563eb;" onclick="showMatchGraphs()">📈 GRAPHS</button>
+                        <button type="button" class="scorer-btn col-2" style="background:#0ea5e9;" onclick="showMatchSummary()">📊 SUMMARY</button>
+                        
+                        <!-- Row 9: 2+2 = 4 -->
+                        <button type="button" class="scorer-btn col-2" style="background:#ca8a04;" onclick="openPlayerSwap()">🔄 INJURY SUB</button>
                         <button type="button" class="scorer-btn col-2" style="background:#4f46e5;" onclick="openEditSquad()">🛠️ SQUAD</button>
-                        <button type="button" class="scorer-btn col-2" style="background:#be123c;" onclick="restartCloudMatch()">🚨 RESTART (WIPE)</button>
 
-                        <!-- Row 9: Flexible Wrapper to perfectly fill 4 columns -->
+                        <!-- Row 10: 4 -->
+                        <button type="button" class="scorer-btn col-4" style="background:#be123c;" onclick="restartCloudMatch()">🚨 RESTART MATCH (WIPE)</button>
+
+                        <!-- Row 11: Flexible Wrapper -->
                         <div class="col-4" style="display: flex; gap: 8px;">
-                            <button type="button" id="breakBtn" class="scorer-btn hidden" style="flex:1; background:#fb923c; color:black; text-shadow:none;" onclick="openBreakModal()">⏱️ STUMPS</button>
+                            <button type="button" id="breakBtn" class="scorer-btn hidden" style="flex:1; background:#fb923c; color:black; text-shadow:none;" onclick="openBreakModal()">⏱️ STUMPS / BREAK</button>
                             <button type="button" id="intBtn" class="scorer-btn" style="flex:1; background:#38bdf8; color:black; text-shadow:none;" onclick="openInterruptionModal()">⛈️ DELAY</button>
                         </div>
                         
-                        <!-- Row 10: Full Width -->
+                        <!-- Row 12: Full Width -->
                         <button type="button" class="scorer-btn col-4" style="background:#047857; font-size:1.1rem; padding:18px 4px;" onclick="endInnings()">🏁 DECLARE / END INNINGS</button>
                     </div>
                 </div>
