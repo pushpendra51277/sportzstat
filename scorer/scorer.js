@@ -428,40 +428,69 @@ function buildEditSq() { let k = el('editSqTeam').value, t = state.teams[k].play
 function saveEditSquad() { let k = el('editSqTeam').value, t = state.teams[k].players; let activeIdxs = []; if (k === state.battingKey) { if(state.current.sIdx !== null) activeIdxs.push(state.current.sIdx); if(state.current.nsIdx !== null) activeIdxs.push(state.current.nsIdx); } if (k === state.bowlingKey) { if(state.current.bIdx !== null) activeIdxs.push(state.current.bIdx); } for(let i=0; i<t.length; i++) { let isChecked = el(`es-p-${i}`).checked; if (!isChecked && activeIdxs.includes(i)) { alert(`Cannot remove ${t[i].name} from Playing XI because they are active!`); return; } } for(let i=0; i<t.length; i++) { t[i].name = el(`es-n-${i}`).value.trim(); t[i].isPlayingXI = el(`es-p-${i}`).checked; } syncMetadataToHistory(true); closeModal(); updateUI(); }
 
 // 🔥 UPDATED: Includes Soft-Warnings and Deadlock Protection
+// 🔥 UPDATED: Includes Smart Auto-Selection, Soft-Warnings, and Deadlock Protection
 function openSelector(typ, title) { 
     let cur = state.current, lst = typ === 'bowler' ? getBowlTeam().players : getBatTeam().players; 
     
-    let opt = lst.map((p, i) => { 
-        if (!p.isPlayingXI) return ''; 
+    let hasValidDefault = false;
+    let optOptions = [];
+
+    lst.forEach((p, i) => { 
+        if (!p.isPlayingXI) return; 
         let s = false;
         
         if (typ === 'bowler') {
-            // Soft-Restriction: Only hide the active bowler. 
-            // Allows over-quota and last-over bowlers to appear in case of umpire mistakes.
+            // Soft-Restriction: Only hide the currently active bowler. 
             s = (i !== cur.bIdx); 
         } else {
             s = ((!p.hasBatted || p.out === 'retiredHurt') && i !== cur.sIdx && i !== cur.nsIdx);
         }
         
-        if (!s) return '';
+        if (!s) return;
         
         let label = p.name;
+        let isWarning = false;
+        
         if (typ === 'bowler') {
-            if (p.quotaOvers >= state.matchSettings.bowlerQuota) label += ' ⚠️ (Quota Full)';
-            if (cur.lastOverBowlers.has(i)) label += ' 🛑 (Bowled Last Over)';
+            if (p.quotaOvers >= state.matchSettings.bowlerQuota) { label += ' ⚠️ (Quota Full)'; isWarning = true; }
+            if (cur.lastOverBowlers.has(i)) { label += ' 🛑 (Bowled Last Over)'; isWarning = true; }
         }
-        return `<option value="${i}">${label}</option>`; 
-    }).join(''); 
+        
+        let selectedStr = "";
+        // 🔥 SMART DEFAULT: Auto-selects the first player who DOES NOT have a warning
+        if (!hasValidDefault && !isWarning) {
+            selectedStr = "selected";
+            hasValidDefault = true;
+        }
 
-    // 🔥 DEADLOCK FIX: If no batters are left (due to retirements/injuries), end innings instantly.
-    if (typ !== 'bowler' && !opt) {
+        optOptions.push(`<option value="${i}" ${selectedStr}>${label}</option>`); 
+    });
+
+    // 🔥 DEADLOCK FIX: If no batters are left
+    if (typ !== 'bowler' && optOptions.length === 0) {
         alert("No more batters available! The innings will now end automatically.");
         setTimeout(endInnings, 500);
         return;
     }
 
-    showModal(title, `<select id="gSel" class="modal-input w-100">${opt}</select>`, () => { 
-        saveState(); let val = parseInt(el('gSel').value); 
+    // If everyone has a warning, force a manual selection placeholder
+    let finalOptHtml = "";
+    if (typ === 'bowler' && !hasValidDefault) {
+        finalOptHtml = `<option value="-1" selected disabled>-- Select Bowler --</option>` + optOptions.join('');
+    } else {
+        finalOptHtml = optOptions.join('');
+    }
+
+    showModal(title, `<select id="gSel" class="modal-input w-100">${finalOptHtml}</select>`, () => { 
+        let val = parseInt(el('gSel').value); 
+        
+        // Safety check if they try to bypass the placeholder
+        if (isNaN(val) || val < 0) {
+            alert("Please select a valid player from the dropdown.");
+            return; // Blocks confirm, forces user to pick
+        }
+
+        saveState(); 
         
         if(typ === 'bowler') { 
             let selectedBowler = getBowlTeam().players[val];
