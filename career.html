@@ -40,7 +40,6 @@
         .table-container { background: #1e293b; border-radius: 10px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.3); overflow: hidden; width: 100%; }
         .table-header { padding: 15px 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
         
-        /* 🔥 NEW: Much taller table wrapper so you can see more players at once */
         .table-scroll-wrapper { max-height: 75vh; overflow-y: auto; overflow-x: auto; position: relative; }
         .table-scroll-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
         .table-scroll-wrapper::-webkit-scrollbar-track { background: #0f172a; }
@@ -97,14 +96,17 @@
         table.hide-runouts .col-runouts { display: none !important; }
 
         /* Advanced Analytics Grid */
-        .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 25px; margin-bottom: 40px; }
-        .chart-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); position: relative; overflow: hidden; }
+        .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 25px; margin-bottom: 40px; }
+        .chart-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 22px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); position: relative; overflow: hidden; display: flex; flex-direction: column; }
         
-        .adv-canvas-container { position: relative; height: 320px; width: 100%; }
-        .chart-title { font-size: 1.1rem; font-weight: bold; margin-top: 0; margin-bottom: 5px; color: #f8fafc; display: flex; align-items: center; gap: 8px; }
-        .chart-subtitle { font-size: 0.75rem; color: #94a3b8; margin-top: 0; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
+        .adv-canvas-container { position: relative; height: 320px; width: 100%; flex-grow: 1; }
+        .chart-title { font-size: 1.1rem; font-weight: bold; margin-top: 0; margin-bottom: 5px; color: #f8fafc; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .chart-subtitle { font-size: 0.75rem; color: #94a3b8; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
         
-        /* Advanced Card Glows */
+        /* Interactive Radar Selector Dropdown */
+        .radar-select { background: #0f172a; border: 1px solid #475569; color: #38bdf8; font-size: 0.8rem; font-weight: bold; border-radius: 4px; padding: 4px 8px; outline: none; }
+        
+        /* Glow Accents */
         .card-glow-purple::before { content: ''; position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(168, 85, 247, 0.2); filter: blur(40px); border-radius: 50%; pointer-events: none; }
         .card-glow-emerald::before { content: ''; position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(16, 185, 129, 0.2); filter: blur(40px); border-radius: 50%; pointer-events: none; }
         .card-glow-amber::before { content: ''; position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(245, 158, 11, 0.2); filter: blur(40px); border-radius: 50%; pointer-events: none; }
@@ -125,6 +127,7 @@
         .modal-box { background: transparent; padding: 0; width: 420px; max-width: 100%; max-height: 95vh; overflow-y: auto; position: relative; transform: translateY(20px); transition: 0.3s; }
         .modal-box::-webkit-scrollbar { display: none; }
         .modal-overlay.active .modal-box { transform: translateY(0); }
+        
         .modal-close { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); border: 1px solid #475569; color: white; font-size: 1.2rem; cursor: pointer; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; z-index: 10; transition: 0.2s; }
         .modal-close:hover { background: #ef4444; border-color: #ef4444; }
 
@@ -164,7 +167,6 @@
         .download-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6); filter: brightness(1.1); }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        
         @media (max-width: 768px) {
             .analytics-grid { grid-template-columns: 1fr; }
             .filter-select, .filter-input { min-width: 100%; }
@@ -176,7 +178,7 @@
     <div class="header">
         <div>
             <h1 style="margin:0; color:#f8fafc;">🏏 Sportzstat Analytics Hub</h1>
-            <p style="margin:5px 0 0 0; color:#94a3b8; font-size:0.9rem;">Interactive Data Engine for Teams & Players</p>
+            <p style="margin:5px 0 0 0; color:#94a3b8; font-size:0.9rem;">Interactive Data Engine for Teams & Selectors</p>
         </div>
         <div style="display: flex; gap: 10px; align-items: center;">
             <button class="action-btn" onclick="document.getElementById('col-toggles').classList.toggle('hidden')">👁️ Table Columns</button>
@@ -289,58 +291,92 @@
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- VIEW 2: MEGA ADVANCED ANALYTICS (12 CHARTS)-->
-    <!-- ========================================== -->
+    <!-- ==================================================== -->
+    <!-- VIEW 2: MEGA ADVANCED ANALYTICS (NOVEL SCOUT ENGINE) -->
+    <!-- ==================================================== -->
     <div id="view-analytics" class="hidden-view">
         <div class="analytics-grid">
             
-            <!-- Basic Visuals -->
-            <div class="chart-card card-glow-amber"><h3 class="chart-title"><span style="color:#f59e0b;">🔥</span> Top 10 Run Scorers</h3><div class="adv-canvas-container"><canvas id="chartRuns"></canvas></div></div>
-            <div class="chart-card card-glow-emerald"><h3 class="chart-title"><span style="color:#10b981;">🎯</span> Top 10 Wicket Takers</h3><div class="adv-canvas-container"><canvas id="chartWickets"></canvas></div></div>
-            <div class="chart-card card-glow-blue"><h3 class="chart-title"><span style="color:#38bdf8;">💥</span> Boundary Breakdown</h3><p class="chart-subtitle">Top 10 Batters</p><div class="adv-canvas-container"><canvas id="chartBoundaries"></canvas></div></div>
-            
-            <!-- Weightage Polar Charts -->
-            <div class="chart-card card-glow-purple"><h3 class="chart-title"><span style="color:#a855f7;">🏆</span> Runs Weightage</h3><p class="chart-subtitle">Distribution across team</p><div class="adv-canvas-container"><canvas id="chartWeightRuns"></canvas></div></div>
-            <div class="chart-card card-glow-rose"><h3 class="chart-title"><span style="color:#ec4899;">☄️</span> Boundary Weightage</h3><p class="chart-subtitle">Total 4s & 6s hit</p><div class="adv-canvas-container"><canvas id="chartWeightBounds"></canvas></div></div>
-            <div class="chart-card card-glow-cyan"><h3 class="chart-title"><span style="color:#06b6d4;">🎳</span> Wicket Weightage</h3><p class="chart-subtitle">Distribution across team</p><div class="adv-canvas-container"><canvas id="chartWeightWkts"></canvas></div></div>
+            <!-- NOVEL 1: Five-Tool Talent Radar Chart with Live Selector -->
+            <div class="chart-card card-glow-purple">
+                <div class="chart-title">
+                    <span><span>🎯</span> The Five-Tool Radar Profile</span>
+                    <select id="radarPlayerSelect" class="radar-select" onchange="updateRadarChart()"></select>
+                </div>
+                <p class="chart-subtitle">Normalized Balance (0-100): Power, Stability, Restraint, Penetration, Athleticism</p>
+                <div class="adv-canvas-container"><canvas id="fiveToolRadar"></canvas></div>
+            </div>
 
-            <!-- Deep Analytics -->
+            <!-- NOVEL 2: Fielding Impact Value (FIV) Net Runs Saved -->
+            <div class="chart-card card-glow-emerald">
+                <h3 class="chart-title"><span>🛡️</span> Fielding Impact Value (FIV)</h3>
+                <p class="chart-subtitle">Weighted Net Runs Saved: (Ct × 12) + (RO × 18) + (St × 14)</p>
+                <div class="adv-canvas-container"><canvas id="fieldingImpactChart"></canvas></div>
+            </div>
+
+            <!-- NOVEL 3: The "Boom-or-Bust" Volatility Matrix -->
             <div class="chart-card card-glow-amber">
-                <h3 class="chart-title"><span style="color:#f59e0b;">⚔️</span> The Batting Matrix</h3>
+                <h3 class="chart-title"><span>💥</span> "Boom-or-Bust" Volatility Matrix</h3>
+                <p class="chart-subtitle">Boundary Run % (X) vs Deliveries Per Dismissal (Y)</p>
+                <div class="adv-canvas-container"><canvas id="boomBustMatrix"></canvas></div>
+            </div>
+
+            <!-- NOVEL 4: Glovework & Safe Hands Breakdown -->
+            <div class="chart-card card-glow-cyan">
+                <h3 class="chart-title"><span>🧤</span> Safe-Hands & Glovework Breakdown</h3>
+                <p class="chart-subtitle">Total In-Field Dismissals (Catches + Stumpings + Run Outs)</p>
+                <div class="adv-canvas-container"><canvas id="safeHandsChart"></canvas></div>
+            </div>
+
+            <!-- Deep Scout Scatter: Batting Matrix -->
+            <div class="chart-card card-glow-amber">
+                <h3 class="chart-title"><span>⚔️</span> The Batting Matrix</h3>
                 <p class="chart-subtitle">Strike Rate (X) vs Average (Y) • Min 30 Runs</p>
                 <div class="adv-canvas-container"><canvas id="battingMatrix"></canvas></div>
             </div>
 
+            <!-- Deep Scout Scatter: Bowling Matrix -->
             <div class="chart-card card-glow-emerald">
-                <h3 class="chart-title"><span style="color:#10b981;">🎯</span> The Bowling Matrix</h3>
+                <h3 class="chart-title"><span>🎯</span> The Bowling Matrix</h3>
                 <p class="chart-subtitle">Economy (X) vs Bowling Average (Y) • Min 2 Wkts</p>
                 <div class="adv-canvas-container"><canvas id="bowlingMatrix"></canvas></div>
             </div>
 
+            <!-- All-Rounder MVP Bubble Tracker -->
             <div class="chart-card card-glow-purple">
-                <h3 class="chart-title"><span style="color:#a855f7;">🌟</span> All-Rounder Impact</h3>
-                <p class="chart-subtitle">Runs (X) vs Wickets (Y) • Bubble Size = Matches Played</p>
+                <h3 class="chart-title"><span>🌟</span> All-Rounder MVP Tracker</h3>
+                <p class="chart-subtitle">Runs (X) vs Wickets (Y) • Bubble Size = Matches</p>
                 <div class="adv-canvas-container"><canvas id="mvpTracker"></canvas></div>
             </div>
 
+            <!-- Boundary Reliance (BRC %) -->
             <div class="chart-card card-glow-rose">
-                <h3 class="chart-title"><span style="color:#f43f5e;">☄️</span> Boundary Reliance (BRC %)</h3>
+                <h3 class="chart-title"><span>☄️</span> Boundary Reliance (BRC %)</h3>
                 <p class="chart-subtitle">% of Total Runs scored via 4s and 6s</p>
                 <div class="adv-canvas-container"><canvas id="boundaryReliance"></canvas></div>
             </div>
 
+            <!-- Balls Per Boundary (BPB) -->
             <div class="chart-card card-glow-cyan">
-                <h3 class="chart-title"><span style="color:#06b6d4;">⏱️</span> Balls Per Boundary (BPB)</h3>
+                <h3 class="chart-title"><span>⏱️</span> Balls Per Boundary (BPB)</h3>
                 <p class="chart-subtitle">Balls faced per boundary hit • Lower is Better</p>
                 <div class="adv-canvas-container"><canvas id="ballsPerBoundary"></canvas></div>
             </div>
 
+            <!-- True Strike Rate Leaders -->
             <div class="chart-card card-glow-blue">
-                <h3 class="chart-title"><span style="color:#38bdf8;">🔥</span> True Strike Rate Leaders</h3>
+                <h3 class="chart-title"><span>🔥</span> True Strike Rate Leaders</h3>
                 <p class="chart-subtitle">Highest Strike Rates • Filtered: Min 30 Runs</p>
                 <div class="adv-canvas-container"><canvas id="trueStrikeRate"></canvas></div>
             </div>
+
+            <!-- Classic Aggregates: Top Scorers & Wickets -->
+            <div class="chart-card card-glow-amber"><h3 class="chart-title"><span>🏏</span> Top 10 Run Scorers</h3><div class="adv-canvas-container"><canvas id="chartRuns"></canvas></div></div>
+            <div class="chart-card card-glow-emerald"><h3 class="chart-title"><span>🎳</span> Top 10 Wicket Takers</h3><div class="adv-canvas-container"><canvas id="chartWickets"></canvas></div></div>
+            <div class="chart-card card-glow-blue"><h3 class="chart-title"><span>💥</span> Boundary Breakdown</h3><p class="chart-subtitle">Top 10 Batters (4s & 6s)</p><div class="adv-canvas-container"><canvas id="chartBoundaries"></canvas></div></div>
+            <div class="chart-card card-glow-purple"><h3 class="chart-title"><span>🏆</span> Run Weightage Distribution</h3><div class="adv-canvas-container"><canvas id="chartWeightRuns"></canvas></div></div>
+            <div class="chart-card card-glow-rose"><h3 class="chart-title"><span>☄️</span> Boundary Weightage</h3><div class="adv-canvas-container"><canvas id="chartWeightBounds"></canvas></div></div>
+            <div class="chart-card card-glow-cyan"><h3 class="chart-title"><span>🎳</span> Wicket Weightage Distribution</h3><div class="adv-canvas-container"><canvas id="chartWeightWkts"></canvas></div></div>
         </div>
     </div>
 
@@ -416,7 +452,6 @@
         const DEFAULT_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
         const themes = ['theme-blue', 'theme-emerald', 'theme-amber', 'theme-purple', 'theme-rose', 'theme-cyan'];
 
-        // 🔥 TAB SWITCHING LOGIC
         function switchTab(tabId) {
             document.getElementById('btn-tab-career').classList.remove('active');
             document.getElementById('btn-tab-analytics').classList.remove('active');
@@ -580,14 +615,34 @@
                 p.econ = p.bowlBalls > 0 ? ((p.rc / p.bowlBalls) * 6) : 0;
                 p.bAvg = p.wkts > 0 ? (p.rc / p.wkts) : 0;
                 
+                // Advanced Scout Formulas
                 let boundaryRuns = (p.fours * 4) + (p.sixes * 6);
                 p.brc = p.runs > 0 ? (boundaryRuns / p.runs) * 100 : 0;
                 let totalBoundaries = p.fours + p.sixes;
                 p.bpb = totalBoundaries > 0 ? (p.bf / totalBoundaries) : 0;
                 
+                // Novel: Fielding Impact Value (FIV)
+                p.fiv = (p.catches * 12) + (p.runouts * 18) + (p.stumpings * 14);
+                p.totalFieldDismissals = p.catches + p.stumpings + p.runouts;
+                
+                // Novel: Balls per dismissal (Staying Power)
+                p.bpd = p.dismissals > 0 ? (p.bf / p.dismissals) : p.bf;
+                
                 p.dispName = p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name;
                 return p;
             });
+
+            // Populate the Five-Tool Radar Selector with the top 15 players by match count
+            let radarSel = document.getElementById('radarPlayerSelect');
+            if (radarSel) {
+                let prevVal = radarSel.value;
+                radarSel.innerHTML = '';
+                let topCandidates = [...aggregatedData].sort((a,b) => (b.runs + b.wkts * 20) - (a.runs + a.wkts * 20)).slice(0, 20);
+                topCandidates.forEach((cand, i) => {
+                    radarSel.innerHTML += `<option value="${cand.name}">${cand.name}</option>`;
+                });
+                if (topCandidates.some(c => c.name === prevVal)) radarSel.value = prevVal;
+            }
 
             executeSort();
         }
@@ -731,7 +786,56 @@
             }).join('');
         }
 
-        // 🔥 Master Chart Renderer for both tabs
+        // 🔥 Separate method to update the 5-Tool Radar dynamically
+        function updateRadarChart() {
+            let radarSel = document.getElementById('radarPlayerSelect');
+            if (!radarSel || aggregatedData.length === 0) return;
+            let targetPlayer = aggregatedData.find(p => p.name === radarSel.value) || aggregatedData[0];
+            if (!targetPlayer) return;
+
+            // Normalized Radar Scores (0 to 100)
+            let power = Math.min((targetPlayer.sr / 200) * 100, 100);
+            let stability = Math.min((targetPlayer.avg / 50) * 100, 100);
+            let restraint = targetPlayer.bowlBalls > 0 ? Math.max(100 - (targetPlayer.econ * 8), 0) : 0;
+            let penetration = targetPlayer.mat > 0 ? Math.min((targetPlayer.wkts / targetPlayer.mat) * 50, 100) : 0;
+            let athleticism = targetPlayer.mat > 0 ? Math.min((targetPlayer.fiv / (targetPlayer.mat * 20)) * 100, 100) : 0;
+
+            const ctx = document.getElementById('fiveToolRadar');
+            if (!ctx) return;
+            if (charts['fiveToolRadar']) charts['fiveToolRadar'].destroy();
+
+            charts['fiveToolRadar'] = new Chart(ctx.getContext('2d'), {
+                type: 'radar',
+                data: {
+                    labels: ['Power (SR)', 'Stability (Avg)', 'Restraint (Econ)', 'Penetration (Wkts)', 'Athleticism (Fielding)'],
+                    datasets: [{
+                        label: targetPlayer.name,
+                        data: [power.toFixed(0), stability.toFixed(0), restraint.toFixed(0), penetration.toFixed(0), athleticism.toFixed(0)],
+                        backgroundColor: 'rgba(168, 85, 247, 0.25)',
+                        borderColor: '#a855f7',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#38bdf8',
+                        pointBorderColor: '#fff',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(51, 65, 85, 0.6)' },
+                            grid: { color: 'rgba(51, 65, 85, 0.6)' },
+                            pointLabels: { color: '#cbd5e1', font: { size: 11, weight: 'bold' } },
+                            ticks: { display: false, min: 0, max: 100 }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // Master Chart Renderer for all analytics widgets
         function renderCharts() {
             const createChart = (id, type, data, options) => {
                 const ctx = document.getElementById(id);
@@ -747,35 +851,48 @@
 
             let formatChartLabels = (players) => players.map(p => p.name.length > 15 ? p.name.substring(0,15) + '...' : p.name);
 
-            // Chart Data Prep
-            let topBatters = [...aggregatedData].sort((a,b) => b.runs - a.runs).slice(0, 10);
-            let topBowlers = [...aggregatedData].sort((a,b) => b.wkts - a.wkts).slice(0, 10);
-            const polarColors = ['#3b82f6', '#f59e0b', '#10b981', '#a855f7', '#ec4899', 'rgba(255,255,255,0.1)'];
+            // ==========================================
+            // NOVEL SCOUT WIDGETS
+            // ==========================================
+            
+            // 1. Five-Tool Radar Polygon
+            updateRadarChart();
 
-            // 1. Basic Bar Charts
-            createChart('chartRuns', 'bar', { labels: formatChartLabels(topBatters), datasets: [{ label: 'Runs', data: topBatters.map(p => p.runs), backgroundColor: '#f59e0b', borderRadius: 4 }] }, barOptions);
-            createChart('chartBoundaries', 'bar', { labels: formatChartLabels(topBatters), datasets: [{ label: 'Sixes (6s)', data: topBatters.map(p => p.sixes), backgroundColor: '#ec4899' }, { label: 'Fours (4s)', data: topBatters.map(p => p.fours), backgroundColor: '#a855f7' }] }, stackedBarOptions);
-            createChart('chartWickets', 'bar', { labels: formatChartLabels(topBowlers), datasets: [{ label: 'Wickets', data: topBowlers.map(p => p.wkts), backgroundColor: '#10b981', borderRadius: 4 }] }, barOptions);
+            // 2. Fielding Impact Value (FIV)
+            let topFIV = [...aggregatedData].filter(p => p.fiv > 0).sort((a,b) => b.fiv - a.fiv).slice(0, 10);
+            createChart('fieldingImpactChart', 'bar', {
+                labels: formatChartLabels(topFIV),
+                datasets: [{ label: 'Fielding Net Runs', data: topFIV.map(p => p.fiv), backgroundColor: '#10b981', borderRadius: 4 }]
+            }, barOptions);
 
-            // 2. Polar Weightage Charts
-            let getPolarData = (sortKey) => {
-                let sorted = [...aggregatedData].sort((a,b) => b[sortKey] - a[sortKey]);
-                let top5 = sorted.slice(0,5); let othersSum = sorted.slice(5).reduce((sum, p) => sum + p[sortKey], 0);
-                let labels = formatChartLabels(top5); let data = top5.map(p => p[sortKey]);
-                if (othersSum > 0) { labels.push('Rest of Players'); data.push(othersSum); }
-                return { labels, data };
-            };
-            let rW = getPolarData('runs');
-            createChart('chartWeightRuns', 'polarArea', { labels: rW.labels, datasets: [{ data: rW.data, backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, polarOptions);
+            // 3. Boom-or-Bust Volatility Matrix (Scatter)
+            let volatilityData = aggregatedData.filter(p => p.runs >= 25).map(p => ({ x: p.brc, y: p.bpd, player: p.dispName }));
+            createChart('boomBustMatrix', 'scatter', {
+                datasets: [{ label: 'Batters', data: volatilityData, backgroundColor: '#f59e0b', pointRadius: 6, pointHoverRadius: 8 }]
+            }, {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: scatterTooltip },
+                scales: {
+                    x: { title: { display: true, text: 'Boundary Run % (Aggression)', color: '#94a3b8' }, grid: { color: '#334155' } },
+                    y: { title: { display: true, text: 'Balls Faced Per Dismissal (Longevity)', color: '#94a3b8' }, grid: { color: '#334155' } }
+                }
+            });
 
-            let trueBounds = [...aggregatedData].map(p => ({name: p.name, b: p.fours+p.sixes})).sort((a,b) => b.b - a.b);
-            let tbTop = trueBounds.slice(0,5); let tbOth = trueBounds.slice(5).reduce((s,p)=>s+p.b,0);
-            createChart('chartWeightBounds', 'polarArea', { labels: [...formatChartLabels(tbTop), ...(tbOth>0?['Rest of Players']:[])], datasets: [{ data: [...tbTop.map(p=>p.b), ...(tbOth>0?[tbOth]:[])], backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, polarOptions);
+            // 4. Safe-Hands & Glovework Breakdown (Stacked Bar)
+            let topHands = [...aggregatedData].filter(p => p.totalFieldDismissals > 0).sort((a,b) => b.totalFieldDismissals - a.totalFieldDismissals).slice(0, 10);
+            createChart('safeHandsChart', 'bar', {
+                labels: formatChartLabels(topHands),
+                datasets: [
+                    { label: 'Catches', data: topHands.map(p => p.catches), backgroundColor: '#38bdf8' },
+                    { label: 'Stumpings', data: topHands.map(p => p.stumpings), backgroundColor: '#a855f7' },
+                    { label: 'Run Outs', data: topHands.map(p => p.runouts), backgroundColor: '#ec4899' }
+                ]
+            }, stackedBarOptions);
 
-            let wW = getPolarData('wkts');
-            createChart('chartWeightWkts', 'polarArea', { labels: wW.labels, datasets: [{ data: wW.data, backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, polarOptions);
-
-            // 3. Advanced Matrices (Scatter)
+            // ==========================================
+            // DEEP ANALYTICS MATRICES
+            // ==========================================
             let batMatrixData = aggregatedData.filter(p => p.runs >= 30).map(p => ({ x: p.sr, y: p.avg, player: p.dispName }));
             createChart('battingMatrix', 'scatter', { datasets: [{ label: 'Batters', data: batMatrixData, backgroundColor: '#f59e0b', pointRadius: 6, pointHoverRadius: 8 }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: {display:false}, tooltip: scatterTooltip }, scales: { x: { title: { display: true, text: 'Strike Rate', color: '#94a3b8' } }, y: { title: { display: true, text: 'Batting Average', color: '#94a3b8' } } } });
 
@@ -785,7 +902,6 @@
             let mvpData = aggregatedData.filter(p => p.runs > 0 || p.wkts > 0).map(p => ({ x: p.runs, y: p.wkts, r: Math.min((p.mat * 3) + 3, 20), player: p.dispName }));
             createChart('mvpTracker', 'bubble', { datasets: [{ label: 'Players', data: mvpData, backgroundColor: 'rgba(168, 85, 247, 0.7)', borderColor: '#a855f7' }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: {display:false}, tooltip: scatterTooltip }, scales: { x: { title: { display: true, text: 'Total Runs', color: '#94a3b8' } }, y: { title: { display: true, text: 'Total Wickets', color: '#94a3b8' } } } });
 
-            // 4. Advanced Bars
             let topBRC = [...aggregatedData].filter(p => p.runs >= 20).sort((a,b) => b.brc - a.brc).slice(0, 10);
             createChart('boundaryReliance', 'bar', { labels: formatChartLabels(topBRC), datasets: [{ label: '% Runs from Boundaries', data: topBRC.map(p => p.brc), backgroundColor: '#f43f5e', borderRadius: 4 }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: { title: {display:true, text: 'Percentage (%)', color:'#94a3b8'}, max: 100, grid:{color:'#334155'} }, x:{grid:{display:false}} } });
 
@@ -794,6 +910,35 @@
 
             let topSR = [...aggregatedData].filter(p => p.runs >= 30).sort((a,b) => b.sr - a.sr).slice(0, 10);
             createChart('trueStrikeRate', 'bar', { labels: formatChartLabels(topSR), datasets: [{ label: 'Strike Rate', data: topSR.map(p => p.sr), backgroundColor: '#38bdf8', borderRadius: 4 }] }, barOptions);
+
+            // ==========================================
+            // CORE AGGREGATES & WEIGHTAGE
+            // ==========================================
+            let topBatters = [...aggregatedData].sort((a,b) => b.runs - a.runs).slice(0, 10);
+            let topBowlers = [...aggregatedData].sort((a,b) => b.wkts - a.wkts).slice(0, 10);
+            const polarColors = ['#3b82f6', '#f59e0b', '#10b981', '#a855f7', '#ec4899', 'rgba(255,255,255,0.1)'];
+
+            createChart('chartRuns', 'bar', { labels: formatChartLabels(topBatters), datasets: [{ label: 'Runs', data: topBatters.map(p => p.runs), backgroundColor: '#f59e0b', borderRadius: 4 }] }, barOptions);
+            createChart('chartBoundaries', 'bar', { labels: formatChartLabels(topBatters), datasets: [{ label: 'Sixes (6s)', data: topBatters.map(p => p.sixes), backgroundColor: '#ec4899' }, { label: 'Fours (4s)', data: topBatters.map(p => p.fours), backgroundColor: '#a855f7' }] }, stackedBarOptions);
+            createChart('chartWickets', 'bar', { labels: formatChartLabels(topBowlers), datasets: [{ label: 'Wickets', data: topBowlers.map(p => p.wkts), backgroundColor: '#10b981', borderRadius: 4 }] }, barOptions);
+
+            let getPolarData = (sortKey) => {
+                let sorted = [...aggregatedData].sort((a,b) => b[sortKey] - a[sortKey]);
+                let top5 = sorted.slice(0,5); let othersSum = sorted.slice(5).reduce((sum, p) => sum + p[sortKey], 0);
+                let labels = formatChartLabels(top5); let data = top5.map(p => p[sortKey]);
+                if (othersSum > 0) { labels.push('Rest of Players'); data.push(othersSum); }
+                return { labels, data };
+            };
+
+            let rW = getPolarData('runs');
+            createChart('chartWeightRuns', 'polarArea', { labels: rW.labels, datasets: [{ data: rW.data, backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, polarOptions);
+
+            let trueBounds = [...aggregatedData].map(p => ({name: p.name, b: p.fours+p.sixes})).sort((a,b) => b.b - a.b);
+            let tbTop = trueBounds.slice(0,5); let tbOth = trueBounds.slice(5).reduce((s,p)=>s+p.b,0);
+            createChart('chartWeightBounds', 'polarArea', { labels: [...formatChartLabels(tbTop), ...(tbOth>0?['Rest of Players']:[])], datasets: [{ data: [...tbTop.map(p=>p.b), ...(tbOth>0?[tbOth]:[])], backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, polarOptions);
+
+            let wW = getPolarData('wkts');
+            createChart('chartWeightWkts', 'polarArea', { labels: wW.labels, datasets: [{ data: wW.data, backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, polarOptions);
         }
     </script>
 </body>
