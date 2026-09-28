@@ -18,7 +18,7 @@
         .action-btn { background: #1e293b; border: 1px solid #38bdf8; color: #38bdf8; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: 0.2s; }
         .action-btn:hover { background: #38bdf8; color: #0f172a; }
 
-        /* SPRINT-STYLE TAB NAVIGATION */
+        /* TAB NAVIGATION */
         .tab-nav { display: flex; gap: 20px; border-bottom: 2px solid #1e293b; margin-top: 15px; margin-bottom: 25px; overflow-x: auto; scrollbar-width: none; }
         .tab-nav::-webkit-scrollbar { display: none; }
         .tab-btn { background: none; border: none; color: #64748b; font-size: 0.95rem; font-weight: 800; cursor: pointer; padding: 10px 5px; position: relative; transition: 0.3s; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
@@ -35,6 +35,7 @@
         .toggle-lbl { background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; cursor: pointer; display: flex; align-items: center; gap: 6px; border: 1px solid #334155; user-select: none; transition: 0.2s; font-weight: bold; }
         .toggle-lbl:hover { background: rgba(255,255,255,0.1); border-color: #475569; }
         .toggle-lbl input { cursor: pointer; margin: 0; width: 14px; height: 14px; accent-color: #38bdf8; }
+        .hidden { display: none !important; }
 
         /* Full Width Table Setup */
         .table-container { background: #1e293b; border-radius: 10px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.3); overflow: hidden; width: 100%; margin-bottom: 30px; }
@@ -202,6 +203,7 @@
     <!-- ========================================== -->
     <div id="view-career">
         
+        <!-- 🔥 FIX: Added 'hidden' class back so it starts closed by default -->
         <div id="col-toggles" class="toggle-panel hidden">
             <div style="width: 100%; color: #38bdf8; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">GENERAL</div>
             <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('mat', this.checked)"> Matches</label>
@@ -287,11 +289,10 @@
     </div>
 
     <!-- ==================================================== -->
-    <!-- VIEW 2: MEGA ADVANCED ANALYTICS (12 CHARTS)          -->
+    <!-- VIEW 2: MEGA ADVANCED ANALYTICS (12 CHARTS) -->
     <!-- ==================================================== -->
     <div id="view-analytics" class="hidden-view">
         <div class="analytics-grid">
-            
             <div class="chart-card card-glow-purple">
                 <div class="chart-title">
                     <span><span>🎯</span> The Five-Tool Radar Profile</span>
@@ -375,9 +376,7 @@
                 </select>
                 <button class="action-btn" onclick="addH2HPlayer()">+ Add</button>
             </div>
-            <div class="pill-container" id="h2h-pill-box">
-                <!-- Selected players will appear here as chips -->
-            </div>
+            <div class="pill-container" id="h2h-pill-box"></div>
         </div>
 
         <div class="analytics-grid">
@@ -390,11 +389,7 @@
                 <h3 class="chart-title"><span>📋</span> Batting Metrics Breakdown</h3>
                 <div style="overflow-x: auto;">
                     <table class="vs-table">
-                        <thead>
-                            <tr id="h2h-th-row">
-                                <th>Metric</th>
-                            </tr>
-                        </thead>
+                        <thead><tr id="h2h-th-row"><th>Metric</th></tr></thead>
                         <tbody id="h2h-tbody">
                             <tr><td colspan="6" style="color:#94a3b8; text-align:center;">Add players to begin comparison (Max 5)</td></tr>
                         </tbody>
@@ -409,13 +404,10 @@
     <!-- ========================================== -->
     <div id="view-live" class="hidden-view">
         <p style="color:#94a3b8; margin-top:0;">Real-time match data or the most recent historical match if no live games are active.</p>
-        <div class="analytics-grid" id="live-scouting-grid" style="grid-template-columns: 1fr; max-width: 800px; margin: 0 auto;">
-            <!-- Live Data will be injected here -->
-        </div>
+        <div class="analytics-grid" id="live-scouting-grid" style="grid-template-columns: 1fr; max-width: 800px; margin: 0 auto;"></div>
     </div>
 
-
-    <!-- DYNAMIC THEME PLAYER CARD MODAL -->
+    <!-- PLAYER CARD MODAL -->
     <div id="playerCardModal" class="modal-overlay" onclick="closePlayerCard(event)">
         <div id="playerCardElement" class="modal-box" onclick="event.stopPropagation()">
             <button type="button" class="modal-close" onclick="closePlayerCard()">×</button>
@@ -480,14 +472,11 @@
         let currentSortAsc = false;
         let charts = {};
         
-        // H2H Array (Max 5)
         let selectedH2HPlayers = [];
         const h2hColors = ['#38bdf8', '#f59e0b', '#10b981', '#a855f7', '#ec4899'];
-
         const DEFAULT_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
         const themes = ['theme-blue', 'theme-emerald', 'theme-amber', 'theme-purple', 'theme-rose', 'theme-cyan'];
 
-        // 🔥 TAB SWITCHING LOGIC
         function switchTab(tabId) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('btn-tab-' + tabId).classList.add('active');
@@ -545,7 +534,6 @@
                                 bowlers: fs.teams?.[fs.bowlingKey]?.players || []
                             });
                         }
-                        // Save the full original object for Live Scouting fallback
                         rawMatches.push({ rawData: m, tourney: tName, format: format, year: year, teams: fs.teams, innings: allInnings });
                     }
                 } catch(err) {}
@@ -669,13 +657,10 @@
                 return p;
             });
 
-            // Update H2H Dropdown & Radar Dropdown based on filters
             let h2hSelect = document.getElementById('h2h-select');
             let radarSelect = document.getElementById('radarPlayerSelect');
-            
             let sortedNames = [...aggregatedData].sort((a,b) => a.name.localeCompare(b.name));
             let opts = `<option value="">Select a Player...</option>` + sortedNames.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
-            
             h2hSelect.innerHTML = opts;
             
             if(radarSelect) {
@@ -684,7 +669,6 @@
                 if([...aggregatedData].some(c=>c.name===prevRad)) radarSelect.value = prevRad;
             }
 
-            // Cleanup invalid H2H selected players if they get filtered out
             selectedH2HPlayers = selectedH2HPlayers.filter(name => aggregatedData.some(p => p.name === name));
 
             executeSort();
@@ -716,16 +700,113 @@
             if(!document.getElementById('view-analytics').classList.contains('hidden-view')) renderCharts();
         }
 
-        // ==========================================
-        // TAB 3: H2H ENGINE (Max 5 Players)
-        // ==========================================
+        function openPlayerCard(index) {
+            let p = aggregatedData[index];
+            if(!p) return;
+            let randomTheme = themes[Math.floor(Math.random() * themes.length)];
+            let modalElement = document.getElementById('cardCaptureArea');
+            themes.forEach(t => modalElement.classList.remove(t));
+            modalElement.classList.add(randomTheme);
+            
+            document.getElementById('player-avatar').src = DEFAULT_AVATAR;
+            document.getElementById('playerPicUpload').value = "";
+            document.getElementById('pc-name').innerText = p.name;
+            document.getElementById('pc-team').innerText = p.team;
+            document.getElementById('pc-mat').innerText = p.mat;
+            document.getElementById('pc-runs').innerText = p.runs;
+            document.getElementById('pc-avg').innerText = (p.dismissals === 0 && p.runs > 0) ? '-' : p.avg.toFixed(2);
+            document.getElementById('pc-sr').innerText = p.sr.toFixed(2);
+            document.getElementById('pc-best').innerText = p.bestRuns > 0 ? `${p.bestRuns}${p.bestNotOut ? '*' : ''}` : '-';
+            document.getElementById('pc-10050').innerText = `${p.hundreds}/${p.fifties}`;
+            document.getElementById('pc-4s6s').innerText = `${p.fours}/${p.sixes}`;
+            document.getElementById('pc-wkts').innerText = p.wkts;
+            document.getElementById('pc-econ').innerText = p.econ.toFixed(2);
+            document.getElementById('pc-bbi').innerText = p.bbiW > 0 ? `${p.bbiW}-${p.bbiR}` : '-';
+            document.getElementById('pc-bavg').innerText = p.wkts === 0 ? '-' : p.bAvg.toFixed(2);
+            document.getElementById('pc-overs').innerText = p.overs.toFixed(1);
+            document.getElementById('pc-mdn').innerText = p.mdn;
+            document.getElementById('pc-catches').innerText = p.catches;
+            document.getElementById('pc-stumpings').innerText = p.stumpings;
+            document.getElementById('pc-runouts').innerText = p.runouts;
+            document.getElementById('playerCardModal').classList.add('active');
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) { document.getElementById('player-avatar').src = e.target.result; }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function closePlayerCard(e) {
+            if(e && e.target.id !== 'playerCardModal') return;
+            document.getElementById('playerCardModal').classList.remove('active');
+        }
+
+        function downloadPlayerCard() {
+            let captureElement = document.getElementById('cardCaptureArea');
+            html2canvas(captureElement, { backgroundColor: null, scale: 2, useCORS: true }).then(canvas => {
+                let link = document.createElement('a');
+                let safeName = document.getElementById('pc-name').innerText.replace(/\s+/g, '_');
+                link.download = `${safeName}_Sportzstat_Card.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
+        function renderTable() {
+            let tbody = document.getElementById('career-tbody');
+            if(aggregatedData.length === 0) { tbody.innerHTML = `<tr><td colspan="27" style="text-align:center; color:#ef4444;">No players match the selected filters.</td></tr>`; return; }
+
+            tbody.innerHTML = aggregatedData.map((p, index) => {
+                let bestStr = p.bestRuns > 0 ? `${p.bestRuns}${p.bestNotOut ? '*' : ''}` : '-';
+                let bbiStr = p.bbiW > 0 ? `${p.bbiW}-${p.bbiR}` : '-';
+                let avgStr = p.dismissals === 0 && p.runs > 0 ? '-' : p.avg.toFixed(2);
+                let bAvgStr = p.wkts === 0 ? '-' : p.bAvg.toFixed(2);
+                let dispName = p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name;
+                let dispTeam = p.team.length > 15 ? p.team.substring(0, 15) + '...' : p.team;
+
+                return `<tr>
+                    <td class="col-name"><span class="player-link" title="${p.name}" onclick="openPlayerCard(${index})">${dispName}</span></td>
+                    <td class="col-team" title="${p.team}">${dispTeam}</td>
+                    <td class="col-mat">${p.mat}</td>
+                    <td class="bat-col col-inn">${p.inn}</td>
+                    <td class="bat-col col-runs">${p.runs}</td>
+                    <td class="col-best" style="color:#ef4444; font-weight:bold;">${bestStr}</td>
+                    <td class="col-bf">${p.bf}</td>
+                    <td class="col-avg" style="color:#38bdf8;">${avgStr}</td>
+                    <td class="col-sr">${p.sr.toFixed(2)}</td>
+                    <td class="col-hundreds">${p.hundreds}</td>
+                    <td class="col-fifties">${p.fifties}</td>
+                    <td class="col-fours">${p.fours}</td>
+                    <td class="col-sixes">${p.sixes}</td>
+                    <td class="col-no">${p.no}</td>
+                    <td class="col-ducks">${p.ducks}</td>
+                    <td class="bowl-col col-overs">${p.overs.toFixed(1)}</td>
+                    <td class="bowl-col col-mdn">${p.mdn}</td>
+                    <td class="col-rc">${p.rc}</td>
+                    <td class="bowl-col col-wkts" style="color:#10b981;">${p.wkts}</td>
+                    <td class="col-bbi" style="color:#ef4444;">${bbiStr}</td>
+                    <td class="col-bavg" style="color:#38bdf8;">${bAvgStr}</td>
+                    <td class="col-econ">${p.econ.toFixed(2)}</td>
+                    <td class="col-w4">${p.w4}</td>
+                    <td class="col-w5">${p.w5}</td>
+                    <td class="field-col col-catches">${p.catches}</td>
+                    <td class="field-col col-stumpings">${p.stumpings}</td>
+                    <td class="field-col col-runouts">${p.runouts}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        // H2H Logic
         function addH2HPlayer() {
             let select = document.getElementById('h2h-select');
             let name = select.value;
             if(!name) return;
             if(selectedH2HPlayers.includes(name)) { alert("Player already selected."); return; }
             if(selectedH2HPlayers.length >= 5) { alert("Maximum 5 players can be compared."); return; }
-            
             selectedH2HPlayers.push(name);
             select.value = "";
             renderH2H();
@@ -737,27 +818,22 @@
         }
 
         function renderH2H() {
-            // Render Pills
             let pillBox = document.getElementById('h2h-pill-box');
             pillBox.innerHTML = selectedH2HPlayers.map((name, i) => {
                 let color = h2hColors[i % h2hColors.length];
                 return `<div class="player-pill" style="border-color:${color}; background:${color}15;">
-                            <div style="color:${color};">${name.length>15?name.substring(0,15)+'...':name}</div>
+                            <div style="color:${color};">${name}</div>
                             <span onclick="removeH2HPlayer(${i})">×</span>
                         </div>`;
             }).join('');
 
-            // Grab player objects
             let playersToCompare = selectedH2HPlayers.map(name => aggregatedData.find(p => p.name === name)).filter(p => p);
-
-            // Render Table Header
             let thRow = `<th>Metric</th>` + playersToCompare.map((p, i) => {
                 let color = h2hColors[i % h2hColors.length];
                 return `<th style="color:${color}; border-bottom-color:${color};">${p.dispName}</th>`;
             }).join('');
             document.getElementById('h2h-th-row').innerHTML = thRow;
 
-            // Render Table Body (Batting Only)
             let tbody = document.getElementById('h2h-tbody');
             if(playersToCompare.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="6" style="color:#94a3b8; text-align:center;">Add players to begin comparison (Max 5)</td></tr>`;
@@ -774,7 +850,6 @@
 
             tbody.innerHTML = `<tr>${trInnings}</tr><tr>${trRuns}</tr><tr>${trAvg}</tr><tr>${trSR}</tr><tr>${trBest}</tr><tr>${trBounds}</tr>`;
 
-            // Render Bar Chart
             let datasets = playersToCompare.map((p, i) => {
                 let avg = p.dismissals===0 && p.runs>0 ? p.runs : p.avg; 
                 return {
@@ -789,39 +864,29 @@
             if(charts['h2hBarChart']) charts['h2hBarChart'].destroy();
             charts['h2hBarChart'] = new Chart(ctx.getContext('2d'), {
                 type: 'bar',
-                data: {
-                    labels: ['Runs', 'Average', 'Strike Rate'],
-                    datasets: datasets
-                },
+                data: { labels: ['Runs', 'Average', 'Strike Rate'], datasets: datasets },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
                     scales: { y: { beginAtZero: true, grid:{color:'#334155'} }, x:{ grid:{display:false} } },
                     plugins: { legend: { position: 'bottom', labels: {color: 'white'} } }
                 }
             });
         }
 
-        // ==========================================
-        // TAB 4: LIVE SCOUTING (With Historical Fallback)
-        // ==========================================
+        // Live Scouting Logic
         async function fetchLiveScouting() {
             if (!document.getElementById('btn-tab-live').classList.contains('active')) return;
-            
             const { data, error } = await db.from('live_matches').select('*');
             
-            // Check if there's no live data
             if (error || !data || data.length === 0) {
                 renderHistoricalFallback();
                 return;
             }
 
-            // Render True Live Match
             let html = "";
             data.forEach(m => {
                 let d = m.live_data;
                 if(!d) return;
-
                 let b1 = d.batters && d.batters[0]; let b2 = d.batters && d.batters[1];
                 let bStr = "";
                 if(b1) { let sr = b1.b>0?((b1.r/b1.b)*100).toFixed(1):"0.0"; bStr += `<div><span style="color:white; font-weight:bold;">${b1.name}</span>: ${b1.r}(${b1.b}) <span style="color:#8b5cf6; font-size:0.8rem;">[SR: ${sr}]</span></div>`; }
@@ -837,61 +902,47 @@
                 <div class="chart-card" style="border-color:#10b981; box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #334155; padding-bottom:10px;">
                         <h3 style="margin:0; border:none; padding:0; color:#10b981; font-size: 1.3rem;">${d.batTeam} vs ${d.bowlTeam}</h3>
-                        <span style="background:rgba(16,185,129,0.2); color:#10b981; padding:4px 10px; border-radius:4px; font-size:0.8rem; font-weight:bold; border: 1px solid #10b981; animation: pulse 2s infinite;">🔴 LIVE</span>
+                        <span style="background:rgba(16,185,129,0.2); color:#10b981; padding:4px 10px; border-radius:4px; font-size:0.8rem; font-weight:bold; border: 1px solid #10b981;">🔴 LIVE</span>
                     </div>
                     <div style="font-size:2.2rem; font-weight:900; color:white; margin-bottom:5px;">${d.runs}/${d.wkts} <span style="font-size:1.1rem; color:#94a3b8;">(${d.overs} ov)</span></div>
-                    <div style="font-size:0.95rem; color:#f59e0b; font-weight:bold; margin-bottom:20px;">CRR: ${d.crr} ${d.rrr && d.rrr !== "0.00" ? `<span style="color:#94a3b8; margin:0 5px;">|</span> RRR: <span style="color:#ef4444;">${d.rrr}</span>` : ''}</div>
-                    
+                    <div style="font-size:0.95rem; color:#f59e0b; font-weight:bold; margin-bottom:20px;">CRR: ${d.crr}</div>
                     <div style="background:#0f172a; padding:15px; border-radius:8px; margin-bottom:12px; font-size:1rem; border: 1px solid #334155;">
                         <div style="color:#94a3b8; font-size:0.8rem; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">At The Crease</div>
                         ${bStr || '<span style="color:#475569;">Waiting for batters...</span>'}
                     </div>
-                    
                     <div style="background:#0f172a; padding:15px; border-radius:8px; font-size:1rem; border: 1px solid #334155;">
                         <div style="color:#94a3b8; font-size:0.8rem; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">Bowling Attack</div>
                         ${bowlStr || '<span style="color:#475569;">Waiting for bowler...</span>'}
                     </div>
                 </div>`;
             });
-
             document.getElementById('live-scouting-grid').innerHTML = html;
         }
 
-        // Feature: Show most recent match if live is empty
         function renderHistoricalFallback() {
             let grid = document.getElementById('live-scouting-grid');
-            
-            // Sort by created_at descending (latest first)
             let sortedMatches = [...rawMatches].sort((a,b) => new Date(b.rawData.created_at) - new Date(a.rawData.created_at));
-            
             if (sortedMatches.length === 0) {
                 grid.innerHTML = `<div class="chart-card" style="text-align:center; color:#94a3b8; padding:30px;">No match data available in database.</div>`;
                 return;
             }
-
             let latest = sortedMatches[0];
             let fs = latest.rawData.full_state;
-            
-            if (!fs || !fs.teams || !fs.teams.A || !fs.teams.B) {
-                grid.innerHTML = `<div class="chart-card" style="text-align:center; color:#94a3b8; padding:30px;">Match data corrupted.</div>`;
-                return;
-            }
+            if (!fs || !fs.teams || !fs.teams.A || !fs.teams.B) return;
 
-            let html = `
-            <div style="text-align:center; margin-bottom: 15px; color: #a855f7; font-weight:bold; letter-spacing: 1px; text-transform: uppercase;">
+            grid.innerHTML = `
+            <div style="text-align:center; margin-bottom: 15px; color: #a855f7; font-weight:bold; text-transform: uppercase;">
                 No Live Matches Active. Showing Latest Completed Match:
             </div>
-            <div class="chart-card" style="border-color:#38bdf8; box-shadow: 0 0 20px rgba(56, 189, 248, 0.1);">
+            <div class="chart-card" style="border-color:#38bdf8;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #334155; padding-bottom:10px;">
-                    <h3 style="margin:0; border:none; padding:0; color:#38bdf8; font-size: 1.3rem;">${fs.teams.A.name} vs ${fs.teams.B.name}</h3>
-                    <span style="background:rgba(148, 163, 184, 0.2); color:#cbd5e1; padding:4px 10px; border-radius:4px; font-size:0.8rem; font-weight:bold; border: 1px solid #475569;">COMPLETED</span>
+                    <h3 style="margin:0; color:#38bdf8; font-size: 1.3rem;">${fs.teams.A.name} vs ${fs.teams.B.name}</h3>
+                    <span style="background:rgba(148, 163, 184, 0.2); color:#cbd5e1; padding:4px 10px; border-radius:4px; font-size:0.8rem; font-weight:bold;">COMPLETED</span>
                 </div>
-                
                 <div style="margin-bottom:20px;">
                     <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 5px;">Tournament: <span style="color:white; font-weight:bold;">${latest.tourney}</span></div>
                     <div style="font-size: 0.9rem; color: #94a3b8;">Format: <span style="color:white; font-weight:bold;">${latest.format}</span></div>
                 </div>
-                
                 <div style="display:flex; flex-direction:column; gap: 15px;">
                     ${fs.inningsSummaries.map((inn, i) => `
                         <div style="background:#0f172a; padding:15px; border-radius:8px; border: 1px solid #334155;">
@@ -901,13 +952,8 @@
                     `).join('')}
                 </div>
             </div>`;
-
-            grid.innerHTML = html;
         }
 
-        // ==========================================
-        // UI UTILS
-        // ==========================================
         function updateRadarChart() {
             let radarSel = document.getElementById('radarPlayerSelect');
             if (!radarSel || aggregatedData.length === 0) return;
