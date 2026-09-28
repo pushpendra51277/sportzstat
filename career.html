@@ -6,6 +6,9 @@
     <title>Sportzstat - Career Analytics Hub</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- html2canvas for capturing the Player Card -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
     <style>
         body { background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; }
         * { box-sizing: border-box; }
@@ -35,6 +38,18 @@
         td { padding: 12px 10px; border-bottom: 1px solid #1e293b; text-align: right; color: #cbd5e1; }
         td:first-child { text-align: left; padding-left: 20px; font-weight: bold; color: white; }
         tr:hover td { background: rgba(56, 189, 248, 0.05); }
+
+        /* 🔥 NEW: Clickable Player Link Styles */
+        .player-link { color: #38bdf8; cursor: pointer; font-weight: bold; text-decoration: none; border-bottom: 1px dashed #38bdf8; transition: 0.2s; }
+        .player-link:hover { color: #f8fafc; border-bottom: 1px solid #f8fafc; }
+
+        /* 🔥 NEW: Player Card Modal Styles */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: 0.2s; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-box { background: #0f172a; border: 1px solid #38bdf8; border-radius: 12px; padding: 25px; width: 450px; max-width: 90%; position: relative; transform: translateY(20px); transition: 0.3s; box-shadow: 0 15px 30px rgba(0,0,0,0.7); }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-close { position: absolute; top: 10px; right: 15px; background: transparent; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; }
+        .modal-close:hover { color: #ef4444; }
 
         .bat-col { color: #f59e0b !important; font-weight: bold; }
         .bowl-col { color: #10b981 !important; font-weight: bold; }
@@ -198,6 +213,65 @@
         <div class="chart-card"><h3 class="chart-title" style="color:#10b981;">🎳 Wickets Weightage</h3><div class="canvas-container"><canvas id="chartWeightWkts"></canvas></div></div>
     </div>
 
+    <!-- 🔥 NEW: PLAYER CARD MODAL -->
+    <div id="playerCardModal" class="modal-overlay hidden" onclick="closePlayerCard(event)">
+        <div id="playerCardElement" class="modal-box" onclick="event.stopPropagation()">
+            <button type="button" class="modal-close" onclick="closePlayerCard()">×</button>
+            
+            <div id="cardCaptureArea" style="background: #0f172a; padding: 25px; border-radius: 12px; border: 2px solid #38bdf8; box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);">
+                <div style="text-align: center; border-bottom: 1px solid #334155; padding-bottom: 15px; margin-bottom: 20px;">
+                    <h2 id="pc-name" style="margin: 0; color: #38bdf8; font-size: 1.8rem; letter-spacing: 1px;">Player Name</h2>
+                    <div id="pc-team" style="color: #94a3b8; font-size: 1rem; margin-top: 5px; text-transform: uppercase;">Team Name</div>
+                    <div style="color: #cbd5e1; font-size: 0.85rem; margin-top: 8px; font-weight: bold;">Matches Played: <span id="pc-mat" style="color: white;">0</span></div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <!-- Batting Section -->
+                    <div style="background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #475569;">
+                        <h4 style="color: #f59e0b; margin-top: 0; text-align: center; border-bottom: 1px solid #334155; padding-bottom: 8px;">Batting</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9rem; color: #cbd5e1;">
+                            <div>Runs: <b id="pc-runs" style="color:white; float:right;">0</b></div>
+                            <div>Avg: <b id="pc-avg" style="color:white; float:right;">0</b></div>
+                            <div>SR: <b id="pc-sr" style="color:white; float:right;">0</b></div>
+                            <div>Best: <b id="pc-best" style="color:white; float:right;">0</b></div>
+                            <div>100/50: <b id="pc-10050" style="color:white; float:right;">0/0</b></div>
+                            <div>4s/6s: <b id="pc-4s6s" style="color:white; float:right;">0/0</b></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Bowling Section -->
+                    <div style="background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #475569;">
+                        <h4 style="color: #10b981; margin-top: 0; text-align: center; border-bottom: 1px solid #334155; padding-bottom: 8px;">Bowling</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9rem; color: #cbd5e1;">
+                            <div>Wkts: <b id="pc-wkts" style="color:white; float:right;">0</b></div>
+                            <div>Econ: <b id="pc-econ" style="color:white; float:right;">0</b></div>
+                            <div>BBI: <b id="pc-bbi" style="color:white; float:right;">0</b></div>
+                            <div>B.Avg: <b id="pc-bavg" style="color:white; float:right;">0</b></div>
+                            <div>Overs: <b id="pc-overs" style="color:white; float:right;">0</b></div>
+                            <div>Mdns: <b id="pc-mdn" style="color:white; float:right;">0</b></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Fielding Section -->
+                <div style="background: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #475569; margin-top: 15px; text-align: center;">
+                    <h4 style="color: #8b5cf6; margin-top: 0; margin-bottom: 8px;">Fielding</h4>
+                    <div style="font-size: 0.9rem; color: #cbd5e1;">
+                        Catches: <b id="pc-catches" style="color:white; margin-right: 15px;">0</b>
+                        Stumpings: <b id="pc-stumpings" style="color:white; margin-right: 15px;">0</b>
+                        Run Outs: <b id="pc-runouts" style="color:white;">0</b>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; font-size: 0.6rem; color: #64748b; margin-top: 15px; text-transform: uppercase; letter-spacing: 2px;">
+                    Generated by Sportzstat
+                </div>
+            </div>
+            
+            <button type="button" class="action-btn" style="width: 100%; margin-top: 15px; padding: 15px; font-size: 1.1rem; background: linear-gradient(90deg, #38bdf8, #2563eb); color: white; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.4);" onclick="downloadPlayerCard()">📸 Download & Share Card</button>
+        </div>
+    </div>
+
     <script>
         const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
         const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
@@ -334,7 +408,6 @@
                         }
                     });
 
-                    // 🔥 UPDATED: Loop through fielding team to capture both bowlers AND fielders
                     (inn.bowlers || []).forEach(b => {
                         let isBowler = b.o > 0 || b.rc > 0;
                         let isFielder = (b.catches > 0) || (b.stumpings > 0) || (b.runouts > 0);
@@ -343,10 +416,8 @@
                             if(!playersObj[b.name]) initPlayer(playersObj, b.name, inn.bowlTeam);
                             let p = playersObj[b.name];
                             
-                            // Process Bowling Stats
                             if (isBowler) {
                                 p.rc += b.rc; p.wkts += b.w; p.mdn += b.m;
-                                
                                 let absBalls = 0;
                                 if (b.o % 1 !== 0) {
                                     absBalls = Math.floor(b.o) * 6 + Math.round((b.o - Math.floor(b.o)) * 10);
@@ -363,7 +434,6 @@
                                 }
                             }
 
-                            // 🔥 Process Fielding Stats
                             if (isFielder) {
                                 p.catches += (b.catches || 0);
                                 p.stumpings += (b.stumpings || 0);
@@ -406,7 +476,7 @@
                 inn: 0, runs: 0, bf: 0, fours: 0, sixes: 0, dismissals: 0, ducks: 0, no: 0, bestRuns: 0, bestNotOut: false,
                 fifties: 0, hundreds: 0, 
                 bowlBalls: 0, rc: 0, wkts: 0, mdn: 0, bbiW: 0, bbiR: 999, w4: 0, w5: 0,
-                catches: 0, stumpings: 0, runouts: 0 // 🔥 Fielding Data Variables
+                catches: 0, stumpings: 0, runouts: 0
             };
         }
 
@@ -428,6 +498,57 @@
             renderCharts();
         }
 
+        // 🔥 NEW: Function to open the Player Card Modal
+        function openPlayerCard(playerName) {
+            let p = aggregatedData.find(player => player.name === playerName);
+            if(!p) return;
+            
+            document.getElementById('pc-name').innerText = p.name;
+            document.getElementById('pc-team').innerText = p.team;
+            document.getElementById('pc-mat').innerText = p.mat;
+            
+            document.getElementById('pc-runs').innerText = p.runs;
+            document.getElementById('pc-avg').innerText = (p.dismissals === 0 && p.runs > 0) ? '-' : p.avg.toFixed(2);
+            document.getElementById('pc-sr').innerText = p.sr.toFixed(2);
+            document.getElementById('pc-best').innerText = p.bestRuns > 0 ? `${p.bestRuns}${p.bestNotOut ? '*' : ''}` : '-';
+            document.getElementById('pc-10050').innerText = `${p.hundreds}/${p.fifties}`;
+            document.getElementById('pc-4s6s').innerText = `${p.fours}/${p.sixes}`;
+            
+            document.getElementById('pc-wkts').innerText = p.wkts;
+            document.getElementById('pc-econ').innerText = p.econ.toFixed(2);
+            document.getElementById('pc-bbi').innerText = p.bbiW > 0 ? `${p.bbiW}-${p.bbiR}` : '-';
+            document.getElementById('pc-bavg').innerText = p.wkts === 0 ? '-' : p.bAvg.toFixed(2);
+            document.getElementById('pc-overs').innerText = p.overs.toFixed(1);
+            document.getElementById('pc-mdn').innerText = p.mdn;
+            
+            document.getElementById('pc-catches').innerText = p.catches;
+            document.getElementById('pc-stumpings').innerText = p.stumpings;
+            document.getElementById('pc-runouts').innerText = p.runouts;
+
+            document.getElementById('playerCardModal').classList.add('active');
+        }
+
+        // 🔥 NEW: Function to close the Player Card Modal
+        function closePlayerCard(e) {
+            if(e && e.target.id !== 'playerCardModal') return;
+            document.getElementById('playerCardModal').classList.remove('active');
+        }
+
+        // 🔥 NEW: Function to download the Player Card via html2canvas
+        function downloadPlayerCard() {
+            let captureElement = document.getElementById('cardCaptureArea');
+            html2canvas(captureElement, { 
+                backgroundColor: '#0f172a', 
+                scale: 2 // High resolution rendering
+            }).then(canvas => {
+                let link = document.createElement('a');
+                let safeName = document.getElementById('pc-name').innerText.replace(/\s+/g, '_');
+                link.download = `${safeName}_Career_Card.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
         function renderTable() {
             let tbody = document.getElementById('career-tbody');
             if(aggregatedData.length === 0) { tbody.innerHTML = `<tr><td colspan="27" style="text-align:center; color:#ef4444;">No players match the selected filters.</td></tr>`; return; }
@@ -437,9 +558,16 @@
                 let bbiStr = p.bbiW > 0 ? `${p.bbiW}-${p.bbiR}` : '-';
                 let avgStr = p.dismissals === 0 && p.runs > 0 ? '-' : p.avg.toFixed(2);
                 let bAvgStr = p.wkts === 0 ? '-' : p.bAvg.toFixed(2);
+                
+                // 🔥 NEW: Name Truncation Logic (Max 15 Characters)
+                let dispName = p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name;
 
                 return `<tr>
-                    <td>${p.name}</td>
+                    <td>
+                        <span class="player-link" title="${p.name}" onclick="openPlayerCard('${p.name.replace(/'/g, "\\'")}')">
+                            ${dispName}
+                        </span>
+                    </td>
                     <td style="color:#94a3b8;">${p.team}</td>
                     <td class="col-mat">${p.mat}</td>
                     
@@ -486,14 +614,17 @@
             let topBatters = [...aggregatedData].sort((a,b) => b.runs - a.runs).slice(0, 10);
             let topBowlers = [...aggregatedData].sort((a,b) => b.wkts - a.wkts).slice(0, 10);
 
-            createChart('chartRuns', 'bar', { labels: topBatters.map(p => p.name), datasets: [{ label: 'Runs', data: topBatters.map(p => p.runs), backgroundColor: '#f59e0b', borderRadius: 4 }] }, barOptions);
-            createChart('chartBoundaries', 'bar', { labels: topBatters.map(p => p.name), datasets: [{ label: 'Sixes (6s)', data: topBatters.map(p => p.sixes), backgroundColor: '#ec4899' }, { label: 'Fours (4s)', data: topBatters.map(p => p.fours), backgroundColor: '#a855f7' }] }, stackedBarOptions);
-            createChart('chartWickets', 'bar', { labels: topBowlers.map(p => p.name), datasets: [{ label: 'Wickets', data: topBowlers.map(p => p.wkts), backgroundColor: '#10b981', borderRadius: 4 }] }, barOptions);
+            // Using the same 15-char truncation for chart labels so they don't break the canvas UI
+            let formatChartLabels = (players) => players.map(p => p.name.length > 15 ? p.name.substring(0,15) + '...' : p.name);
+
+            createChart('chartRuns', 'bar', { labels: formatChartLabels(topBatters), datasets: [{ label: 'Runs', data: topBatters.map(p => p.runs), backgroundColor: '#f59e0b', borderRadius: 4 }] }, barOptions);
+            createChart('chartBoundaries', 'bar', { labels: formatChartLabels(topBatters), datasets: [{ label: 'Sixes (6s)', data: topBatters.map(p => p.sixes), backgroundColor: '#ec4899' }, { label: 'Fours (4s)', data: topBatters.map(p => p.fours), backgroundColor: '#a855f7' }] }, stackedBarOptions);
+            createChart('chartWickets', 'bar', { labels: formatChartLabels(topBowlers), datasets: [{ label: 'Wickets', data: topBowlers.map(p => p.wkts), backgroundColor: '#10b981', borderRadius: 4 }] }, barOptions);
 
             let getPolarData = (sortKey) => {
                 let sorted = [...aggregatedData].sort((a,b) => b[sortKey] - a[sortKey]);
                 let top5 = sorted.slice(0,5); let othersSum = sorted.slice(5).reduce((sum, p) => sum + p[sortKey], 0);
-                let labels = top5.map(p => p.name); let data = top5.map(p => p[sortKey]);
+                let labels = formatChartLabels(top5); let data = top5.map(p => p[sortKey]);
                 if (othersSum > 0) { labels.push('Rest of Players'); data.push(othersSum); }
                 return { labels, data };
             };
@@ -504,7 +635,7 @@
 
             let trueBounds = [...aggregatedData].map(p => ({name: p.name, b: p.fours+p.sixes})).sort((a,b) => b.b - a.b);
             let tbTop = trueBounds.slice(0,5); let tbOth = trueBounds.slice(5).reduce((s,p)=>s+p.b,0);
-            createChart('chartWeightBounds', 'polarArea', { labels: [...tbTop.map(p=>p.name), ...(tbOth>0?['Rest of Players']:[])], datasets: [{ data: [...tbTop.map(p=>p.b), ...(tbOth>0?[tbOth]:[])], backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, chartOptions);
+            createChart('chartWeightBounds', 'polarArea', { labels: [...formatChartLabels(tbTop), ...(tbOth>0?['Rest of Players']:[])], datasets: [{ data: [...tbTop.map(p=>p.b), ...(tbOth>0?[tbOth]:[])], backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, chartOptions);
 
             let wW = getPolarData('wkts');
             createChart('chartWeightWkts', 'polarArea', { labels: wW.labels, datasets: [{ data: wW.data, backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, chartOptions);
