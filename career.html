@@ -6,7 +6,6 @@
     <title>Sportzstat - Career Analytics Hub</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- html2canvas for capturing the Player Card -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
@@ -39,11 +38,10 @@
         td:first-child { text-align: left; padding-left: 20px; font-weight: bold; color: white; }
         tr:hover td { background: rgba(56, 189, 248, 0.05); }
 
-        /* 🔥 NEW: Clickable Player Link Styles */
         .player-link { color: #38bdf8; cursor: pointer; font-weight: bold; text-decoration: none; border-bottom: 1px dashed #38bdf8; transition: 0.2s; }
         .player-link:hover { color: #f8fafc; border-bottom: 1px solid #f8fafc; }
 
-        /* 🔥 NEW: Player Card Modal Styles */
+        /* Modal Styles */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: 0.2s; }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
         .modal-box { background: #0f172a; border: 1px solid #38bdf8; border-radius: 12px; padding: 25px; width: 450px; max-width: 90%; position: relative; transform: translateY(20px); transition: 0.3s; box-shadow: 0 15px 30px rgba(0,0,0,0.7); }
@@ -213,7 +211,7 @@
         <div class="chart-card"><h3 class="chart-title" style="color:#10b981;">🎳 Wickets Weightage</h3><div class="canvas-container"><canvas id="chartWeightWkts"></canvas></div></div>
     </div>
 
-    <!-- 🔥 NEW: PLAYER CARD MODAL -->
+    <!-- PLAYER CARD MODAL -->
     <div id="playerCardModal" class="modal-overlay hidden" onclick="closePlayerCard(event)">
         <div id="playerCardElement" class="modal-box" onclick="event.stopPropagation()">
             <button type="button" class="modal-close" onclick="closePlayerCard()">×</button>
@@ -226,7 +224,6 @@
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <!-- Batting Section -->
                     <div style="background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #475569;">
                         <h4 style="color: #f59e0b; margin-top: 0; text-align: center; border-bottom: 1px solid #334155; padding-bottom: 8px;">Batting</h4>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9rem; color: #cbd5e1;">
@@ -239,7 +236,6 @@
                         </div>
                     </div>
                     
-                    <!-- Bowling Section -->
                     <div style="background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #475569;">
                         <h4 style="color: #10b981; margin-top: 0; text-align: center; border-bottom: 1px solid #334155; padding-bottom: 8px;">Bowling</h4>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9rem; color: #cbd5e1;">
@@ -253,7 +249,6 @@
                     </div>
                 </div>
                 
-                <!-- Fielding Section -->
                 <div style="background: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #475569; margin-top: 15px; text-align: center;">
                     <h4 style="color: #8b5cf6; margin-top: 0; margin-bottom: 8px;">Fielding</h4>
                     <div style="font-size: 0.9rem; color: #cbd5e1;">
@@ -498,9 +493,9 @@
             renderCharts();
         }
 
-        // 🔥 NEW: Function to open the Player Card Modal
-        function openPlayerCard(playerName) {
-            let p = aggregatedData.find(player => player.name === playerName);
+        // 🔥 FIX: Now uses the array index instead of the raw name string to avoid breaking HTML
+        function openPlayerCard(index) {
+            let p = aggregatedData[index];
             if(!p) return;
             
             document.getElementById('pc-name').innerText = p.name;
@@ -528,18 +523,16 @@
             document.getElementById('playerCardModal').classList.add('active');
         }
 
-        // 🔥 NEW: Function to close the Player Card Modal
         function closePlayerCard(e) {
             if(e && e.target.id !== 'playerCardModal') return;
             document.getElementById('playerCardModal').classList.remove('active');
         }
 
-        // 🔥 NEW: Function to download the Player Card via html2canvas
         function downloadPlayerCard() {
             let captureElement = document.getElementById('cardCaptureArea');
             html2canvas(captureElement, { 
                 backgroundColor: '#0f172a', 
-                scale: 2 // High resolution rendering
+                scale: 2 
             }).then(canvas => {
                 let link = document.createElement('a');
                 let safeName = document.getElementById('pc-name').innerText.replace(/\s+/g, '_');
@@ -553,22 +546,26 @@
             let tbody = document.getElementById('career-tbody');
             if(aggregatedData.length === 0) { tbody.innerHTML = `<tr><td colspan="27" style="text-align:center; color:#ef4444;">No players match the selected filters.</td></tr>`; return; }
 
-            tbody.innerHTML = aggregatedData.map(p => {
+            // 🔥 We use the 'index' from the map to safely link to the exact player object
+            tbody.innerHTML = aggregatedData.map((p, index) => {
                 let bestStr = p.bestRuns > 0 ? `${p.bestRuns}${p.bestNotOut ? '*' : ''}` : '-';
                 let bbiStr = p.bbiW > 0 ? `${p.bbiW}-${p.bbiR}` : '-';
                 let avgStr = p.dismissals === 0 && p.runs > 0 ? '-' : p.avg.toFixed(2);
                 let bAvgStr = p.wkts === 0 ? '-' : p.bAvg.toFixed(2);
                 
-                // 🔥 NEW: Name Truncation Logic (Max 15 Characters)
+                // Truncate player name (Max 15 Characters)
                 let dispName = p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name;
+                
+                // 🔥 NEW: Truncate team name (Max 15 Characters)
+                let dispTeam = p.team.length > 15 ? p.team.substring(0, 15) + '...' : p.team;
 
                 return `<tr>
                     <td>
-                        <span class="player-link" title="${p.name}" onclick="openPlayerCard('${p.name.replace(/'/g, "\\'")}')">
+                        <span class="player-link" title="${p.name}" onclick="openPlayerCard(${index})">
                             ${dispName}
                         </span>
                     </td>
-                    <td style="color:#94a3b8;">${p.team}</td>
+                    <td style="color:#94a3b8;" title="${p.team}">${dispTeam}</td>
                     <td class="col-mat">${p.mat}</td>
                     
                     <td class="bat-col col-inn">${p.inn}</td>
@@ -614,7 +611,6 @@
             let topBatters = [...aggregatedData].sort((a,b) => b.runs - a.runs).slice(0, 10);
             let topBowlers = [...aggregatedData].sort((a,b) => b.wkts - a.wkts).slice(0, 10);
 
-            // Using the same 15-char truncation for chart labels so they don't break the canvas UI
             let formatChartLabels = (players) => players.map(p => p.name.length > 15 ? p.name.substring(0,15) + '...' : p.name);
 
             createChart('chartRuns', 'bar', { labels: formatChartLabels(topBatters), datasets: [{ label: 'Runs', data: topBatters.map(p => p.runs), backgroundColor: '#f59e0b', borderRadius: 4 }] }, barOptions);
