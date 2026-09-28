@@ -12,35 +12,40 @@
         body { background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; }
         * { box-sizing: border-box; }
         
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 15px; margin-bottom: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 5px; }
         .back-btn { background: transparent; border: 1px solid #475569; color: #cbd5e1; padding: 8px 15px; border-radius: 6px; cursor: pointer; text-decoration: none; font-size: 0.85rem; transition: 0.2s; }
         .back-btn:hover { background: #334155; color: white; }
         .action-btn { background: #1e293b; border: 1px solid #38bdf8; color: #38bdf8; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: 0.2s; }
         .action-btn:hover { background: #38bdf8; color: #0f172a; }
 
-        .filter-bar { background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #334155; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; align-items: center; }
+        /* 🔥 NEW: SPRINT-STYLE TAB NAVIGATION */
+        .tab-nav { display: flex; gap: 30px; border-bottom: 2px solid #1e293b; margin-top: 15px; margin-bottom: 25px; }
+        .tab-btn { background: none; border: none; color: #64748b; font-size: 1rem; font-weight: 800; cursor: pointer; padding: 10px 5px; position: relative; transition: 0.3s; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .tab-btn:hover { color: #cbd5e1; }
+        .tab-btn.active { color: #f8fafc; }
+        .tab-btn.active::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 100%; height: 3px; background: #38bdf8; border-radius: 3px 3px 0 0; }
+        .hidden-view { display: none !important; }
+
+        .filter-bar { background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #334155; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; align-items: center; }
         .filter-select, .filter-input { background: #0f172a; color: white; border: 1px solid #475569; padding: 10px; border-radius: 6px; font-size: 0.9rem; flex: 1; min-width: 150px; outline: none; }
         .filter-select:focus, .filter-input:focus { border-color: #38bdf8; }
 
-        .toggle-panel { background: #0f172a; border: 1px solid #38bdf8; border-radius: 8px; padding: 15px; margin-bottom: 25px; display: flex; flex-wrap: wrap; gap: 10px; animation: fadeIn 0.3s ease; }
+        .toggle-panel { background: #0f172a; border: 1px solid #38bdf8; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; animation: fadeIn 0.3s ease; }
         .toggle-lbl { background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; cursor: pointer; display: flex; align-items: center; gap: 6px; border: 1px solid #334155; user-select: none; transition: 0.2s; font-weight: bold; }
         .toggle-lbl:hover { background: rgba(255,255,255,0.1); border-color: #475569; }
         .toggle-lbl input { cursor: pointer; margin: 0; width: 14px; height: 14px; accent-color: #38bdf8; }
-        .hidden { display: none !important; }
 
-        /* 🔥 NEW: SIDE-BY-SIDE DASHBOARD LAYOUT */
+        /* Dashboard Layout */
         .dashboard-layout { display: flex; gap: 20px; align-items: flex-start; }
-        
-        .table-section { flex: 1; min-width: 0; /* Prevents table from blowing out the flex layout */ }
-        
+        .table-section { flex: 1; min-width: 0; }
         .side-panel { width: 380px; flex-shrink: 0; display: flex; flex-direction: column; gap: 20px; max-height: 520px; overflow-y: auto; padding-right: 5px; }
         .side-panel::-webkit-scrollbar { width: 6px; }
         .side-panel::-webkit-scrollbar-track { background: transparent; }
         .side-panel::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
 
+        /* Table Setup */
         .table-container { background: #1e293b; border-radius: 10px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.3); overflow: hidden; }
         .table-header { padding: 15px 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
-        
         .table-scroll-wrapper { max-height: 450px; overflow-y: auto; overflow-x: auto; position: relative; }
         .table-scroll-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
         .table-scroll-wrapper::-webkit-scrollbar-track { background: #0f172a; }
@@ -48,24 +53,14 @@
         .table-scroll-wrapper::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; white-space: nowrap; }
-        
-        /* 🔥 NEW: STICKY HEADERS & COLUMNS */
         th { background: #0f172a; color: #38bdf8; padding: 12px 10px; text-align: right; cursor: pointer; user-select: none; border-bottom: 2px solid #334155; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
         th:hover { background: #1e293b; color: white; }
-        
-        /* Solid backgrounds prevent horizontal scrolling text bleed */
         td { padding: 12px 10px; border-bottom: 1px solid #1e293b; text-align: right; color: #cbd5e1; background: #1e293b; }
         tr:hover td { background: #26354a; }
 
-        /* Lock Column 1 (Player Name) */
         .col-name { min-width: 170px; max-width: 170px; position: sticky; left: 0; z-index: 12; text-align: left; padding-left: 20px; font-weight: bold; color: white; }
-        /* Lock Column 2 (Team Name) */
         .col-team { min-width: 140px; max-width: 140px; position: sticky; left: 170px; z-index: 12; text-align: left; border-right: 2px solid #334155; }
-        
-        /* CSS Gradient Shadow to show depth when scrolling */
         .col-team::after { content: ''; position: absolute; top: 0; bottom: 0; right: -15px; width: 15px; background: linear-gradient(to right, rgba(0,0,0,0.5), transparent); pointer-events: none; }
-        
-        /* Ensure top-left headers stay above everything */
         th.col-name, th.col-team { z-index: 20; background: #0f172a; }
         td.col-name, td.col-team { background: #1e293b; }
         tr:hover td.col-name, tr:hover td.col-team { background: #26354a; }
@@ -106,11 +101,25 @@
         table.hide-stumpings .col-stumpings { display: none !important; }
         table.hide-runouts .col-runouts { display: none !important; }
 
-        .chart-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .chart-title { text-align: center; font-size: 1rem; font-weight: bold; margin-top: 0; margin-bottom: 15px; color: #f8fafc; }
+        /* Chart Cards Setup */
+        .chart-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); position: relative; }
+        .chart-title { font-size: 1rem; font-weight: bold; margin-top: 0; margin-bottom: 5px; color: #f8fafc; }
+        .chart-subtitle { font-size: 0.7rem; color: #94a3b8; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
         .canvas-container { position: relative; height: 260px; width: 100%; }
 
-        /* Modal Styles */
+        /* Advanced Analytics Grid */
+        .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 25px; margin-bottom: 40px; }
+        .adv-canvas-container { position: relative; height: 320px; width: 100%; }
+        
+        /* Advanced Card Glows */
+        .card-glow-purple::before { content: ''; position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(168, 85, 247, 0.2); filter: blur(40px); border-radius: 50%; pointer-events: none; }
+        .card-glow-emerald::before { content: ''; position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(16, 185, 129, 0.2); filter: blur(40px); border-radius: 50%; pointer-events: none; }
+        .card-glow-amber::before { content: ''; position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(245, 158, 11, 0.2); filter: blur(40px); border-radius: 50%; pointer-events: none; }
+        .card-glow-rose::before { content: ''; position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(244, 63, 94, 0.2); filter: blur(40px); border-radius: 50%; pointer-events: none; }
+        .card-glow-cyan::before { content: ''; position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(6, 182, 212, 0.2); filter: blur(40px); border-radius: 50%; pointer-events: none; }
+        .card-glow-blue::before { content: ''; position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(56, 189, 248, 0.2); filter: blur(40px); border-radius: 50%; pointer-events: none; }
+
+        /* Dynamic Theme Modals */
         .theme-blue { --theme-color: #38bdf8; --theme-grad: linear-gradient(90deg, #0ea5e9, #2563eb); --theme-glow: rgba(56, 189, 248, 0.2); }
         .theme-emerald { --theme-color: #10b981; --theme-grad: linear-gradient(90deg, #10b981, #059669); --theme-glow: rgba(16, 185, 129, 0.2); }
         .theme-amber { --theme-color: #f59e0b; --theme-grad: linear-gradient(90deg, #f59e0b, #ea580c); --theme-glow: rgba(245, 158, 11, 0.2); }
@@ -123,10 +132,10 @@
         .modal-box { background: transparent; padding: 0; width: 420px; max-width: 100%; max-height: 95vh; overflow-y: auto; position: relative; transform: translateY(20px); transition: 0.3s; }
         .modal-box::-webkit-scrollbar { display: none; }
         .modal-overlay.active .modal-box { transform: translateY(0); }
-        
         .modal-close { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); border: 1px solid #475569; color: white; font-size: 1.2rem; cursor: pointer; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; z-index: 10; transition: 0.2s; }
         .modal-close:hover { background: #ef4444; border-color: #ef4444; }
 
+        /* Player Card UI */
         .player-card-ui { background: linear-gradient(145deg, #0f172a, #1e293b); border-radius: 16px; border: 2px solid var(--theme-color, #38bdf8); box-shadow: 0 15px 35px rgba(0,0,0,0.8), inset 0 0 25px var(--theme-glow, rgba(56, 189, 248, 0.2)); overflow: hidden; padding: 18px 20px; position: relative; }
         .card-header-grid { display: flex; gap: 15px; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #334155; padding-bottom: 12px; }
         .avatar-wrapper { position: relative; width: 75px; height: 75px; border-radius: 12px; border: 2px dashed #475569; cursor: pointer; overflow: hidden; background: #020617; display: flex; align-items: center; justify-content: center; transition: 0.3s; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
@@ -141,7 +150,6 @@
         .pc-badge-mat { display: inline-block; background: rgba(255,255,255,0.1); border: 1px solid #475569; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; color: #cbd5e1; margin-top: 6px; font-weight: bold; }
 
         .stats-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-        
         .stat-panel { background: rgba(0,0,0,0.3); border: 1px solid #334155; border-radius: 10px; padding: 10px 12px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2); }
         .stat-panel h4 { margin-top: 0; margin-bottom: 8px; text-align: center; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; }
         .stat-panel.bat h4 { color: #f59e0b; }
@@ -164,11 +172,14 @@
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* Mobile Breakpoint for Dashboard */
         @media (max-width: 1024px) { 
             .dashboard-layout { flex-direction: column; }
             .side-panel { width: 100%; max-height: none; flex-direction: row; flex-wrap: wrap; }
             .side-panel .chart-card { flex: 1; min-width: 300px; }
+        }
+        @media (max-width: 768px) {
+            .analytics-grid { grid-template-columns: 1fr; }
+            .filter-select, .filter-input { min-width: 100%; }
         }
     </style>
 </head>
@@ -176,16 +187,22 @@
 
     <div class="header">
         <div>
-            <h1 style="margin:0; color:#38bdf8;">🏏 Ultimate Career Analytics Hub</h1>
-            <p style="margin:5px 0 0 0; color:#94a3b8; font-size:0.9rem;">Interactive Filters, Sortable Columns & Deep Data Visualization</p>
+            <h1 style="margin:0; color:#f8fafc;">🏏 Sportzstat Analytics Hub</h1>
+            <p style="margin:5px 0 0 0; color:#94a3b8; font-size:0.9rem;">Interactive Data Engine for Teams & Players</p>
         </div>
         <div style="display: flex; gap: 10px; align-items: center;">
-            <button class="action-btn" onclick="document.getElementById('col-toggles').classList.toggle('hidden')">👁️ Customize Columns</button>
+            <button class="action-btn" onclick="document.getElementById('col-toggles').classList.toggle('hidden')">👁️ Table Columns</button>
             <a href="index.html" class="back-btn">← Back to Portal</a>
         </div>
     </div>
 
-    <!-- FILTER BAR -->
+    <!-- 🔥 NEW: TAB NAVIGATION -->
+    <div class="tab-nav">
+        <button id="btn-tab-career" class="tab-btn active" onclick="switchTab('career')">📊 Career Stats</button>
+        <button id="btn-tab-analytics" class="tab-btn" onclick="switchTab('analytics')">📈 Advanced Analytics</button>
+    </div>
+
+    <!-- SHARED FILTER BAR -->
     <div class="filter-bar">
         <input type="text" id="filter-search" class="filter-input" placeholder="🔍 Search Player..." onkeyup="applyFilters()">
         <select id="filter-team" class="filter-select" onchange="applyFilters()"><option value="ALL">🛡️ All Teams</option></select>
@@ -194,115 +211,153 @@
         <select id="filter-year" class="filter-select" onchange="applyFilters()"><option value="ALL">📅 All Years</option></select>
     </div>
 
-    <!-- COLUMN TOGGLE PANEL -->
-    <div id="col-toggles" class="toggle-panel hidden">
-        <div style="width: 100%; color: #38bdf8; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">GENERAL</div>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('mat', this.checked)"> Matches</label>
-        
-        <div style="width: 100%; color: #f59e0b; font-weight: bold; margin-top: 10px; margin-bottom: 5px; font-size: 0.9rem;">BATTING</div>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('inn', this.checked)"> Innings</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('runs', this.checked)"> Runs</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('best', this.checked)"> Best</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('bf', this.checked)"> BF</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('avg', this.checked)"> Avg</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('sr', this.checked)"> SR</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('hundreds', this.checked)"> 100s</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('fifties', this.checked)"> 50s</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('fours', this.checked)"> 4s</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('sixes', this.checked)"> 6s</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('no', this.checked)"> NO</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('ducks', this.checked)"> Ducks</label>
+    <!-- ========================================== -->
+    <!-- VIEW 1: CAREER STATS TABLE & SIDE PANEL    -->
+    <!-- ========================================== -->
+    <div id="view-career">
+        <!-- COLUMN TOGGLE PANEL -->
+        <div id="col-toggles" class="toggle-panel hidden">
+            <div style="width: 100%; color: #38bdf8; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">GENERAL</div>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('mat', this.checked)"> Matches</label>
+            
+            <div style="width: 100%; color: #f59e0b; font-weight: bold; margin-top: 10px; margin-bottom: 5px; font-size: 0.9rem;">BATTING</div>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('inn', this.checked)"> Innings</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('runs', this.checked)"> Runs</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('best', this.checked)"> Best</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('bf', this.checked)"> BF</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('avg', this.checked)"> Avg</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('sr', this.checked)"> SR</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('hundreds', this.checked)"> 100s</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('fifties', this.checked)"> 50s</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('fours', this.checked)"> 4s</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('sixes', this.checked)"> 6s</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('no', this.checked)"> NO</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('ducks', this.checked)"> Ducks</label>
 
-        <div style="width: 100%; color: #10b981; font-weight: bold; margin-top: 10px; margin-bottom: 5px; font-size: 0.9rem;">BOWLING</div>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('overs', this.checked)"> Overs</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('mdn', this.checked)"> Maidens</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('rc', this.checked)"> Runs Conceded</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('wkts', this.checked)"> Wickets</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('bbi', this.checked)"> BBI</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('bavg', this.checked)"> B.Avg</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('econ', this.checked)"> Econ</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('w4', this.checked)"> 4W</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('w5', this.checked)"> 5W</label>
+            <div style="width: 100%; color: #10b981; font-weight: bold; margin-top: 10px; margin-bottom: 5px; font-size: 0.9rem;">BOWLING</div>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('overs', this.checked)"> Overs</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('mdn', this.checked)"> Maidens</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('rc', this.checked)"> Runs Conceded</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('wkts', this.checked)"> Wickets</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('bbi', this.checked)"> BBI</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('bavg', this.checked)"> B.Avg</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('econ', this.checked)"> Econ</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('w4', this.checked)"> 4W</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('w5', this.checked)"> 5W</label>
 
-        <div style="width: 100%; color: #8b5cf6; font-weight: bold; margin-top: 10px; margin-bottom: 5px; font-size: 0.9rem;">FIELDING</div>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('catches', this.checked)"> Catches</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('stumpings', this.checked)"> Stumpings</label>
-        <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('runouts', this.checked)"> Run Outs</label>
-    </div>
+            <div style="width: 100%; color: #8b5cf6; font-weight: bold; margin-top: 10px; margin-bottom: 5px; font-size: 0.9rem;">FIELDING</div>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('catches', this.checked)"> Catches</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('stumpings', this.checked)"> Stumpings</label>
+            <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('runouts', this.checked)"> Run Outs</label>
+        </div>
 
-    <!-- 🔥 NEW: Dashboard Layout (Table Left, Charts Right) -->
-    <div class="dashboard-layout">
-        
-        <!-- TABLE SECTION -->
-        <div class="table-section">
-            <div class="table-container">
-                <div class="table-header">
-                    <h3 style="margin:0; color:#38bdf8;">📊 Career Aggregation Table</h3>
-                    <span style="font-size:0.75rem; color:#94a3b8;">Click any column header to sort</span>
-                </div>
-                
-                <div class="table-scroll-wrapper">
-                    <table id="career-table">
-                        <thead>
-                            <tr>
-                                <!-- Sticky Columns need specific classes -->
-                                <th class="col-name" onclick="sortTable('name')">Player Name ↕</th>
-                                <th class="col-team" onclick="sortTable('team')">Team ↕</th>
-                                <th class="col-mat" onclick="sortTable('mat')">Mat ↕</th>
-                                
-                                <th class="bat-hdr col-inn" onclick="sortTable('inn')">Inn ↕</th>
-                                <th class="bat-hdr col-runs" onclick="sortTable('runs')">Runs ↕</th>
-                                <th class="bat-hdr col-best" onclick="sortTable('best')">Best ↕</th>
-                                <th class="bat-hdr col-bf" onclick="sortTable('bf')">BF ↕</th>
-                                <th class="bat-hdr col-avg" onclick="sortTable('avg')">Avg ↕</th>
-                                <th class="bat-hdr col-sr" onclick="sortTable('sr')">SR ↕</th>
-                                <th class="bat-hdr col-hundreds" onclick="sortTable('hundreds')">100s ↕</th>
-                                <th class="bat-hdr col-fifties" onclick="sortTable('fifties')">50s ↕</th>
-                                <th class="bat-hdr col-fours" onclick="sortTable('fours')">4s ↕</th>
-                                <th class="bat-hdr col-sixes" onclick="sortTable('sixes')">6s ↕</th>
-                                <th class="bat-hdr col-no" onclick="sortTable('no')">NO ↕</th>
-                                <th class="bat-hdr col-ducks" onclick="sortTable('ducks')">Ducks ↕</th>
-                                
-                                <th class="bowl-hdr col-overs" onclick="sortTable('overs')">Overs ↕</th>
-                                <th class="bowl-hdr col-mdn" onclick="sortTable('mdn')">Mdn ↕</th>
-                                <th class="bowl-hdr col-rc" onclick="sortTable('rc')">RC ↕</th>
-                                <th class="bowl-hdr col-wkts" onclick="sortTable('wkts')">Wkts ↕</th>
-                                <th class="bowl-hdr col-bbi" onclick="sortTable('bbiW')">BBI ↕</th>
-                                <th class="bowl-hdr col-bavg" onclick="sortTable('bAvg')">B.Avg ↕</th>
-                                <th class="bowl-hdr col-econ" onclick="sortTable('econ')">Econ ↕</th>
-                                <th class="bowl-hdr col-w4" onclick="sortTable('w4')">4W ↕</th>
-                                <th class="bowl-hdr col-w5" onclick="sortTable('w5')">5W ↕</th>
+        <div class="dashboard-layout">
+            <div class="table-section">
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 style="margin:0; color:#38bdf8;">📊 Career Aggregation Table</h3>
+                        <span style="font-size:0.75rem; color:#94a3b8;">Click any column header to sort</span>
+                    </div>
+                    <div class="table-scroll-wrapper">
+                        <table id="career-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-name" onclick="sortTable('name')">Player Name ↕</th>
+                                    <th class="col-team" onclick="sortTable('team')">Team ↕</th>
+                                    <th class="col-mat" onclick="sortTable('mat')">Mat ↕</th>
+                                    
+                                    <th class="bat-hdr col-inn" onclick="sortTable('inn')">Inn ↕</th>
+                                    <th class="bat-hdr col-runs" onclick="sortTable('runs')">Runs ↕</th>
+                                    <th class="bat-hdr col-best" onclick="sortTable('best')">Best ↕</th>
+                                    <th class="bat-hdr col-bf" onclick="sortTable('bf')">BF ↕</th>
+                                    <th class="bat-hdr col-avg" onclick="sortTable('avg')">Avg ↕</th>
+                                    <th class="bat-hdr col-sr" onclick="sortTable('sr')">SR ↕</th>
+                                    <th class="bat-hdr col-hundreds" onclick="sortTable('hundreds')">100s ↕</th>
+                                    <th class="bat-hdr col-fifties" onclick="sortTable('fifties')">50s ↕</th>
+                                    <th class="bat-hdr col-fours" onclick="sortTable('fours')">4s ↕</th>
+                                    <th class="bat-hdr col-sixes" onclick="sortTable('sixes')">6s ↕</th>
+                                    <th class="bat-hdr col-no" onclick="sortTable('no')">NO ↕</th>
+                                    <th class="bat-hdr col-ducks" onclick="sortTable('ducks')">Ducks ↕</th>
+                                    
+                                    <th class="bowl-hdr col-overs" onclick="sortTable('overs')">Overs ↕</th>
+                                    <th class="bowl-hdr col-mdn" onclick="sortTable('mdn')">Mdn ↕</th>
+                                    <th class="bowl-hdr col-rc" onclick="sortTable('rc')">RC ↕</th>
+                                    <th class="bowl-hdr col-wkts" onclick="sortTable('wkts')">Wkts ↕</th>
+                                    <th class="bowl-hdr col-bbi" onclick="sortTable('bbiW')">BBI ↕</th>
+                                    <th class="bowl-hdr col-bavg" onclick="sortTable('bAvg')">B.Avg ↕</th>
+                                    <th class="bowl-hdr col-econ" onclick="sortTable('econ')">Econ ↕</th>
+                                    <th class="bowl-hdr col-w4" onclick="sortTable('w4')">4W ↕</th>
+                                    <th class="bowl-hdr col-w5" onclick="sortTable('w5')">5W ↕</th>
 
-                                <th class="field-hdr col-catches" onclick="sortTable('catches')">Ct ↕</th>
-                                <th class="field-hdr col-stumpings" onclick="sortTable('stumpings')">St ↕</th>
-                                <th class="field-hdr col-runouts" onclick="sortTable('runouts')">RO ↕</th>
-                            </tr>
-                        </thead>
-                        <tbody id="career-tbody">
-                            <tr><td colspan="27" style="text-align:center;">Loading cloud data...</td></tr>
-                        </tbody>
-                    </table>
+                                    <th class="field-hdr col-catches" onclick="sortTable('catches')">Ct ↕</th>
+                                    <th class="field-hdr col-stumpings" onclick="sortTable('stumpings')">St ↕</th>
+                                    <th class="field-hdr col-runouts" onclick="sortTable('runouts')">RO ↕</th>
+                                </tr>
+                            </thead>
+                            <tbody id="career-tbody">
+                                <tr><td colspan="27" style="text-align:center;">Loading cloud data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- SIDE PANEL FOR CHARTS -->
-        <div class="side-panel">
-            <div class="chart-card"><h3 class="chart-title" style="color:#f59e0b;">🔥 Top Scorers</h3><div class="canvas-container"><canvas id="chartRuns"></canvas></div></div>
-            <div class="chart-card"><h3 class="chart-title" style="color:#10b981;">🎯 Top Wickets</h3><div class="canvas-container"><canvas id="chartWickets"></canvas></div></div>
-            <div class="chart-card"><h3 class="chart-title" style="color:#38bdf8;">💥 Boundary Breakers</h3><div class="canvas-container"><canvas id="chartBoundaries"></canvas></div></div>
-            <div class="chart-card"><h3 class="chart-title" style="color:#a855f7;">🏆 Run Weightage</h3><div class="canvas-container"><canvas id="chartWeightRuns"></canvas></div></div>
-            <div class="chart-card"><h3 class="chart-title" style="color:#10b981;">🎳 Wicket Weightage</h3><div class="canvas-container"><canvas id="chartWeightWkts"></canvas></div></div>
+            <div class="side-panel">
+                <div class="chart-card"><h3 class="chart-title" style="color:#f59e0b; text-align:center;">🔥 Top Scorers</h3><div class="canvas-container"><canvas id="chartRuns"></canvas></div></div>
+                <div class="chart-card"><h3 class="chart-title" style="color:#10b981; text-align:center;">🎯 Top Wickets</h3><div class="canvas-container"><canvas id="chartWickets"></canvas></div></div>
+                <div class="chart-card"><h3 class="chart-title" style="color:#38bdf8; text-align:center;">💥 Boundary Breakers</h3><div class="canvas-container"><canvas id="chartBoundaries"></canvas></div></div>
+            </div>
         </div>
-
     </div>
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: ADVANCED ANALYTICS                 -->
+    <!-- ========================================== -->
+    <div id="view-analytics" class="hidden-view">
+        <div class="analytics-grid">
+            <div class="chart-card card-glow-amber">
+                <h3 class="chart-title"><span style="color:#f59e0b;">⚔️</span> The Batting Matrix</h3>
+                <p class="chart-subtitle">Strike Rate (X) vs Average (Y) • Min 30 Runs</p>
+                <div class="adv-canvas-container"><canvas id="battingMatrix"></canvas></div>
+            </div>
+
+            <div class="chart-card card-glow-emerald">
+                <h3 class="chart-title"><span style="color:#10b981;">🎯</span> The Bowling Matrix</h3>
+                <p class="chart-subtitle">Economy (X) vs Bowling Average (Y) • Min 2 Wkts</p>
+                <div class="adv-canvas-container"><canvas id="bowlingMatrix"></canvas></div>
+            </div>
+
+            <div class="chart-card card-glow-purple">
+                <h3 class="chart-title"><span style="color:#a855f7;">🌟</span> All-Rounder Impact</h3>
+                <p class="chart-subtitle">Runs (X) vs Wickets (Y) • Bubble Size = Matches Played</p>
+                <div class="adv-canvas-container"><canvas id="mvpTracker"></canvas></div>
+            </div>
+
+            <div class="chart-card card-glow-rose">
+                <h3 class="chart-title"><span style="color:#f43f5e;">☄️</span> Boundary Reliance (BRC %)</h3>
+                <p class="chart-subtitle">% of Total Runs scored via 4s and 6s</p>
+                <div class="adv-canvas-container"><canvas id="boundaryReliance"></canvas></div>
+            </div>
+
+            <div class="chart-card card-glow-cyan">
+                <h3 class="chart-title"><span style="color:#06b6d4;">⏱️</span> Balls Per Boundary (BPB)</h3>
+                <p class="chart-subtitle">Balls faced per boundary hit • Lower is Better</p>
+                <div class="adv-canvas-container"><canvas id="ballsPerBoundary"></canvas></div>
+            </div>
+
+            <div class="chart-card card-glow-blue">
+                <h3 class="chart-title"><span style="color:#38bdf8;">🔥</span> True Strike Rate Leaders</h3>
+                <p class="chart-subtitle">Highest Strike Rates • Filtered: Min 30 Runs</p>
+                <div class="adv-canvas-container"><canvas id="trueStrikeRate"></canvas></div>
+            </div>
+        </div>
+    </div>
+
 
     <!-- DYNAMIC THEME PLAYER CARD MODAL -->
     <div id="playerCardModal" class="modal-overlay" onclick="closePlayerCard(event)">
         <div id="playerCardElement" class="modal-box" onclick="event.stopPropagation()">
-            
             <button type="button" class="modal-close" onclick="closePlayerCard()">×</button>
-            
             <div id="cardCaptureArea" class="player-card-ui">
                 <div class="card-header-grid">
                     <input type="file" id="playerPicUpload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
@@ -365,12 +420,26 @@
         let aggregatedData = [];
         let currentSortCol = 'runs';
         let currentSortAsc = false;
-        
         let charts = {};
 
         const DEFAULT_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
-        
         const themes = ['theme-blue', 'theme-emerald', 'theme-amber', 'theme-purple', 'theme-rose', 'theme-cyan'];
+
+        // 🔥 TAB SWITCHING LOGIC
+        function switchTab(tabId) {
+            // Update Tab Buttons
+            document.getElementById('btn-tab-career').classList.remove('active');
+            document.getElementById('btn-tab-analytics').classList.remove('active');
+            document.getElementById('btn-tab-' + tabId).classList.add('active');
+
+            // Toggle Views
+            document.getElementById('view-career').classList.add('hidden-view');
+            document.getElementById('view-analytics').classList.add('hidden-view');
+            document.getElementById('view-' + tabId).classList.remove('hidden-view');
+
+            // Force charts to re-render in case the canvas size was 0 when hidden
+            renderCharts();
+        }
 
         function toggleCol(colName, isChecked) {
             const table = document.getElementById('career-table');
@@ -380,7 +449,7 @@
 
         window.onload = async () => {
             Chart.defaults.color = '#94a3b8';
-            Chart.defaults.borderColor = '#334155';
+            Chart.defaults.borderColor = 'rgba(51, 65, 85, 0.5)';
             await fetchMatches();
             setInterval(fetchMatches, 15000); 
         };
@@ -395,25 +464,16 @@
             data.forEach(m => {
                 try {
                     let fs = m.full_state;
-                    
                     if (fs && (fs.match_status === 'completed' || fs.match_status === 'live')) {
                         let tName = (m.tournaments && m.tournaments.name) ? m.tournaments.name : (fs.tournament || 'Independent Match');
                         let year = new Date(m.created_at).getFullYear().toString();
-                        
-                        let format = fs.format;
-                        if (!format || format === 'undefined' || format === '') {
-                            if (fs.matchSettings && fs.matchSettings.matchType === 'multiday') { format = 'Multi-Day (Test)'; } 
-                            else if (fs.inningsSummaries && fs.inningsSummaries.length > 2) { format = 'Multi-Day (Test)'; } 
-                            else if (fs.matchSettings && fs.matchSettings.matchType === 'oneday') { format = 'One Day (ODI)'; } 
-                            else { format = 'T20'; }
-                        }
+                        let format = fs.format || 'T20';
 
                         filterSets.tourneys.add(tName);
                         filterSets.years.add(year);
                         filterSets.formats.add(format);
 
                         let allInnings = fs.inningsSummaries ? [...fs.inningsSummaries] : [];
-
                         if (fs.match_status === 'live' && fs.current && (fs.current.balls > 0 || fs.current.runs > 0)) {
                             allInnings.push({
                                 batTeam: fs.teams?.[fs.battingKey]?.name || 'Team A',
@@ -422,20 +482,13 @@
                                 bowlers: fs.teams?.[fs.bowlingKey]?.players || []
                             });
                         }
-
-                        rawMatches.push({
-                            tourney: tName, format: format, year: year,
-                            teams: fs.teams,
-                            innings: allInnings
-                        });
+                        rawMatches.push({ tourney: tName, format: format, year: year, teams: fs.teams, innings: allInnings });
                     }
                 } catch(err) { console.warn("Skipped corrupted match."); }
             });
 
             let updateDropdown = (id, set) => { 
-                let el = document.getElementById(id); 
-                let currentVal = el.value;
-                let defaultTxt = el.options[0].text; 
+                let el = document.getElementById(id); let currentVal = el.value; let defaultTxt = el.options[0].text; 
                 el.innerHTML = `<option value="ALL">${defaultTxt}</option>`;
                 Array.from(set).sort().forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`); 
                 if (Array.from(set).includes(currentVal)) el.value = currentVal;
@@ -488,7 +541,6 @@
                             if (currentScore > p.bestRuns || (currentScore === p.bestRuns && isNotOut && !p.bestNotOut)) {
                                 p.bestRuns = currentScore; p.bestNotOut = isNotOut;
                             }
-                            
                             if (currentScore >= 100) { p.hundreds++; } else if (currentScore >= 50) { p.fifties++; }
                         }
                     });
@@ -503,20 +555,12 @@
                             
                             if (isBowler) {
                                 p.rc += b.rc; p.wkts += b.w; p.mdn += b.m;
-                                let absBalls = 0;
-                                if (b.o % 1 !== 0) {
-                                    absBalls = Math.floor(b.o) * 6 + Math.round((b.o - Math.floor(b.o)) * 10);
-                                } else {
-                                    absBalls = b.o;
-                                }
+                                let absBalls = (b.o % 1 !== 0) ? Math.floor(b.o) * 6 + Math.round((b.o - Math.floor(b.o)) * 10) : b.o;
                                 p.bowlBalls += absBalls;
 
                                 if (b.w >= 4) p.w4++;
                                 if (b.w >= 5) p.w5++;
-
-                                if (b.w > p.bbiW || (b.w === p.bbiW && b.rc < p.bbiR)) {
-                                    p.bbiW = b.w; p.bbiR = b.rc;
-                                }
+                                if (b.w > p.bbiW || (b.w === p.bbiW && b.rc < p.bbiR)) { p.bbiW = b.w; p.bbiR = b.rc; }
                             }
 
                             if (isFielder) {
@@ -544,11 +588,17 @@
             }).map(p => {
                 p.avg = p.dismissals > 0 ? (p.runs / p.dismissals) : (p.runs > 0 ? p.runs : 0);
                 p.sr = p.bf > 0 ? ((p.runs / p.bf) * 100) : 0;
-                
-                let bOvers = Math.floor(p.bowlBalls / 6) + (p.bowlBalls % 6) / 10;
-                p.overs = bOvers;
+                p.overs = Math.floor(p.bowlBalls / 6) + (p.bowlBalls % 6) / 10;
                 p.econ = p.bowlBalls > 0 ? ((p.rc / p.bowlBalls) * 6) : 0;
                 p.bAvg = p.wkts > 0 ? (p.rc / p.wkts) : 0;
+                
+                // Advanced Calculated Stats
+                let boundaryRuns = (p.fours * 4) + (p.sixes * 6);
+                p.brc = p.runs > 0 ? (boundaryRuns / p.runs) * 100 : 0;
+                let totalBoundaries = p.fours + p.sixes;
+                p.bpb = totalBoundaries > 0 ? (p.bf / totalBoundaries) : 0;
+                
+                p.dispName = p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name;
                 return p;
             });
 
@@ -557,11 +607,8 @@
 
         function initPlayer(obj, name, team) {
             obj[name] = { 
-                name: name, team: team, mat: 0, 
-                inn: 0, runs: 0, bf: 0, fours: 0, sixes: 0, dismissals: 0, ducks: 0, no: 0, bestRuns: 0, bestNotOut: false,
-                fifties: 0, hundreds: 0, 
-                bowlBalls: 0, rc: 0, wkts: 0, mdn: 0, bbiW: 0, bbiR: 999, w4: 0, w5: 0,
-                catches: 0, stumpings: 0, runouts: 0
+                name: name, team: team, mat: 0, inn: 0, runs: 0, bf: 0, fours: 0, sixes: 0, dismissals: 0, ducks: 0, no: 0, bestRuns: 0, bestNotOut: false, fifties: 0, hundreds: 0, 
+                bowlBalls: 0, rc: 0, wkts: 0, mdn: 0, bbiW: 0, bbiR: 999, w4: 0, w5: 0, catches: 0, stumpings: 0, runouts: 0
             };
         }
 
@@ -595,10 +642,10 @@
             document.getElementById('player-avatar').src = DEFAULT_AVATAR;
             document.getElementById('playerPicUpload').value = "";
             
-            document.getElementById('pc-name').innerText = p.name;
-            document.getElementById('pc-name').title = p.name; // Hover for full
+            document.getElementById('pc-name').innerText = p.name.length > 20 ? p.name.substring(0, 20) + '...' : p.name;
+            document.getElementById('pc-name').title = p.name; 
             
-            document.getElementById('pc-team').innerText = p.team;
+            document.getElementById('pc-team').innerText = p.team.length > 25 ? p.team.substring(0, 25) + '...' : p.team;
             document.getElementById('pc-team').title = p.team;
             
             document.getElementById('pc-mat').innerText = p.mat;
@@ -628,9 +675,7 @@
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('player-avatar').src = e.target.result;
-                }
+                reader.onload = function(e) { document.getElementById('player-avatar').src = e.target.result; }
                 reader.readAsDataURL(file);
             }
         }
@@ -642,11 +687,7 @@
 
         function downloadPlayerCard() {
             let captureElement = document.getElementById('cardCaptureArea');
-            html2canvas(captureElement, { 
-                backgroundColor: null, 
-                scale: 2,
-                useCORS: true 
-            }).then(canvas => {
+            html2canvas(captureElement, { backgroundColor: null, scale: 2, useCORS: true }).then(canvas => {
                 let link = document.createElement('a');
                 let safeName = document.getElementById('pc-name').innerText.replace(/\s+/g, '_');
                 link.download = `${safeName}_Sportzstat_Card.png`;
@@ -669,11 +710,7 @@
                 let dispTeam = p.team.length > 15 ? p.team.substring(0, 15) + '...' : p.team;
 
                 return `<tr>
-                    <td class="col-name">
-                        <span class="player-link" title="${p.name}" onclick="openPlayerCard(${index})">
-                            ${dispName}
-                        </span>
-                    </td>
+                    <td class="col-name"><span class="player-link" title="${p.name}" onclick="openPlayerCard(${index})">${dispName}</span></td>
                     <td class="col-team" title="${p.team}">${dispTeam}</td>
                     <td class="col-mat">${p.mat}</td>
                     
@@ -707,44 +744,53 @@
             }).join('');
         }
 
+        // 🔥 Renders ALL charts (both Career and Advanced views)
         function renderCharts() {
             const createChart = (id, type, data, options) => {
+                const ctx = document.getElementById(id);
+                if (!ctx) return; 
                 if (charts[id]) charts[id].destroy();
-                charts[id] = new Chart(document.getElementById(id).getContext('2d'), { type, data, options });
+                charts[id] = new Chart(ctx.getContext('2d'), { type, data, options });
             };
 
-            // Using position: bottom so legends don't get squished in the narrower side panel
-            const chartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels:{color:'#cbd5e1'} } } };
-            const barOptions = { ...chartOptions, plugins: { legend: {display: false} }, scales: { y: { beginAtZero: true, grid:{color:'#334155'} }, x:{ grid:{display:false} } } };
-            const stackedBarOptions = { ...chartOptions, scales: { x: { stacked: true, grid:{display:false} }, y: { stacked: true, grid:{color:'#334155'} } } };
+            const barOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: { beginAtZero: true, grid:{color:'#334155'} }, x:{ grid:{display:false} } } };
+            const stackedBarOptions = { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, grid:{display:false} }, y: { stacked: true, grid:{color:'#334155'} } } };
+            
+            // Format labels for clean axis display
+            let formatChartLabels = (players) => players.map(p => p.name.length > 15 ? p.name.substring(0,15) + '...' : p.name);
 
+            // ==========================================
+            // VIEW 1 CHARTS (Career Stats Side Panel)
+            // ==========================================
             let topBatters = [...aggregatedData].sort((a,b) => b.runs - a.runs).slice(0, 10);
             let topBowlers = [...aggregatedData].sort((a,b) => b.wkts - a.wkts).slice(0, 10);
-
-            let formatChartLabels = (players) => players.map(p => p.name.length > 15 ? p.name.substring(0,15) + '...' : p.name);
 
             createChart('chartRuns', 'bar', { labels: formatChartLabels(topBatters), datasets: [{ label: 'Runs', data: topBatters.map(p => p.runs), backgroundColor: '#f59e0b', borderRadius: 4 }] }, barOptions);
             createChart('chartBoundaries', 'bar', { labels: formatChartLabels(topBatters), datasets: [{ label: 'Sixes (6s)', data: topBatters.map(p => p.sixes), backgroundColor: '#ec4899' }, { label: 'Fours (4s)', data: topBatters.map(p => p.fours), backgroundColor: '#a855f7' }] }, stackedBarOptions);
             createChart('chartWickets', 'bar', { labels: formatChartLabels(topBowlers), datasets: [{ label: 'Wickets', data: topBowlers.map(p => p.wkts), backgroundColor: '#10b981', borderRadius: 4 }] }, barOptions);
 
-            let getPolarData = (sortKey) => {
-                let sorted = [...aggregatedData].sort((a,b) => b[sortKey] - a[sortKey]);
-                let top5 = sorted.slice(0,5); let othersSum = sorted.slice(5).reduce((sum, p) => sum + p[sortKey], 0);
-                let labels = formatChartLabels(top5); let data = top5.map(p => p[sortKey]);
-                if (othersSum > 0) { labels.push('Rest of Players'); data.push(othersSum); }
-                return { labels, data };
-            };
-            const polarColors = ['#3b82f6', '#f59e0b', '#10b981', '#a855f7', '#ec4899', 'rgba(255,255,255,0.1)'];
+            // ==========================================
+            // VIEW 2 CHARTS (Advanced Analytics Tab)
+            // ==========================================
+            const scatterTooltip = { callbacks: { label: function(context) { return `${context.raw.player}: (${context.raw.x.toFixed(1)}, ${context.raw.y.toFixed(1)})`; } } };
 
-            let rW = getPolarData('runs');
-            createChart('chartWeightRuns', 'polarArea', { labels: rW.labels, datasets: [{ data: rW.data, backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, chartOptions);
+            let batMatrixData = aggregatedData.filter(p => p.runs >= 30).map(p => ({ x: p.sr, y: p.avg, player: p.dispName }));
+            createChart('battingMatrix', 'scatter', { datasets: [{ label: 'Batters', data: batMatrixData, backgroundColor: '#f59e0b', pointRadius: 6, pointHoverRadius: 8 }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: {display:false}, tooltip: scatterTooltip }, scales: { x: { title: { display: true, text: 'Strike Rate', color: '#94a3b8' } }, y: { title: { display: true, text: 'Batting Average', color: '#94a3b8' } } } });
 
-            let trueBounds = [...aggregatedData].map(p => ({name: p.name, b: p.fours+p.sixes})).sort((a,b) => b.b - a.b);
-            let tbTop = trueBounds.slice(0,5); let tbOth = trueBounds.slice(5).reduce((s,p)=>s+p.b,0);
-            createChart('chartWeightBounds', 'polarArea', { labels: [...formatChartLabels(tbTop), ...(tbOth>0?['Rest of Players']:[])], datasets: [{ data: [...tbTop.map(p=>p.b), ...(tbOth>0?[tbOth]:[])], backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, chartOptions);
+            let bowlMatrixData = aggregatedData.filter(p => p.wkts >= 2).map(p => ({ x: p.econ, y: p.bAvg, player: p.dispName }));
+            createChart('bowlingMatrix', 'scatter', { datasets: [{ label: 'Bowlers', data: bowlMatrixData, backgroundColor: '#10b981', pointRadius: 6, pointHoverRadius: 8 }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: {display:false}, tooltip: scatterTooltip }, scales: { x: { title: { display: true, text: 'Economy Rate', color: '#94a3b8' } }, y: { title: { display: true, text: 'Bowling Average', color: '#94a3b8' } } } });
 
-            let wW = getPolarData('wkts');
-            createChart('chartWeightWkts', 'polarArea', { labels: wW.labels, datasets: [{ data: wW.data, backgroundColor: polarColors, borderWidth: 1, borderColor: '#1e293b' }] }, chartOptions);
+            let mvpData = aggregatedData.filter(p => p.runs > 0 || p.wkts > 0).map(p => ({ x: p.runs, y: p.wkts, r: Math.min((p.mat * 3) + 3, 20), player: p.dispName }));
+            createChart('mvpTracker', 'bubble', { datasets: [{ label: 'Players', data: mvpData, backgroundColor: 'rgba(168, 85, 247, 0.7)', borderColor: '#a855f7' }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: {display:false}, tooltip: scatterTooltip }, scales: { x: { title: { display: true, text: 'Total Runs', color: '#94a3b8' } }, y: { title: { display: true, text: 'Total Wickets', color: '#94a3b8' } } } });
+
+            let topBRC = [...aggregatedData].filter(p => p.runs >= 20).sort((a,b) => b.brc - a.brc).slice(0, 10);
+            createChart('boundaryReliance', 'bar', { labels: formatChartLabels(topBRC), datasets: [{ label: '% Runs from Boundaries', data: topBRC.map(p => p.brc), backgroundColor: '#f43f5e', borderRadius: 4 }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: { title: {display:true, text: 'Percentage (%)', color:'#94a3b8'}, max: 100, grid:{color:'#334155'} }, x:{grid:{display:false}} } });
+
+            let topBPB = [...aggregatedData].filter(p => p.runs >= 20 && p.bpb > 0).sort((a,b) => a.bpb - b.bpb).slice(0, 10);
+            createChart('ballsPerBoundary', 'bar', { labels: formatChartLabels(topBPB), datasets: [{ label: 'Balls Per Boundary', data: topBPB.map(p => p.bpb), backgroundColor: '#06b6d4', borderRadius: 4 }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: {display: false} }, scales: { y: { title: {display:true, text: 'Deliveries Faced', color:'#94a3b8'}, grid:{color:'#334155'} }, x:{grid:{display:false}} } });
+
+            let topSR = [...aggregatedData].filter(p => p.runs >= 30).sort((a,b) => b.sr - a.sr).slice(0, 10);
+            createChart('trueStrikeRate', 'bar', { labels: formatChartLabels(topSR), datasets: [{ label: 'Strike Rate', data: topSR.map(p => p.sr), backgroundColor: '#38bdf8', borderRadius: 4 }] }, barOptions);
         }
     </script>
 </body>
