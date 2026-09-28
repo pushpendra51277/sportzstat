@@ -41,53 +41,6 @@
         .player-link { color: #38bdf8; cursor: pointer; font-weight: bold; text-decoration: none; border-bottom: 1px dashed #38bdf8; transition: 0.2s; }
         .player-link:hover { color: #f8fafc; border-bottom: 1px solid #f8fafc; }
 
-        /* Modal Styles */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: 0.2s; }
-        .modal-overlay.active { opacity: 1; pointer-events: auto; }
-        .modal-box { background: transparent; padding: 0; width: 480px; max-width: 95%; position: relative; transform: translateY(20px); transition: 0.3s; }
-        .modal-overlay.active .modal-box { transform: translateY(0); }
-        .modal-close { position: absolute; top: 10px; right: 15px; background: rgba(0,0,0,0.5); border: 1px solid #475569; color: white; font-size: 1.2rem; cursor: pointer; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; z-index: 10; transition: 0.2s; }
-        .modal-close:hover { background: #ef4444; border-color: #ef4444; }
-
-        /* 🔥 REDESIGNED PLAYER CARD */
-        .player-card-ui { background: linear-gradient(145deg, #0f172a, #1e293b); border-radius: 16px; border: 2px solid #38bdf8; box-shadow: 0 15px 35px rgba(0,0,0,0.8), inset 0 0 20px rgba(56, 189, 248, 0.1); overflow: hidden; padding: 25px; position: relative; }
-        
-        .card-header-grid { display: flex; gap: 20px; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #334155; padding-bottom: 20px; }
-        
-        /* Avatar Upload Area */
-        .avatar-wrapper { position: relative; width: 90px; height: 90px; border-radius: 12px; border: 2px dashed #475569; cursor: pointer; overflow: hidden; background: #020617; display: flex; align-items: center; justify-content: center; transition: 0.3s; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .avatar-wrapper:hover { border-color: #38bdf8; }
-        .avatar-img { width: 100%; height: 100%; object-fit: cover; z-index: 1; }
-        .avatar-overlay { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7); color: white; font-size: 0.65rem; text-align: center; padding: 4px 0; z-index: 2; opacity: 0; transition: 0.3s; text-transform: uppercase; font-weight: bold; }
-        .avatar-wrapper:hover .avatar-overlay { opacity: 1; }
-        
-        .card-title-area { flex-grow: 1; }
-        .pc-title-name { margin: 0; color: #f8fafc; font-size: 1.6rem; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-        .pc-title-team { color: #38bdf8; font-size: 0.95rem; margin-top: 4px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
-        .pc-badge-mat { display: inline-block; background: rgba(255,255,255,0.1); border: 1px solid #475569; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; color: #cbd5e1; margin-top: 8px; font-weight: bold; }
-
-        .stats-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
-        
-        .stat-panel { background: rgba(0,0,0,0.3); border: 1px solid #334155; border-radius: 10px; padding: 15px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2); }
-        .stat-panel h4 { margin-top: 0; margin-bottom: 12px; text-align: center; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; }
-        .stat-panel.bat h4 { color: #f59e0b; }
-        .stat-panel.bowl h4 { color: #10b981; }
-        .stat-panel.field h4 { color: #8b5cf6; }
-        
-        .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px dashed rgba(255,255,255,0.05); }
-        .stat-row:last-child { border-bottom: none; }
-        .stat-lbl { color: #94a3b8; font-size: 0.8rem; }
-        .stat-val { color: white; font-weight: bold; font-size: 0.95rem; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-        
-        .fielding-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
-        .field-box { background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); padding: 10px; border-radius: 8px; }
-        .field-box-lbl { font-size: 0.7rem; color: #cbd5e1; text-transform: uppercase; margin-bottom: 4px; }
-        .field-box-val { font-size: 1.2rem; color: white; font-weight: bold; }
-
-        .card-footer { text-align: center; font-size: 0.6rem; color: #475569; margin-top: 20px; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
-        .download-btn { width: 100%; margin-top: 15px; padding: 15px; font-size: 1rem; background: linear-gradient(90deg, #38bdf8, #2563eb); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4); text-transform: uppercase; transition: 0.2s; }
-        .download-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6); }
-
         .bat-col { color: #f59e0b !important; font-weight: bold; }
         .bowl-col { color: #10b981 !important; font-weight: bold; }
         .field-col { color: #8b5cf6 !important; font-weight: bold; }
@@ -126,12 +79,86 @@
         .chart-title { text-align: center; font-size: 1.1rem; font-weight: bold; margin-top: 0; margin-bottom: 15px; color: #f8fafc; }
         .canvas-container { position: relative; height: 300px; width: 100%; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        /* 🔥 DYNAMIC THEME DEFINITIONS */
+        .theme-blue { --theme-color: #38bdf8; --theme-grad: linear-gradient(90deg, #0ea5e9, #2563eb); --theme-glow: rgba(56, 189, 248, 0.2); }
+        .theme-emerald { --theme-color: #10b981; --theme-grad: linear-gradient(90deg, #10b981, #059669); --theme-glow: rgba(16, 185, 129, 0.2); }
+        .theme-amber { --theme-color: #f59e0b; --theme-grad: linear-gradient(90deg, #f59e0b, #ea580c); --theme-glow: rgba(245, 158, 11, 0.2); }
+        .theme-purple { --theme-color: #a855f7; --theme-grad: linear-gradient(90deg, #a855f7, #7e22ce); --theme-glow: rgba(168, 85, 247, 0.2); }
+        .theme-rose { --theme-color: #f43f5e; --theme-grad: linear-gradient(90deg, #f43f5e, #be123c); --theme-glow: rgba(244, 63, 94, 0.2); }
+        .theme-cyan { --theme-color: #06b6d4; --theme-grad: linear-gradient(90deg, #06b6d4, #0369a1); --theme-glow: rgba(6, 182, 212, 0.2); }
 
-        @media (max-width: 768px) {
-            .charts-grid { grid-template-columns: 1fr; }
-            .filter-select, .filter-input { min-width: 100%; }
+        /* SCROLLABLE MODAL SETUP */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: 0.2s; padding: 10px; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        
+        .modal-box { 
+            background: transparent; 
+            padding: 0; 
+            width: 420px; 
+            max-width: 100%; 
+            max-height: 95vh; /* Prevents going out of window */
+            overflow-y: auto; /* Allows scrolling if screen is too short */
+            position: relative; 
+            transform: translateY(20px); 
+            transition: 0.3s; 
         }
+        .modal-box::-webkit-scrollbar { display: none; } /* Clean look */
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        
+        .modal-close { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); border: 1px solid #475569; color: white; font-size: 1.2rem; cursor: pointer; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; z-index: 10; transition: 0.2s; }
+        .modal-close:hover { background: #ef4444; border-color: #ef4444; }
+
+        /* COMPACT & SYSTEMATIC PLAYER CARD */
+        .player-card-ui { 
+            background: linear-gradient(145deg, #0f172a, #1e293b); 
+            border-radius: 16px; 
+            border: 2px solid var(--theme-color, #38bdf8); 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8), inset 0 0 25px var(--theme-glow, rgba(56, 189, 248, 0.2)); 
+            overflow: hidden; 
+            padding: 18px 20px; /* Compressed padding */
+            position: relative; 
+        }
+        
+        .card-header-grid { display: flex; gap: 15px; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #334155; padding-bottom: 12px; }
+        
+        .avatar-wrapper { position: relative; width: 75px; height: 75px; border-radius: 12px; border: 2px dashed #475569; cursor: pointer; overflow: hidden; background: #020617; display: flex; align-items: center; justify-content: center; transition: 0.3s; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .avatar-wrapper:hover { border-color: var(--theme-color, #38bdf8); }
+        .avatar-img { width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        .avatar-overlay { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7); color: white; font-size: 0.6rem; text-align: center; padding: 4px 0; z-index: 2; opacity: 0; transition: 0.3s; text-transform: uppercase; font-weight: bold; }
+        .avatar-wrapper:hover .avatar-overlay { opacity: 1; }
+        
+        .card-title-area { flex-grow: 1; }
+        .pc-title-name { margin: 0; color: #f8fafc; font-size: 1.35rem; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .pc-title-team { color: var(--theme-color, #38bdf8); font-size: 0.85rem; margin-top: 2px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
+        .pc-badge-mat { display: inline-block; background: rgba(255,255,255,0.1); border: 1px solid #475569; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; color: #cbd5e1; margin-top: 6px; font-weight: bold; }
+
+        .stats-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        
+        .stat-panel { background: rgba(0,0,0,0.3); border: 1px solid #334155; border-radius: 10px; padding: 10px 12px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2); }
+        .stat-panel h4 { margin-top: 0; margin-bottom: 8px; text-align: center; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; }
+        .stat-panel.bat h4 { color: #f59e0b; }
+        .stat-panel.bowl h4 { color: #10b981; }
+        .stat-panel.field h4 { color: #8b5cf6; }
+        
+        /* Clean Zebra Striping for readability */
+        .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; border-radius: 4px; }
+        .stat-row:nth-child(even) { background: rgba(255,255,255,0.03); }
+        .stat-lbl { color: #94a3b8; font-size: 0.75rem; }
+        .stat-val { color: white; font-weight: bold; font-size: 0.85rem; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        
+        .fielding-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; margin-top: 4px; }
+        .field-box { background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); padding: 8px 4px; border-radius: 8px; }
+        .field-box-lbl { font-size: 0.65rem; color: #cbd5e1; text-transform: uppercase; margin-bottom: 2px; }
+        .field-box-val { font-size: 1.1rem; color: white; font-weight: bold; }
+
+        .card-footer { text-align: center; font-size: 0.55rem; color: #475569; margin-top: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
+        
+        /* Download Button connects cleanly at the bottom */
+        .download-btn { width: 100%; margin-top: 10px; padding: 12px; font-size: 0.95rem; background: var(--theme-grad, linear-gradient(90deg, #38bdf8, #2563eb)); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); text-transform: uppercase; transition: 0.2s; }
+        .download-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6); filter: brightness(1.1); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } .filter-select, .filter-input { min-width: 100%; } }
     </style>
 </head>
 <body>
@@ -250,19 +277,20 @@
         <div class="chart-card"><h3 class="chart-title" style="color:#10b981;">🎳 Wickets Weightage</h3><div class="canvas-container"><canvas id="chartWeightWkts"></canvas></div></div>
     </div>
 
-    <!-- 🔥 REDESIGNED PLAYER CARD MODAL -->
+    <!-- 🔥 DYNAMIC THEME PLAYER CARD MODAL -->
     <div id="playerCardModal" class="modal-overlay" onclick="closePlayerCard(event)">
+        <!-- The modal-box is the scrollable wrapper to prevent going out of window -->
         <div id="playerCardElement" class="modal-box" onclick="event.stopPropagation()">
+            
+            <!-- Close button sits just outside the capture area -->
             <button type="button" class="modal-close" onclick="closePlayerCard()">×</button>
             
+            <!-- ONLY THIS DIV IS CAPTURED AS AN IMAGE -->
             <div id="cardCaptureArea" class="player-card-ui">
-                <!-- Header: Avatar + Title -->
+                
                 <div class="card-header-grid">
-                    <!-- Hidden File Input -->
                     <input type="file" id="playerPicUpload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
-                    
                     <div class="avatar-wrapper" onclick="document.getElementById('playerPicUpload').click()" title="Click to upload photo">
-                        <!-- Default SVG Avatar -->
                         <img id="player-avatar" class="avatar-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>" alt="Avatar">
                         <div class="avatar-overlay">📷 Upload</div>
                     </div>
@@ -274,9 +302,7 @@
                     </div>
                 </div>
                 
-                <!-- Main Stats Grid -->
                 <div class="stats-grid-2col">
-                    <!-- Batting -->
                     <div class="stat-panel bat">
                         <h4>Batting</h4>
                         <div class="stat-row"><span class="stat-lbl">Runs</span> <span class="stat-val" id="pc-runs">0</span></div>
@@ -287,7 +313,6 @@
                         <div class="stat-row"><span class="stat-lbl">4s / 6s</span> <span class="stat-val" id="pc-4s6s">0/0</span></div>
                     </div>
                     
-                    <!-- Bowling -->
                     <div class="stat-panel bowl">
                         <h4>Bowling</h4>
                         <div class="stat-row"><span class="stat-lbl">Wickets</span> <span class="stat-val" id="pc-wkts">0</span></div>
@@ -299,22 +324,12 @@
                     </div>
                 </div>
                 
-                <!-- Fielding -->
                 <div class="stat-panel field">
                     <h4>Fielding Impact</h4>
                     <div class="fielding-grid">
-                        <div class="field-box">
-                            <div class="field-box-lbl">Catches</div>
-                            <div class="field-box-val" id="pc-catches">0</div>
-                        </div>
-                        <div class="field-box">
-                            <div class="field-box-lbl">Stumpings</div>
-                            <div class="field-box-val" id="pc-stumpings">0</div>
-                        </div>
-                        <div class="field-box">
-                            <div class="field-box-lbl">Run Outs</div>
-                            <div class="field-box-val" id="pc-runouts">0</div>
-                        </div>
+                        <div class="field-box"><div class="field-box-lbl">Catches</div><div class="field-box-val" id="pc-catches">0</div></div>
+                        <div class="field-box"><div class="field-box-lbl">Stumpings</div><div class="field-box-val" id="pc-stumpings">0</div></div>
+                        <div class="field-box"><div class="field-box-lbl">Run Outs</div><div class="field-box-val" id="pc-runouts">0</div></div>
                     </div>
                 </div>
                 
@@ -337,16 +352,15 @@
         
         let charts = {};
 
-        // Default SVG for avatar reset
         const DEFAULT_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
+        
+        // 🔥 Array of dynamic CSS themes
+        const themes = ['theme-blue', 'theme-emerald', 'theme-amber', 'theme-purple', 'theme-rose', 'theme-cyan'];
 
         function toggleCol(colName, isChecked) {
             const table = document.getElementById('career-table');
-            if (isChecked) {
-                table.classList.remove('hide-' + colName);
-            } else {
-                table.classList.add('hide-' + colName);
-            }
+            if (isChecked) { table.classList.remove('hide-' + colName); } 
+            else { table.classList.add('hide-' + colName); }
         }
 
         window.onload = async () => {
@@ -558,10 +572,17 @@
             let p = aggregatedData[index];
             if(!p) return;
             
-            // Reset Avatar and File Input on every new card open
+            // 🔥 Randomly assign a vibrant CSS theme
+            let randomTheme = themes[Math.floor(Math.random() * themes.length)];
+            let modalElement = document.getElementById('playerCardElement');
+            themes.forEach(t => modalElement.classList.remove(t));
+            modalElement.classList.add(randomTheme);
+            
+            // Reset Avatar
             document.getElementById('player-avatar').src = DEFAULT_AVATAR;
             document.getElementById('playerPicUpload').value = "";
             
+            // Populate Data
             document.getElementById('pc-name').innerText = p.name;
             document.getElementById('pc-team').innerText = p.team;
             document.getElementById('pc-mat').innerText = p.mat;
@@ -587,7 +608,6 @@
             document.getElementById('playerCardModal').classList.add('active');
         }
 
-        // 🔥 NEW: Function to handle local image upload safely for html2canvas
         function handleImageUpload(event) {
             const file = event.target.files[0];
             if (file) {
@@ -607,13 +627,13 @@
         function downloadPlayerCard() {
             let captureElement = document.getElementById('cardCaptureArea');
             html2canvas(captureElement, { 
-                backgroundColor: '#0f172a', 
+                backgroundColor: null, // Allow border radius and shadows to look natural
                 scale: 2,
-                useCORS: true // Ensures custom images process correctly
+                useCORS: true 
             }).then(canvas => {
                 let link = document.createElement('a');
                 let safeName = document.getElementById('pc-name').innerText.replace(/\s+/g, '_');
-                link.download = `${safeName}_Career_Card.png`;
+                link.download = `${safeName}_Sportzstat_Card.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
             });
