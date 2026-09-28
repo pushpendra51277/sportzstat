@@ -530,10 +530,32 @@ function manualRotateUI() { saveState(); manualRotate(); }
 function manualRotate() { [state.current.sIdx, state.current.nsIdx] = [state.current.nsIdx, state.current.sIdx]; updateUI(); }
 
 function executeEndOver() {
-    saveState(); finalizeOver(false); manualRotate(); state.current.bIdx = null; updateUI();
-    if (state.current.overHistory.length >= state.matchSettings.maxOvers) { setTimeout(endInnings, 100); } else { setTimeout(() => openSelector('bowler', "Select Next Bowler"), 50); }
+    saveState(); 
+    
+    // 🔥 AUTO-WIPE FREE HIT: If an over ends (even manually on a 7th ball), the free hit is killed.
+    if (state.current.isFreeHit) {
+        state.current.isFreeHit = false;
+    }
+
+    finalizeOver(false); 
+    manualRotate(); 
+    state.current.bIdx = null; 
+    updateUI();
+    
+    if (state.current.overHistory.length >= state.matchSettings.maxOvers) { 
+        setTimeout(endInnings, 100); 
+    } else { 
+        setTimeout(() => openSelector('bowler', "Select Next Bowler"), 50); 
+    }
 }
 
+// 🔥 MANUAL TOGGLE FAILSAFE
+function toggleFreeHit() {
+    saveState();
+    // Flips it: If it's true, makes it false. If false, makes it true.
+    state.current.isFreeHit = !state.current.isFreeHit;
+    updateUI();
+}
 function manualEndOver() {
     if (state.current.bIdx === null) { alert("No bowler is currently active!"); return; }
     
