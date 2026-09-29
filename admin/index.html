@@ -139,25 +139,46 @@
                 <h3 style="margin-top: 0; margin-bottom: 15px; color:white; border-bottom: 1px solid #334155; padding-bottom: 10px;">1. Tournament Details & Teams</h3>
                 
                 <div class="tourney-grid">
-                    <div class="card" style="margin:0;">
+                    <div class="card" style="margin:0; height: fit-content;">
                         <div class="input-group">
                             <label>Tournament Name *</label>
                             <input type="text" id="t-name" placeholder="e.g. Veda Premier League">
                         </div>
+                        
+                        <!-- 🔥 NEW: Governing Association Dropdown -->
                         <div class="input-group">
-                            <label>Format *</label>
-                            <select id="t-format">
-                                <option value="T20">T20 (20 Overs)</option>
-                                <option value="One Day">One Day (50 Overs)</option>
-                                <option value="Multi-Day">Multi-Day (Test)</option>
-                                <option value="T10">T10</option>
+                            <label>Governing Association (Host) *</label>
+                            <select id="t-host">
+                                <option value="Independent">Open / Independent Tournament</option>
+                                <!-- Populated dynamically by DB -->
                             </select>
                         </div>
+                        
+                        <!-- 🔥 NEW: Match Tier Dropdown -->
                         <div class="input-group">
-                            <label>Starting Date *</label>
-                            <input type="date" id="t-date">
+                            <label>Match Tier (Scouting Context) *</label>
+                            <select id="t-tier">
+                                <option value="Local">Tier 2: Local / Club / Practice</option>
+                                <option value="Inter-Division">Tier 1: Inter-Division / Elite</option>
+                            </select>
                         </div>
-                        <div class="input-group">
+                        
+                        <div class="grid-2">
+                            <div class="input-group">
+                                <label>Format *</label>
+                                <select id="t-format">
+                                    <option value="T20">T20</option>
+                                    <option value="One Day">One Day</option>
+                                    <option value="Multi-Day">Multi-Day</option>
+                                    <option value="T10">T10</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>Starting Date *</label>
+                                <input type="date" id="t-date">
+                            </div>
+                        </div>
+                        <div class="input-group" style="margin-bottom:0;">
                             <label>Points System (Per Win)</label>
                             <input type="number" id="tWinPoints" value="2">
                         </div>
@@ -380,16 +401,27 @@
             "Rank 1", "Rank 2", "Rank 3", "Rank 4"
         ];
 
-        // Unique ID and PIN Generators (Now fully accessible globally)
         function generateUniqueMatchID(prefix) { return `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`; }
         function generateUniquePin() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
         document.addEventListener('DOMContentLoaded', async () => { 
+            await loadAssociations(); // 🔥 Fetch DB Associations to populate Dropdown
             await fetchAllMasterTeams();
             await loadExistingTournamentsList();
             initPoolsWorkspace("1"); 
             renderCanvas();
         });
+
+        // 🔥 NEW: Fetch Association Lists for the dropdown
+        async function loadAssociations() {
+            const selectEl = document.getElementById('t-host');
+            const { data, error } = await db.from('associations').select('code, name');
+            if (!error && data && data.length > 0) {
+                let html = '<option value="Independent">Open / Independent Tournament (No Body)</option>';
+                data.forEach(a => { html += `<option value="${a.code}">${a.code} - ${a.name}</option>`; });
+                selectEl.innerHTML = html;
+            }
+        }
 
         // --- UI NAVIGATION ---
         function switchTab(targetId, navElement) {
@@ -414,10 +446,7 @@
         // --- LIVE SYNC & TEAMS ---
         function syncActiveTeams() {
             let activeNames = selectedTourneyTeams.map(t => t.name);
-            
-            Object.keys(poolsData).forEach(p => { 
-                poolsData[p] = poolsData[p].filter(t => activeNames.includes(t)); 
-            });
+            Object.keys(poolsData).forEach(p => { poolsData[p] = poolsData[p].filter(t => activeNames.includes(t)); });
             
             const select = document.getElementById('squad-team-select');
             select.innerHTML = '<option value="">Select a team to verify squad...</option>' + activeNames.map(team => `<option value="${team}">${team}</option>`).join('');
@@ -436,7 +465,6 @@
 
         function renderTeamPanes() {
             let searchStr = document.getElementById('teamSearch').value.toLowerCase();
-            
             let availableHtml = allDbTeams
                 .filter(t => !selectedTourneyTeams.some(sel => sel.team_id === t.team_id))
                 .filter(t => t.name.toLowerCase().includes(searchStr))
@@ -445,7 +473,6 @@
             document.getElementById('available-teams-list').innerHTML = availableHtml || '<div style="text-align:center; padding:10px; color:#64748b; font-size:0.8rem;">No teams found.</div>';
 
             let selectedHtml = selectedTourneyTeams.map(t => `<div class="team-list-item" style="border-left: 3px solid #10b981;"><span>${t.name}</span><button type="button" class="btn-danger" onclick="removeTeam('${t.team_id}', event)">✕</button></div>`).join('');
-            
             document.getElementById('selected-teams-list').innerHTML = selectedHtml || '<div style="text-align:center; padding:10px; color:#64748b; font-size:0.8rem; font-style:italic;">No teams selected.</div>';
             document.getElementById('teamCountBadge').innerText = selectedTourneyTeams.length + " Selected";
         }
@@ -515,6 +542,8 @@
                 masterFixtures = []; 
                 document.getElementById('t-name').value = '';
                 document.getElementById('t-date').value = '';
+                document.getElementById('t-host').value = 'Independent';
+                document.getElementById('t-tier').value = 'Local';
                 renderTeamPanes();
                 initPoolsWorkspace("1");
                 renderCanvas();
@@ -534,7 +563,12 @@
             document.getElementById('t-name').value = tData.name || '';
             document.getElementById('t-format').value = tData.format || 'T20';
             document.getElementById('t-date').value = tData.start_date ? tData.start_date.split('T')[0] : '';
-            if(tData.config && tData.config.winPoints) { document.getElementById('tWinPoints').value = tData.config.winPoints; }
+            document.getElementById('t-host').value = tData.host || 'Independent'; // 🔥 Restore Host
+            
+            if(tData.config) {
+                if(tData.config.winPoints) document.getElementById('tWinPoints').value = tData.config.winPoints; 
+                if(tData.config.tier) document.getElementById('t-tier').value = tData.config.tier; // 🔥 Restore Tier
+            }
 
             const { data: mData } = await db.from('matches').select('*').eq('tournament_id', tournId);
             let linkedTeamNames = new Set();
@@ -545,7 +579,6 @@
                     let fs = m.full_state || {};
                     if(fs.team1 && fs.team1 !== "TBD" && !fs.team1.includes("Winner") && !fs.team1.includes("Rank")) linkedTeamNames.add(fs.team1);
                     if(fs.team2 && fs.team2 !== "TBD" && !fs.team2.includes("Winner") && !fs.team2.includes("Rank")) linkedTeamNames.add(fs.team2);
-                    // Match loaded from DB is already Live
                     masterFixtures.push({ id: m.match_id, name: fs.matchName || m.match_id, t1: fs.team1 || '', t2: fs.team2 || '', pin: m.scorer_pin, isLive: true });
                 });
             }
@@ -554,7 +587,7 @@
             if (squadData) {
                 tournamentSquadsCache = {};
                 squadData.forEach(s => {
-                    let tName = Object.keys(activeTeamMap).find(name => activeTeamMap[name] === s.team_id);
+                    let tName = allDbTeams.find(x => x.team_id === s.team_id)?.name;
                     if (tName) {
                         linkedTeamNames.add(tName);
                         if(!tournamentSquadsCache[tName]) tournamentSquadsCache[tName] = [];
@@ -578,7 +611,11 @@
             let tName = document.getElementById('t-name').value.trim();
             let tFormat = document.getElementById('t-format').value;
             let tDate = document.getElementById('t-date').value;
-            let configPayload = { winPoints: document.getElementById('tWinPoints').value }; 
+            let tHost = document.getElementById('t-host').value; // 🔥 Grab Association Host
+            let tTier = document.getElementById('t-tier').value; // 🔥 Grab Match Tier
+            
+            // Save tier metadata in config JSON to avoid schema changes
+            let configPayload = { winPoints: document.getElementById('tWinPoints').value, tier: tTier }; 
 
             if (!tName || !tDate) { 
                 alert("Name and Starting Date are required."); 
@@ -596,10 +633,10 @@
             
             try {
                 if (mode === 'edit' && currentTournamentId) {
-                    const { error } = await db.from('tournaments').update({ name: tName, format: tFormat, start_date: tDate, config: configPayload }).eq('tournament_id', currentTournamentId);
+                    const { error } = await db.from('tournaments').update({ name: tName, format: tFormat, start_date: tDate, host: tHost, config: configPayload }).eq('tournament_id', currentTournamentId);
                     tError = error;
                 } else {
-                    const { data: tData, error } = await db.from('tournaments').insert([{ name: tName, format: tFormat, start_date: tDate, config: configPayload }]).select();
+                    const { data: tData, error } = await db.from('tournaments').insert([{ name: tName, format: tFormat, start_date: tDate, host: tHost, config: configPayload }]).select();
                     tError = error; if (tData && tData.length > 0) currentTournamentId = tData[0].tournament_id;
                 }
 
@@ -1076,6 +1113,8 @@
 
             let tName = document.getElementById('t-name').value;
             let tFormat = document.getElementById('t-format').value;
+            let tHost = document.getElementById('t-host').value;     // 🔥 Grab Association
+            let tTier = document.getElementById('t-tier').value;     // 🔥 Grab Tier
 
             for (let m of masterFixtures) {
                 let t1Obj = selectedTourneyTeams.find(t => t.name === m.t1);
@@ -1083,13 +1122,14 @@
                 let team1UUID = t1Obj ? t1Obj.team_id : null; 
                 let team2UUID = t2Obj ? t2Obj.team_id : null;
 
+                // 🔥 Injecting host and tier into the full_state json so career stats hub can read it later!
                 let matchPayload = {
                     match_id: m.id,
                     tournament_id: currentTournamentId,
                     team_a_id: team1UUID,
                     team_b_id: team2UUID,
                     scorer_pin: m.pin,
-                    full_state: { tournament: tName, format: tFormat, team1: m.t1, team2: m.t2, matchName: m.name, match_status: 'upcoming' }
+                    full_state: { tournament: tName, format: tFormat, host: tHost, tier: tTier, team1: m.t1, team2: m.t2, matchName: m.name, match_status: 'upcoming' }
                 };
 
                 await db.from('matches').upsert([matchPayload]);
