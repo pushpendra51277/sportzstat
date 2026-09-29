@@ -27,6 +27,7 @@
         .tab-btn.active::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 100%; height: 3px; background: #38bdf8; border-radius: 3px 3px 0 0; }
         .hidden-view { display: none !important; }
 
+        /* 🔥 UPDATED: FILTER BAR */
         .filter-bar { background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #334155; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; align-items: center; }
         .filter-select, .filter-input { background: #0f172a; color: white; border: 1px solid #475569; padding: 10px; border-radius: 6px; font-size: 0.9rem; flex: 1; min-width: 150px; outline: none; }
         .filter-select:focus, .filter-input:focus { border-color: #38bdf8; }
@@ -126,7 +127,7 @@
         /* Modal Styles */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: 0.2s; padding: 10px; }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
-        .modal-box { background: transparent; padding: 0; width: 420px; max-width: 100%; max-height: 95vh; overflow-y: auto; position: relative; transform: translateY(20px); transition: 0.3s; }
+        .modal-box { background: transparent; padding: 0; width: 440px; max-width: 100%; max-height: 95vh; overflow-y: auto; position: relative; transform: translateY(20px); transition: 0.3s; }
         .modal-box::-webkit-scrollbar { display: none; }
         .modal-overlay.active .modal-box { transform: translateY(0); }
         .modal-close { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); border: 1px solid #475569; color: white; font-size: 1.2rem; cursor: pointer; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; z-index: 10; transition: 0.2s; }
@@ -189,9 +190,14 @@
         <button id="btn-tab-live" class="tab-btn" onclick="switchTab('live')">🔴 Live Scouting</button>
     </div>
 
-    <!-- SHARED FILTER BAR -->
+    <!-- 🔥 UPDATED SHARED FILTER BAR (Now includes Association & Tier) -->
     <div class="filter-bar">
         <input type="text" id="filter-search" class="filter-input" placeholder="🔍 Search Player..." onkeyup="applyFilters()">
+        
+        <!-- NEW METADATA FILTERS -->
+        <select id="filter-association" class="filter-select" onchange="applyFilters()"><option value="ALL">🏛️ All Associations</option></select>
+        <select id="filter-tier" class="filter-select" onchange="applyFilters()"><option value="ALL">⭐ All Match Tiers</option></select>
+        
         <select id="filter-team" class="filter-select" onchange="applyFilters()"><option value="ALL">🛡️ All Teams</option></select>
         <select id="filter-tourney" class="filter-select" onchange="applyFilters()"><option value="ALL">🏆 All Tournaments</option></select>
         <select id="filter-format" class="filter-select" onchange="applyFilters()"><option value="ALL">🏏 All Formats</option></select>
@@ -203,7 +209,6 @@
     <!-- ========================================== -->
     <div id="view-career">
         
-        <!-- 🔥 FIX: Added 'hidden' class back so it starts closed by default -->
         <div id="col-toggles" class="toggle-panel hidden">
             <div style="width: 100%; color: #38bdf8; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">GENERAL</div>
             <label class="toggle-lbl"><input type="checkbox" checked onchange="toggleCol('mat', this.checked)"> Matches</label>
@@ -289,10 +294,11 @@
     </div>
 
     <!-- ==================================================== -->
-    <!-- VIEW 2: MEGA ADVANCED ANALYTICS (12 CHARTS) -->
+    <!-- VIEW 2: MEGA ADVANCED ANALYTICS (12 CHARTS)          -->
     <!-- ==================================================== -->
     <div id="view-analytics" class="hidden-view">
         <div class="analytics-grid">
+            
             <div class="chart-card card-glow-purple">
                 <div class="chart-title">
                     <span><span>🎯</span> The Five-Tool Radar Profile</span>
@@ -407,7 +413,7 @@
         <div class="analytics-grid" id="live-scouting-grid" style="grid-template-columns: 1fr; max-width: 800px; margin: 0 auto;"></div>
     </div>
 
-    <!-- PLAYER CARD MODAL -->
+    <!-- PLAYER CARD MODAL (Now includes Tier Context Breakdown) -->
     <div id="playerCardModal" class="modal-overlay" onclick="closePlayerCard(event)">
         <div id="playerCardElement" class="modal-box" onclick="event.stopPropagation()">
             <button type="button" class="modal-close" onclick="closePlayerCard()">×</button>
@@ -444,14 +450,22 @@
                         <div class="stat-row"><span class="stat-lbl">Overs</span> <span class="stat-val" id="pc-overs">0</span></div>
                         <div class="stat-row"><span class="stat-lbl">Maidens</span> <span class="stat-val" id="pc-mdn">0</span></div>
                     </div>
-                </div>
-                
-                <div class="stat-panel field">
-                    <h4>Fielding Impact</h4>
-                    <div class="fielding-grid">
-                        <div class="field-box"><div class="field-box-lbl">Catches</div><div class="field-box-val" id="pc-catches">0</div></div>
-                        <div class="field-box"><div class="field-box-lbl">Stumpings</div><div class="field-box-val" id="pc-stumpings">0</div></div>
-                        <div class="field-box"><div class="field-box-lbl">Run Outs</div><div class="field-box-val" id="pc-runouts">0</div></div>
+                    
+                    <!-- 🔥 NEW: Contextual Tier Breakdown Panel -->
+                    <div class="stat-panel tier-breakdown" style="grid-column: 1 / -1;">
+                        <h4 style="color: #38bdf8;">Contextual Batting Breakdown (By Tier)</h4>
+                        <div id="pc-tier-stats">
+                            <!-- Tier stats injected dynamically here -->
+                        </div>
+                    </div>
+
+                    <div class="stat-panel field" style="grid-column: 1 / -1;">
+                        <h4>Fielding Impact</h4>
+                        <div class="fielding-grid">
+                            <div class="field-box"><div class="field-box-lbl">Catches</div><div class="field-box-val" id="pc-catches">0</div></div>
+                            <div class="field-box"><div class="field-box-lbl">Stumpings</div><div class="field-box-val" id="pc-stumpings">0</div></div>
+                            <div class="field-box"><div class="field-box-lbl">Run Outs</div><div class="field-box-val" id="pc-runouts">0</div></div>
+                        </div>
                     </div>
                 </div>
                 
@@ -511,7 +525,8 @@
             if (error) { console.error("Cloud Error", error); return; }
 
             rawMatches = [];
-            let filterSets = { teams: new Set(), tourneys: new Set(), formats: new Set(), years: new Set() };
+            // 🔥 NEW: Add Sets for our new filter metadata
+            let filterSets = { teams: new Set(), tourneys: new Set(), formats: new Set(), years: new Set(), associations: new Set(), tiers: new Set() };
 
             data.forEach(m => {
                 try {
@@ -520,10 +535,16 @@
                         let tName = (m.tournaments && m.tournaments.name) ? m.tournaments.name : (fs.tournament || 'Independent Match');
                         let year = new Date(m.created_at).getFullYear().toString();
                         let format = fs.format || 'T20';
+                        
+                        // 🔥 Extract the newly injected Match Context Metadata
+                        let host = fs.host || 'Independent';
+                        let tier = fs.tier || 'Local';
 
                         filterSets.tourneys.add(tName);
                         filterSets.years.add(year);
                         filterSets.formats.add(format);
+                        filterSets.associations.add(host); // Populate associations set
+                        filterSets.tiers.add(tier);        // Populate tiers set
 
                         let allInnings = fs.inningsSummaries ? [...fs.inningsSummaries] : [];
                         if (fs.match_status === 'live' && fs.current && (fs.current.balls > 0 || fs.current.runs > 0)) {
@@ -534,21 +555,25 @@
                                 bowlers: fs.teams?.[fs.bowlingKey]?.players || []
                             });
                         }
-                        rawMatches.push({ rawData: m, tourney: tName, format: format, year: year, teams: fs.teams, innings: allInnings });
+                        
+                        // Push into raw array with new metadata attached
+                        rawMatches.push({ rawData: m, tourney: tName, format: format, year: year, host: host, tier: tier, teams: fs.teams, innings: allInnings });
                     }
                 } catch(err) {}
             });
 
-            let updateDropdown = (id, set) => { 
-                let el = document.getElementById(id); let currentVal = el.value; let defaultTxt = el.options[0].text; 
-                el.innerHTML = `<option value="ALL">${defaultTxt}</option>`;
+            let updateDropdown = (id, set, defTxt) => { 
+                let el = document.getElementById(id); let currentVal = el.value;
+                el.innerHTML = `<option value="ALL">${defTxt}</option>`;
                 Array.from(set).sort().forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`); 
                 if (Array.from(set).includes(currentVal)) el.value = currentVal;
             };
 
-            updateDropdown('filter-tourney', filterSets.tourneys);
-            updateDropdown('filter-format', filterSets.formats);
-            updateDropdown('filter-year', filterSets.years);
+            updateDropdown('filter-tourney', filterSets.tourneys, '🏆 All Tournaments');
+            updateDropdown('filter-format', filterSets.formats, '🏏 All Formats');
+            updateDropdown('filter-year', filterSets.years, '📅 All Years');
+            updateDropdown('filter-association', filterSets.associations, '🏛️ All Associations');
+            updateDropdown('filter-tier', filterSets.tiers, '⭐ All Match Tiers');
 
             applyFilters();
         }
@@ -558,14 +583,19 @@
             let fTourn = document.getElementById('filter-tourney').value;
             let fForm = document.getElementById('filter-format').value;
             let fYear = document.getElementById('filter-year').value;
+            let fHost = document.getElementById('filter-association').value; // 🔥 Grab Association Filter
+            let fTier = document.getElementById('filter-tier').value;        // 🔥 Grab Tier Filter
 
             let playersObj = {};
             let teamSet = new Set(); 
 
             rawMatches.forEach(m => {
+                // Apply all filters before processing the match
                 if (fTourn !== 'ALL' && m.tourney !== fTourn) return;
                 if (fForm !== 'ALL' && m.format !== fForm) return;
                 if (fYear !== 'ALL' && m.year !== fYear) return;
+                if (fHost !== 'ALL' && m.host !== fHost) return; // Restrict to specific Association (e.g. MPCA)
+                if (fTier !== 'ALL' && m.tier !== fTier) return; // Restrict to specific Tier (e.g. Inter-Division)
 
                 if (m.teams && m.teams.A && m.teams.B) {
                     let processXI = (teamData) => {
@@ -594,6 +624,12 @@
                                 p.bestRuns = currentScore; p.bestNotOut = isNotOut;
                             }
                             if (currentScore >= 100) { p.hundreds++; } else if (currentScore >= 50) { p.fifties++; }
+
+                            // 🔥 Track Performance Context inside the player object specifically for the Player Card
+                            if(!p.tierStats[m.tier]) p.tierStats[m.tier] = { inn: 0, runs: 0, dismissals: 0 };
+                            p.tierStats[m.tier].inn++;
+                            p.tierStats[m.tier].runs += b.r;
+                            if(b.out) p.tierStats[m.tier].dismissals++;
                         }
                     });
 
@@ -675,10 +711,12 @@
             if(!document.getElementById('view-h2h').classList.contains('hidden-view')) renderH2H();
         }
 
+        // 🔥 Added tierStats dictionary to the player initialization object
         function initPlayer(obj, name, team) {
             obj[name] = { 
                 name: name, team: team, mat: 0, inn: 0, runs: 0, bf: 0, fours: 0, sixes: 0, dismissals: 0, ducks: 0, no: 0, bestRuns: 0, bestNotOut: false, fifties: 0, hundreds: 0, 
-                bowlBalls: 0, rc: 0, wkts: 0, mdn: 0, bbiW: 0, bbiR: 999, w4: 0, w5: 0, catches: 0, stumpings: 0, runouts: 0
+                bowlBalls: 0, rc: 0, wkts: 0, mdn: 0, bbiW: 0, bbiR: 999, w4: 0, w5: 0, catches: 0, stumpings: 0, runouts: 0,
+                tierStats: {} 
             };
         }
 
@@ -710,8 +748,10 @@
             
             document.getElementById('player-avatar').src = DEFAULT_AVATAR;
             document.getElementById('playerPicUpload').value = "";
-            document.getElementById('pc-name').innerText = p.name;
-            document.getElementById('pc-team').innerText = p.team;
+            document.getElementById('pc-name').innerText = p.name.length > 20 ? p.name.substring(0, 20) + '...' : p.name;
+            document.getElementById('pc-name').title = p.name; 
+            document.getElementById('pc-team').innerText = p.team.length > 25 ? p.team.substring(0, 25) + '...' : p.team;
+            document.getElementById('pc-team').title = p.team;
             document.getElementById('pc-mat').innerText = p.mat;
             document.getElementById('pc-runs').innerText = p.runs;
             document.getElementById('pc-avg').innerText = (p.dismissals === 0 && p.runs > 0) ? '-' : p.avg.toFixed(2);
@@ -728,6 +768,20 @@
             document.getElementById('pc-catches').innerText = p.catches;
             document.getElementById('pc-stumpings').innerText = p.stumpings;
             document.getElementById('pc-runouts').innerText = p.runouts;
+
+            // 🔥 Extract and render Contextual Tier Breakdown into the modal
+            let tierHtml = Object.keys(p.tierStats).map(t => {
+                let tStat = p.tierStats[t];
+                let tAvg = tStat.dismissals > 0 ? (tStat.runs / tStat.dismissals).toFixed(2) : (tStat.runs > 0 ? tStat.runs.toFixed(2) : '-');
+                return `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; border-bottom:1px dashed rgba(255,255,255,0.05); padding:6px 0;">
+                    <span style="color:#f8fafc; font-weight:bold;">${t}</span>
+                    <span style="color:#94a3b8;">Inn: <b style="color:white;">${tStat.inn}</b> | Runs: <b style="color:#10b981;">${tStat.runs}</b> | Avg: <b style="color:#38bdf8;">${tAvg}</b></span>
+                </div>`;
+            }).join('');
+            
+            if(!tierHtml) tierHtml = '<div style="color:#64748b; font-size:0.8rem; text-align:center;">No match tier data available</div>';
+            document.getElementById('pc-tier-stats').innerHTML = tierHtml;
+
             document.getElementById('playerCardModal').classList.add('active');
         }
 
