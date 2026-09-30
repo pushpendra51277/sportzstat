@@ -10,14 +10,16 @@
     
     <style>
         body { background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; padding: 30px 20px; margin: 0;}
-        * { box-sizing: border-box; } /* Prevents padding from breaking widths */
+        * { box-sizing: border-box; } 
         
         .auth-container { max-width: 420px; margin: 40px auto; background: #1e293b; padding: 30px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         .input-group { margin-bottom: 15px; text-align: left; }
         .input-group label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; }
         .input-group input, .input-group select { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; font-size: 0.95rem; }
-        .btn-launch { width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 0.95rem; }
+        .btn-launch { width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 0.95rem; transition: 0.2s; }
+        .btn-launch:hover { background: #2563eb; }
         .btn-alt { background: transparent; border: 1px dashed #3b82f6; color: #3b82f6; margin-top: 15px; }
+        .btn-alt:hover { background: rgba(59, 130, 246, 0.1); }
         
         #portal-dashboard { display: none; max-width: 900px; margin: 0 auto; width: 100%; }
         .portal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 25px; }
@@ -27,7 +29,7 @@
         .portal-card p { margin: 0; color: #94a3b8; font-size: 0.85rem; line-height: 1.4; }
         .hidden { display: none !important; }
 
-        /* MATCH HUB WIDGET (Carousel) */
+        /* MATCH HUB WIDGET */
         .match-hub-container { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 15px; margin-bottom: 25px; text-align: left; }
         .hub-tabs { display: flex; gap: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 15px; overflow-x: auto; scrollbar-width: none; }
         .hub-tab { background: transparent; color: #94a3b8; border: none; font-size: 0.9rem; font-weight: bold; cursor: pointer; padding: 5px 10px; white-space: nowrap;}
@@ -45,10 +47,9 @@
         .badge-sched { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b;}
         .badge-comp { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981;}
 
-        /* Directory Modal / Table */
+        /* Directory Modal */
         .directory-box { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; text-align: left; margin-top: 20px; width: 100%; overflow: hidden; }
-        
-        .directory-search { width: 100%; padding: 12px 15px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; font-size: 0.95rem; margin-bottom: 15px; outline: none; transition: border-color 0.2s; }
+        .directory-search { width: 100%; padding: 12px 15px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; font-size: 0.95rem; margin-bottom: 15px; outline: none; }
         .directory-search:focus { border-color: #38bdf8; }
 
         .table-responsive { width: 100%; overflow-x: auto; scrollbar-width: thin; }
@@ -62,12 +63,10 @@
         .state-upcoming { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
         .state-completed { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
 
-        /* Copy Button Styles */
         .btn-copy { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #38bdf8; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; transition: 0.2s; white-space: nowrap; }
         .btn-copy:hover { background: #38bdf8; color: #0f172a; }
         .btn-copy.copied { background: #10b981; color: white; border-color: #10b981; }
 
-        /* MOBILE OPTIMIZATION: Table to Cards */
         @media (max-width: 768px) {
             .directory-box { padding: 15px; }
             .table-responsive { overflow-x: visible; }
@@ -78,7 +77,6 @@
             .directory-table td { display: flex; justify-content: space-between; align-items: center; text-align: right; padding: 12px 15px; border-bottom: 1px solid #1e293b; }
             .directory-table td::before { content: attr(data-label); font-weight: 800; color: #94a3b8; font-size: 0.7rem; text-transform: uppercase; text-align: left; flex-shrink: 0; margin-right: 10px; }
             .directory-table td:last-child { border-bottom: none; }
-            .directory-table td[style*="text-align: center"] { text-align: right !important; }
         }
     </style>
 </head>
@@ -114,7 +112,11 @@
         <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 15px;">
             <div style="text-align: left;">
                 <h2 style="margin: 0; font-size: 1.5rem;">Welcome, <span id="user-name-display" style="color: #38bdf8;"></span></h2>
-                <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">Role Permission: <span id="user-role-display" style="color: #f59e0b; text-transform: uppercase; font-weight: bold;"></span></div>
+                <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">
+                    Role Permission: <span id="user-role-display" style="color: #f59e0b; text-transform: uppercase; font-weight: bold;"></span> 
+                    <!-- Workspace indicator -->
+                    | Workspace: <span id="user-workspace-display" style="color: #10b981; font-weight: bold;"></span>
+                </div>
             </div>
             <button onclick="signOut(event)" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">Sign Out</button>
         </div>
@@ -137,18 +139,21 @@
                 <h3 style="color: #f59e0b;" id="directory-card-title">📁 Match Directory</h3>
                 <p id="directory-card-desc">Review your created tournaments, active fixtures, Match IDs, and Scorer PINs.</p>
             </div>
+            
+            <!-- Repository Paths Corrected -->
             <a href="admin/index.html" class="portal-card" id="card-admin" style="border-color: #3b82f6;">
                 <h3 style="color: #3b82f6;">🛠️ Tournament Creator</h3>
                 <p>Build fixtures, map pools, and assign officials.</p>
             </a>
             <a href="admin/rosters.html" class="portal-card" id="card-rosters" style="border-color: #f43f5e; display: none;">
-                <h3 style="color: #f43f5e;">🛡️ Master Roster Manager</h3>
+                <h3 style="color: #f43f5e;">🛡️️ Master Roster Manager</h3>
                 <p>Register franchises and manage global master player lineups.</p>
             </a>
             <a href="scorer/live.html" class="portal-card" id="card-scorer" style="border-color: #10b981;">
                 <h3 style="color: #10b981;">📊 Live Scoring Engine</h3>
                 <p>Access match postings and score live games ball-by-ball.</p>
             </a>
+            
             <a href="selector.html" class="portal-card" id="card-selector" style="border-color: #8b5cf6;">
                 <h3 style="color: #8b5cf6;">📋 Selector Analytics</h3>
                 <p>Deep-dive player analytics, pitch tracking, and team statistics.</p>
@@ -165,8 +170,7 @@
                 <h3 style="color: #eab308;">🎙️ Broadcast & Commentary</h3>
                 <p>Live milestones, dynamic talking points, and in-depth crease context.</p>
             </a>
-        </div> 
-        <!-- 🔥 FIX: The closing tag above was missing, which caused the Directory table to break! -->
+        </div>
 
         <!-- DYNAMIC DIRECTORY TABLE WITH SEARCH -->
         <div id="directory-section" class="directory-box hidden">
@@ -205,7 +209,6 @@
 
         let currentUser = null; let currentUserProfile = null; let isSignUp = false;
         let hubMatches = { live: [], upcoming: [], completed: [] };
-        
         let globalDirectoryMatches = [];
 
         window.onload = async () => {
@@ -230,7 +233,8 @@
                 const { data, error } = await db.auth.signUp({ email, password });
                 if (error) { alert("Auth Error: " + error.message); btn.innerText = "Register"; return; }
                 if (data.user) {
-                    const { error: profileError } = await db.from('profiles').upsert([{ id: data.user.id, full_name: fullName, role: role }]);
+                    // Set default 'Independent' association during open signups
+                    const { error: profileError } = await db.from('profiles').upsert([{ id: data.user.id, full_name: fullName, role: role, association: 'Independent' }]);
                     if (profileError) { alert("Database Error: " + profileError.message); btn.innerText = "Register"; return; }
                     currentUser = data.user; await loadPortalDashboard(data.user.id);
                 }
@@ -244,11 +248,17 @@
         async function loadPortalDashboard(userId) {
             document.getElementById('auth-section').style.display = 'none';
             const { data: profile } = await db.from('profiles').select('*').eq('id', userId).single();
-            currentUserProfile = profile || { role: 'fan', full_name: 'Sports Fan' };
+            currentUserProfile = profile || { role: 'fan', full_name: 'Sports Fan', association: 'Independent' };
             const userRole = (currentUserProfile.role || 'fan').toLowerCase();
+            const userAssoc = currentUserProfile.association || 'Independent';
             
             document.getElementById('user-role-display').innerText = userRole;
             document.getElementById('user-name-display').innerText = currentUserProfile.full_name || 'Sports Fan';
+            document.getElementById('user-workspace-display').innerText = userAssoc;
+
+            // Save for other apps (like Career Hub / Tournament Hub) to use instantly
+            localStorage.setItem('user_association', userAssoc);
+
             document.getElementById('portal-dashboard').style.display = 'block';
 
             document.getElementById('card-directory').style.display = 'none';
@@ -267,20 +277,25 @@
                 document.getElementById('card-selector').style.display = 'block'; 
             }
             
-            await fetchMatchHubData();
+            await fetchMatchHubData(userAssoc, userRole);
         }
 
-        async function fetchMatchHubData() {
-            const { data: matches, error } = await db
-                .from('matches')
-                .select('match_id, scorer_pin, full_state, tournaments(admin_id, name)');
-                
+        async function fetchMatchHubData(assoc, role) {
+            let query = db.from('matches').select('match_id, scorer_pin, full_state, tournaments(admin_id, name)');
+            
+            const { data: matches, error } = await query;
             if (error || !matches) return;
 
             hubMatches = { live: [], upcoming: [], completed: [] };
 
             matches.forEach(m => {
                 let p = m.full_state || {};
+                
+                // Enforce Dashboard Isolation for Admins/Selectors based on Workspace
+                if (role !== 'superadmin' && role !== 'fan') {
+                    if (p.host && p.host !== assoc) return; 
+                }
+
                 const state = (p.match_status || 'upcoming').toLowerCase();
                 
                 if (state === 'live' || state === 'innings_break') hubMatches.live.push(m);
@@ -337,6 +352,7 @@
                 const userPin = prompt(`Please enter your 4-Digit Scorer PIN for match ${matchId}:`);
                 if (userPin === pin) {
                     alert("PIN Verified. Routing to Live Engine...");
+                    // Paths correctly route to sub-folders
                     window.location.href = `scorer/live.html`; 
                 } else if (userPin) {
                     alert("❌ Incorrect PIN. Access Denied.");
@@ -463,8 +479,8 @@
             if (event && event.target) { event.target.innerText = "Signing out..."; event.target.style.opacity = "0.5"; event.target.style.pointerEvents = "none"; }
             try { await db.auth.signOut(); } catch (error) { console.warn(error); } 
             finally {
-                Object.keys(localStorage).forEach(key => { if (key.startsWith('sb-')) localStorage.removeItem(key); });
-                localStorage.removeItem('cricStat_activeMatch'); window.location.reload(); 
+                Object.keys(localStorage).forEach(key => { if (key.startsWith('sb-') || key === 'user_association') localStorage.removeItem(key); });
+                window.location.reload(); 
             }
         }
     </script>
