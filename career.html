@@ -27,10 +27,23 @@
         .tab-btn.active::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 100%; height: 3px; background: #38bdf8; border-radius: 3px 3px 0 0; }
         .hidden-view { display: none !important; }
 
-        /* 🔥 UPDATED: FILTER BAR */
+        /* 🔥 NEW: MULTI-SELECT FILTER UI */
         .filter-bar { background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #334155; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; align-items: center; }
-        .filter-select, .filter-input { background: #0f172a; color: white; border: 1px solid #475569; padding: 10px; border-radius: 6px; font-size: 0.9rem; flex: 1; min-width: 150px; outline: none; }
-        .filter-select:focus, .filter-input:focus { border-color: #38bdf8; }
+        .filter-input { background: #0f172a; color: white; border: 1px solid #475569; padding: 10px; border-radius: 6px; font-size: 0.9rem; flex: 1; min-width: 150px; outline: none; }
+        .filter-input:focus { border-color: #38bdf8; }
+
+        /* Custom Multi-Select Dropdown */
+        .multi-select-container { position: relative; flex: 1; min-width: 180px; }
+        .multi-select-btn { background: #0f172a; color: white; border: 1px solid #475569; padding: 10px; border-radius: 6px; font-size: 0.9rem; width: 100%; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .multi-select-btn:hover { border-color: #38bdf8; }
+        .multi-select-dropdown { position: absolute; top: 100%; left: 0; width: 100%; max-height: 250px; overflow-y: auto; background: #1e293b; border: 1px solid #475569; border-top: none; border-radius: 0 0 6px 6px; z-index: 100; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .multi-select-dropdown.active { display: block; }
+        .multi-select-dropdown::-webkit-scrollbar { width: 6px; }
+        .multi-select-dropdown::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        
+        .multi-option { padding: 8px 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: 0.2s; font-size: 0.85rem; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .multi-option:hover { background: rgba(56, 189, 248, 0.1); color: white; }
+        .multi-option input[type="checkbox"] { accent-color: #38bdf8; cursor: pointer; width: 14px; height: 14px; margin: 0; }
 
         .toggle-panel { background: #0f172a; border: 1px solid #38bdf8; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; animation: fadeIn 0.3s ease; }
         .toggle-lbl { background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; color: #cbd5e1; cursor: pointer; display: flex; align-items: center; gap: 6px; border: 1px solid #334155; user-select: none; transition: 0.2s; font-weight: bold; }
@@ -166,10 +179,10 @@
         .download-btn { width: 100%; margin-top: 10px; padding: 12px; font-size: 0.95rem; background: linear-gradient(90deg, #38bdf8, #2563eb); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        @media (max-width: 768px) { .analytics-grid { grid-template-columns: 1fr; } .filter-select, .filter-input { min-width: 100%; } }
+        @media (max-width: 768px) { .analytics-grid { grid-template-columns: 1fr; } .multi-select-container, .filter-input { min-width: 100%; } }
     </style>
 </head>
-<body>
+<body onclick="closeAllDropdowns(event)">
 
     <div class="header">
         <div>
@@ -190,22 +203,76 @@
         <button id="btn-tab-live" class="tab-btn" onclick="switchTab('live')">🔴 Live Scouting</button>
     </div>
 
-    <!-- 🔥 UPDATED SHARED FILTER BAR (Now includes Association & Tier) -->
+    <!-- 🔥 NEW: MULTI-SELECT FILTER BAR -->
     <div class="filter-bar">
         <input type="text" id="filter-search" class="filter-input" placeholder="🔍 Search Player..." onkeyup="applyFilters()">
         
-        <!-- NEW METADATA FILTERS -->
-        <select id="filter-association" class="filter-select" onchange="applyFilters()"><option value="ALL">🏛️ All Associations</option></select>
-        <select id="filter-tier" class="filter-select" onchange="applyFilters()"><option value="ALL">⭐ All Match Tiers</option></select>
+        <!-- Association -->
+        <div class="multi-select-container">
+            <button class="multi-select-btn" onclick="toggleDropdown('dropdown-association')">
+                <span id="btn-text-association">🏛️ All Associations</span>
+                <span>▼</span>
+            </button>
+            <div id="dropdown-association" class="multi-select-dropdown custom-scroll"></div>
+        </div>
+
+        <!-- Tier -->
+        <div class="multi-select-container">
+            <button class="multi-select-btn" onclick="toggleDropdown('dropdown-tier')">
+                <span id="btn-text-tier">⭐ All Match Tiers</span>
+                <span>▼</span>
+            </button>
+            <div id="dropdown-tier" class="multi-select-dropdown custom-scroll"></div>
+        </div>
         
-        <select id="filter-team" class="filter-select" onchange="applyFilters()"><option value="ALL">🛡️ All Teams</option></select>
-        <select id="filter-tourney" class="filter-select" onchange="applyFilters()"><option value="ALL">🏆 All Tournaments</option></select>
-        <select id="filter-format" class="filter-select" onchange="applyFilters()"><option value="ALL">🏏 All Formats</option></select>
-        <select id="filter-year" class="filter-select" onchange="applyFilters()"><option value="ALL">📅 All Years</option></select>
+        <!-- Format -->
+        <div class="multi-select-container">
+            <button class="multi-select-btn" onclick="toggleDropdown('dropdown-format')">
+                <span id="btn-text-format">🏏 All Formats</span>
+                <span>▼</span>
+            </button>
+            <div id="dropdown-format" class="multi-select-dropdown custom-scroll"></div>
+        </div>
+        
+        <!-- Tournament -->
+        <div class="multi-select-container">
+            <button class="multi-select-btn" onclick="toggleDropdown('dropdown-tourney')">
+                <span id="btn-text-tourney">🏆 All Tournaments</span>
+                <span>▼</span>
+            </button>
+            <div id="dropdown-tourney" class="multi-select-dropdown custom-scroll"></div>
+        </div>
+
+        <!-- Own Team -->
+        <div class="multi-select-container">
+            <button class="multi-select-btn" onclick="toggleDropdown('dropdown-team')">
+                <span id="btn-text-team">🛡️ All Teams</span>
+                <span>▼</span>
+            </button>
+            <div id="dropdown-team" class="multi-select-dropdown custom-scroll"></div>
+        </div>
+
+        <!-- Opponent Team -->
+        <div class="multi-select-container">
+            <button class="multi-select-btn" onclick="toggleDropdown('dropdown-opponent')">
+                <span id="btn-text-opponent">⚔️ Vs. Opponent</span>
+                <span>▼</span>
+            </button>
+            <div id="dropdown-opponent" class="multi-select-dropdown custom-scroll"></div>
+        </div>
+
+        <!-- Year -->
+        <div class="multi-select-container">
+            <button class="multi-select-btn" onclick="toggleDropdown('dropdown-year')">
+                <span id="btn-text-year">📅 All Years</span>
+                <span>▼</span>
+            </button>
+            <div id="dropdown-year" class="multi-select-dropdown custom-scroll"></div>
+        </div>
     </div>
 
     <!-- ========================================== -->
-    <!-- VIEW 1: CAREER STATS TABLE (Full Width)    -->
+    <!-- VIEW 1: CAREER STATS TABLE                 -->
     <!-- ========================================== -->
     <div id="view-career">
         
@@ -377,7 +444,8 @@
     <div id="view-h2h" class="hidden-view">
         <div class="h2h-controls">
             <div style="display:flex; gap:10px; align-items:center;">
-                <select id="h2h-select" class="filter-select" style="min-width: 200px;">
+                <!-- Updated class for consistency, but acts as a standard select -->
+                <select id="h2h-select" class="filter-input" style="min-width: 200px;">
                     <option value="">Select a Batter...</option>
                 </select>
                 <button class="action-btn" onclick="addH2HPlayer()">+ Add</button>
@@ -413,7 +481,7 @@
         <div class="analytics-grid" id="live-scouting-grid" style="grid-template-columns: 1fr; max-width: 800px; margin: 0 auto;"></div>
     </div>
 
-    <!-- PLAYER CARD MODAL (Now includes Tier Context Breakdown) -->
+    <!-- PLAYER CARD MODAL -->
     <div id="playerCardModal" class="modal-overlay" onclick="closePlayerCard(event)">
         <div id="playerCardElement" class="modal-box" onclick="event.stopPropagation()">
             <button type="button" class="modal-close" onclick="closePlayerCard()">×</button>
@@ -451,12 +519,10 @@
                         <div class="stat-row"><span class="stat-lbl">Maidens</span> <span class="stat-val" id="pc-mdn">0</span></div>
                     </div>
                     
-                    <!-- 🔥 NEW: Contextual Tier Breakdown Panel -->
+                    <!-- Contextual Tier Breakdown Panel -->
                     <div class="stat-panel tier-breakdown" style="grid-column: 1 / -1;">
                         <h4 style="color: #38bdf8;">Contextual Batting Breakdown (By Tier)</h4>
-                        <div id="pc-tier-stats">
-                            <!-- Tier stats injected dynamically here -->
-                        </div>
+                        <div id="pc-tier-stats"></div>
                     </div>
 
                     <div class="stat-panel field" style="grid-column: 1 / -1;">
@@ -490,6 +556,81 @@
         const h2hColors = ['#38bdf8', '#f59e0b', '#10b981', '#a855f7', '#ec4899'];
         const DEFAULT_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
         const themes = ['theme-blue', 'theme-emerald', 'theme-amber', 'theme-purple', 'theme-rose', 'theme-cyan'];
+
+        // 🔥 STATE FOR MULTI-SELECT FILTERS
+        let selectedFilters = {
+            association: [],
+            tier: [],
+            format: [],
+            tourney: [],
+            team: [],
+            opponent: [],
+            year: []
+        };
+
+        // --- Custom Dropdown Logic ---
+        function toggleDropdown(id) {
+            document.querySelectorAll('.multi-select-dropdown').forEach(el => {
+                if(el.id !== id) el.classList.remove('active');
+            });
+            document.getElementById(id).classList.toggle('active');
+        }
+
+        function closeAllDropdowns(event) {
+            if (!event.target.closest('.multi-select-container')) {
+                document.querySelectorAll('.multi-select-dropdown').forEach(el => el.classList.remove('active'));
+            }
+        }
+
+        function handleCheckboxChange(filterCategory, value, isChecked) {
+            if (isChecked) {
+                if (!selectedFilters[filterCategory].includes(value)) {
+                    selectedFilters[filterCategory].push(value);
+                }
+            } else {
+                selectedFilters[filterCategory] = selectedFilters[filterCategory].filter(v => v !== value);
+            }
+            updateDropdownButtonText(filterCategory);
+            applyFilters();
+        }
+
+        function updateDropdownButtonText(filterCategory) {
+            let btnTextEl = document.getElementById(`btn-text-${filterCategory}`);
+            let arr = selectedFilters[filterCategory];
+            let prefix = "";
+            
+            if(filterCategory === 'association') prefix = "🏛️ ";
+            if(filterCategory === 'tier') prefix = "⭐ ";
+            if(filterCategory === 'format') prefix = "🏏 ";
+            if(filterCategory === 'tourney') prefix = "🏆 ";
+            if(filterCategory === 'team') prefix = "🛡️ ";
+            if(filterCategory === 'opponent') prefix = "⚔️ ";
+            if(filterCategory === 'year') prefix = "📅 ";
+
+            if (arr.length === 0) {
+                btnTextEl.innerText = `${prefix}All Selected`;
+            } else if (arr.length === 1) {
+                btnTextEl.innerText = `${prefix}${arr[0]}`;
+            } else {
+                btnTextEl.innerText = `${prefix}${arr.length} Selected`;
+            }
+        }
+
+        function buildMultiSelectOptions(dropdownId, filterCategory, dataSet) {
+            let container = document.getElementById(dropdownId);
+            let html = "";
+            Array.from(dataSet).sort().forEach(val => {
+                let isChecked = selectedFilters[filterCategory].includes(val) ? "checked" : "";
+                html += `
+                <label class="multi-option">
+                    <input type="checkbox" value="${val}" ${isChecked} onchange="handleCheckboxChange('${filterCategory}', this.value, this.checked)">
+                    ${val}
+                </label>`;
+            });
+            container.innerHTML = html;
+            updateDropdownButtonText(filterCategory);
+        }
+        // -----------------------------
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -525,7 +666,6 @@
             if (error) { console.error("Cloud Error", error); return; }
 
             rawMatches = [];
-            // 🔥 NEW: Add Sets for our new filter metadata
             let filterSets = { teams: new Set(), tourneys: new Set(), formats: new Set(), years: new Set(), associations: new Set(), tiers: new Set() };
 
             data.forEach(m => {
@@ -534,17 +674,25 @@
                     if (fs && (fs.match_status === 'completed' || fs.match_status === 'live')) {
                         let tName = (m.tournaments && m.tournaments.name) ? m.tournaments.name : (fs.tournament || 'Independent Match');
                         let year = new Date(m.created_at).getFullYear().toString();
-                        let format = fs.format || 'T20';
                         
-                        // 🔥 Extract the newly injected Match Context Metadata
+                        // 🔥 Smart Format Handling
+                        let rawFormat = (fs.format || 'T20').toLowerCase();
+                        let format = 'T20';
+                        if (rawFormat.includes('one day') || rawFormat.includes('odi')) { format = 'One Day'; }
+                        else if (rawFormat.includes('multi') || rawFormat.includes('test')) { format = 'Multi-Day'; }
+                        else if (rawFormat.includes('t10')) { format = 'T10'; }
+
                         let host = fs.host || 'Independent';
                         let tier = fs.tier || 'Local';
 
                         filterSets.tourneys.add(tName);
                         filterSets.years.add(year);
                         filterSets.formats.add(format);
-                        filterSets.associations.add(host); // Populate associations set
-                        filterSets.tiers.add(tier);        // Populate tiers set
+                        filterSets.associations.add(host);
+                        filterSets.tiers.add(tier);
+
+                        if(fs.teams && fs.teams.A) filterSets.teams.add(fs.teams.A.name);
+                        if(fs.teams && fs.teams.B) filterSets.teams.add(fs.teams.B.name);
 
                         let allInnings = fs.inningsSummaries ? [...fs.inningsSummaries] : [];
                         if (fs.match_status === 'live' && fs.current && (fs.current.balls > 0 || fs.current.runs > 0)) {
@@ -556,52 +704,45 @@
                             });
                         }
                         
-                        // Push into raw array with new metadata attached
                         rawMatches.push({ rawData: m, tourney: tName, format: format, year: year, host: host, tier: tier, teams: fs.teams, innings: allInnings });
                     }
                 } catch(err) {}
             });
 
-            let updateDropdown = (id, set, defTxt) => { 
-                let el = document.getElementById(id); let currentVal = el.value;
-                el.innerHTML = `<option value="ALL">${defTxt}</option>`;
-                Array.from(set).sort().forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`); 
-                if (Array.from(set).includes(currentVal)) el.value = currentVal;
-            };
-
-            updateDropdown('filter-tourney', filterSets.tourneys, '🏆 All Tournaments');
-            updateDropdown('filter-format', filterSets.formats, '🏏 All Formats');
-            updateDropdown('filter-year', filterSets.years, '📅 All Years');
-            updateDropdown('filter-association', filterSets.associations, '🏛️ All Associations');
-            updateDropdown('filter-tier', filterSets.tiers, '⭐ All Match Tiers');
+            // Build multi-select dropdowns
+            buildMultiSelectOptions('dropdown-tourney', 'tourney', filterSets.tourneys);
+            buildMultiSelectOptions('dropdown-format', 'format', filterSets.formats);
+            buildMultiSelectOptions('dropdown-year', 'year', filterSets.years);
+            buildMultiSelectOptions('dropdown-association', 'association', filterSets.associations);
+            buildMultiSelectOptions('dropdown-tier', 'tier', filterSets.tiers);
+            buildMultiSelectOptions('dropdown-team', 'team', filterSets.teams);
+            buildMultiSelectOptions('dropdown-opponent', 'opponent', filterSets.teams);
 
             applyFilters();
         }
 
         function applyFilters() {
             let sTerm = document.getElementById('filter-search').value.toLowerCase();
-            let fTourn = document.getElementById('filter-tourney').value;
-            let fForm = document.getElementById('filter-format').value;
-            let fYear = document.getElementById('filter-year').value;
-            let fHost = document.getElementById('filter-association').value; // 🔥 Grab Association Filter
-            let fTier = document.getElementById('filter-tier').value;        // 🔥 Grab Tier Filter
-
             let playersObj = {};
-            let teamSet = new Set(); 
+
+            // Helper function to check arrays (empty array means 'ALL')
+            const passesFilter = (arr, val) => arr.length === 0 || arr.includes(val);
 
             rawMatches.forEach(m => {
-                // Apply all filters before processing the match
-                if (fTourn !== 'ALL' && m.tourney !== fTourn) return;
-                if (fForm !== 'ALL' && m.format !== fForm) return;
-                if (fYear !== 'ALL' && m.year !== fYear) return;
-                if (fHost !== 'ALL' && m.host !== fHost) return; // Restrict to specific Association (e.g. MPCA)
-                if (fTier !== 'ALL' && m.tier !== fTier) return; // Restrict to specific Tier (e.g. Inter-Division)
+                // 1. Filter Match Metadata
+                if (!passesFilter(selectedFilters.tourney, m.tourney)) return;
+                if (!passesFilter(selectedFilters.format, m.format)) return;
+                if (!passesFilter(selectedFilters.year, m.year)) return;
+                if (!passesFilter(selectedFilters.association, m.host)) return;
+                if (!passesFilter(selectedFilters.tier, m.tier)) return;
 
                 if (m.teams && m.teams.A && m.teams.B) {
                     let processXI = (teamData) => {
-                        teamSet.add(teamData.name);
                         (teamData.players || []).forEach(p => {
                             if (p.isPlayingXI) {
+                                // Match-level team filter
+                                if (!passesFilter(selectedFilters.team, teamData.name)) return;
+                                
                                 if(!playersObj[p.name]) initPlayer(playersObj, p.name, teamData.name);
                                 playersObj[p.name].mat++;
                             }
@@ -612,65 +753,65 @@
                 }
 
                 m.innings.forEach(inn => {
-                    (inn.batters || []).forEach(b => {
-                        if (b.hasBatted) {
-                            if(!playersObj[b.name]) initPlayer(playersObj, b.name, inn.batTeam);
-                            let p = playersObj[b.name];
-                            p.inn++; p.runs += b.r; p.bf += b.b; p.fours += b.f; p.sixes += b.s;
-                            if (b.out) { p.dismissals++; if(b.r === 0) p.ducks++; } else { p.no++; }
+                    // 🔥 NEW: Opponent Filter Logic
+                    let isBattingAgainstSelectedOpponent = passesFilter(selectedFilters.opponent, inn.bowlTeam);
+                    let isBowlingAgainstSelectedOpponent = passesFilter(selectedFilters.opponent, inn.batTeam);
+
+                    // Batters
+                    if (isBattingAgainstSelectedOpponent) {
+                        (inn.batters || []).forEach(b => {
+                            if (b.hasBatted && passesFilter(selectedFilters.team, inn.batTeam)) {
+                                if(!playersObj[b.name]) initPlayer(playersObj, b.name, inn.batTeam);
+                                let p = playersObj[b.name];
+                                p.inn++; p.runs += b.r; p.bf += b.b; p.fours += b.f; p.sixes += b.s;
+                                if (b.out) { p.dismissals++; if(b.r === 0) p.ducks++; } else { p.no++; }
+                                
+                                let currentScore = b.r; let isNotOut = !b.out;
+                                if (currentScore > p.bestRuns || (currentScore === p.bestRuns && isNotOut && !p.bestNotOut)) {
+                                    p.bestRuns = currentScore; p.bestNotOut = isNotOut;
+                                }
+                                if (currentScore >= 100) { p.hundreds++; } else if (currentScore >= 50) { p.fifties++; }
+
+                                if(!p.tierStats[m.tier]) p.tierStats[m.tier] = { inn: 0, runs: 0, dismissals: 0 };
+                                p.tierStats[m.tier].inn++;
+                                p.tierStats[m.tier].runs += b.r;
+                                if(b.out) p.tierStats[m.tier].dismissals++;
+                            }
+                        });
+                    }
+
+                    // Bowlers & Fielders
+                    if (isBowlingAgainstSelectedOpponent) {
+                        (inn.bowlers || []).forEach(b => {
+                            let isBowler = b.o > 0 || b.rc > 0;
+                            let isFielder = (b.catches > 0) || (b.stumpings > 0) || (b.runouts > 0);
                             
-                            let currentScore = b.r; let isNotOut = !b.out;
-                            if (currentScore > p.bestRuns || (currentScore === p.bestRuns && isNotOut && !p.bestNotOut)) {
-                                p.bestRuns = currentScore; p.bestNotOut = isNotOut;
+                            if ((isBowler || isFielder) && passesFilter(selectedFilters.team, inn.bowlTeam)) {
+                                if(!playersObj[b.name]) initPlayer(playersObj, b.name, inn.bowlTeam);
+                                let p = playersObj[b.name];
+                                
+                                if (isBowler) {
+                                    p.rc += b.rc; p.wkts += b.w; p.mdn += b.m;
+                                    let absBalls = (b.o % 1 !== 0) ? Math.floor(b.o) * 6 + Math.round((b.o - Math.floor(b.o)) * 10) : b.o;
+                                    p.bowlBalls += absBalls;
+
+                                    if (b.w >= 4) p.w4++;
+                                    if (b.w >= 5) p.w5++;
+                                    if (b.w > p.bbiW || (b.w === p.bbiW && b.rc < p.bbiR)) { p.bbiW = b.w; p.bbiR = b.rc; }
+                                }
+
+                                if (isFielder) {
+                                    p.catches += (b.catches || 0);
+                                    p.stumpings += (b.stumpings || 0);
+                                    p.runouts += (b.runouts || 0);
+                                }
                             }
-                            if (currentScore >= 100) { p.hundreds++; } else if (currentScore >= 50) { p.fifties++; }
-
-                            // 🔥 Track Performance Context inside the player object specifically for the Player Card
-                            if(!p.tierStats[m.tier]) p.tierStats[m.tier] = { inn: 0, runs: 0, dismissals: 0 };
-                            p.tierStats[m.tier].inn++;
-                            p.tierStats[m.tier].runs += b.r;
-                            if(b.out) p.tierStats[m.tier].dismissals++;
-                        }
-                    });
-
-                    (inn.bowlers || []).forEach(b => {
-                        let isBowler = b.o > 0 || b.rc > 0;
-                        let isFielder = (b.catches > 0) || (b.stumpings > 0) || (b.runouts > 0);
-                        
-                        if (isBowler || isFielder) {
-                            if(!playersObj[b.name]) initPlayer(playersObj, b.name, inn.bowlTeam);
-                            let p = playersObj[b.name];
-                            
-                            if (isBowler) {
-                                p.rc += b.rc; p.wkts += b.w; p.mdn += b.m;
-                                let absBalls = (b.o % 1 !== 0) ? Math.floor(b.o) * 6 + Math.round((b.o - Math.floor(b.o)) * 10) : b.o;
-                                p.bowlBalls += absBalls;
-
-                                if (b.w >= 4) p.w4++;
-                                if (b.w >= 5) p.w5++;
-                                if (b.w > p.bbiW || (b.w === p.bbiW && b.rc < p.bbiR)) { p.bbiW = b.w; p.bbiR = b.rc; }
-                            }
-
-                            if (isFielder) {
-                                p.catches += (b.catches || 0);
-                                p.stumpings += (b.stumpings || 0);
-                                p.runouts += (b.runouts || 0);
-                            }
-                        }
-                    });
+                        });
+                    }
                 });
             });
 
-            let teamSelect = document.getElementById('filter-team');
-            let currentTeamVal = teamSelect.value;
-            teamSelect.innerHTML = `<option value="ALL">🛡️ All Teams</option>`;
-            Array.from(teamSet).sort().forEach(t => teamSelect.innerHTML += `<option value="${t}">${t}</option>`);
-            if(Array.from(teamSet).includes(currentTeamVal)) teamSelect.value = currentTeamVal;
-
-            let fTeam = document.getElementById('filter-team').value;
-
             aggregatedData = Object.values(playersObj).filter(p => {
-                if (fTeam !== 'ALL' && p.team !== fTeam) return false;
                 if (sTerm && !p.name.toLowerCase().includes(sTerm)) return false;
                 return true;
             }).map(p => {
@@ -711,7 +852,6 @@
             if(!document.getElementById('view-h2h').classList.contains('hidden-view')) renderH2H();
         }
 
-        // 🔥 Added tierStats dictionary to the player initialization object
         function initPlayer(obj, name, team) {
             obj[name] = { 
                 name: name, team: team, mat: 0, inn: 0, runs: 0, bf: 0, fours: 0, sixes: 0, dismissals: 0, ducks: 0, no: 0, bestRuns: 0, bestNotOut: false, fifties: 0, hundreds: 0, 
@@ -769,7 +909,6 @@
             document.getElementById('pc-stumpings').innerText = p.stumpings;
             document.getElementById('pc-runouts').innerText = p.runouts;
 
-            // 🔥 Extract and render Contextual Tier Breakdown into the modal
             let tierHtml = Object.keys(p.tierStats).map(t => {
                 let tStat = p.tierStats[t];
                 let tAvg = tStat.dismissals > 0 ? (tStat.runs / tStat.dismissals).toFixed(2) : (tStat.runs > 0 ? tStat.runs.toFixed(2) : '-');
