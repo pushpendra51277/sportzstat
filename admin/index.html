@@ -15,7 +15,7 @@
         .sidebar-header { padding: 25px 20px; border-bottom: 1px solid #1e293b; }
         .back-link { color: #94a3b8; text-decoration: none; font-size: 0.85rem; font-weight: bold; display: inline-block; margin-bottom: 15px; transition: 0.2s; }
         .back-link:hover { color: #38bdf8; }
-        .app-title { margin: 0; color: #3b82f6; letter-spacing: 1px; font-size: 1.2rem; }
+        .app-title { margin: 0; color: #3b82f6; letter-spacing: 1px; font-size: 1.2rem; text-transform: uppercase; }
         .app-subtitle { margin: 5px 0 0 0; color: #64748b; font-size: 0.75rem; }
 
         .nav-menu { flex: 1; overflow-y: auto; padding: 20px 0; }
@@ -145,16 +145,7 @@
                             <input type="text" id="t-name" placeholder="e.g. Veda Premier League">
                         </div>
                         
-                        <!-- 🔥 NEW: Governing Association Dropdown -->
-                        <div class="input-group">
-                            <label>Governing Association (Host) *</label>
-                            <select id="t-host">
-                                <option value="Independent">Open / Independent Tournament</option>
-                                <!-- Populated dynamically by DB -->
-                            </select>
-                        </div>
-                        
-                        <!-- 🔥 NEW: Match Tier Dropdown -->
+                        <!-- 🔥 Match Tier Dropdown remains (Association Dropdown is Removed for Security) -->
                         <div class="input-group">
                             <label>Match Tier (Scouting Context) *</label>
                             <select id="t-tier">
@@ -387,6 +378,10 @@
         const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // 🔥 NEW: Global variables for the logged-in Admin Workspace
+        let currentAdminId = null;
+        let currentAdminAssociation = 'Independent';
+
         let currentTournamentId = null;
         let allDbTeams = [];        
         let selectedTourneyTeams = [];      
@@ -405,21 +400,36 @@
         function generateUniquePin() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
         document.addEventListener('DOMContentLoaded', async () => { 
-            await loadAssociations(); // 🔥 Fetch DB Associations to populate Dropdown
+            await checkAdminSession(); // 🔥 Check identity before loading data
             await fetchAllMasterTeams();
             await loadExistingTournamentsList();
             initPoolsWorkspace("1"); 
             renderCanvas();
         });
 
-        // 🔥 NEW: Fetch Association Lists for the dropdown
-        async function loadAssociations() {
-            const selectEl = document.getElementById('t-host');
-            const { data, error } = await db.from('associations').select('code, name');
-            if (!error && data && data.length > 0) {
-                let html = '<option value="Independent">Open / Independent Tournament (No Body)</option>';
-                data.forEach(a => { html += `<option value="${a.code}">${a.code} - ${a.name}</option>`; });
-                selectEl.innerHTML = html;
+        // 🔥 NEW: Gatekeeper Function
+        async function checkAdminSession() {
+            const { data: { session }, error: sessionError } = await db.auth.getSession();
+            
+            if (sessionError || !session) {
+                console.warn("No active session found. Running in offline/testing mode.");
+                // In production, uncomment the line below to enforce login
+                // window.location.href = "login.html"; 
+                return;
+            }
+
+            currentAdminId = session.user.id;
+
+            const { data: profileData, error: profileError } = await db
+                .from('profiles')
+                .select('association')
+                .eq('id', currentAdminId)
+                .single();
+
+            if (!profileError && profileData && profileData.association) {
+                currentAdminAssociation = profileData.association;
+                console.log("Logged in as Admin for:", currentAdminAssociation);
+                document.querySelector('.app-title').innerText = `${currentAdminAssociation} TOURNAMENT HUB`;
             }
         }
 
@@ -542,7 +552,6 @@
                 masterFixtures = []; 
                 document.getElementById('t-name').value = '';
                 document.getElementById('t-date').value = '';
-                document.getElementById('t-host').value = 'Independent';
                 document.getElementById('t-tier').value = 'Local';
                 renderTeamPanes();
                 initPoolsWorkspace("1");
@@ -563,11 +572,10 @@
             document.getElementById('t-name').value = tData.name || '';
             document.getElementById('t-format').value = tData.format || 'T20';
             document.getElementById('t-date').value = tData.start_date ? tData.start_date.split('T')[0] : '';
-            document.getElementById('t-host').value = tData.host || 'Independent'; // 🔥 Restore Host
             
             if(tData.config) {
                 if(tData.config.winPoints) document.getElementById('tWinPoints').value = tData.config.winPoints; 
-                if(tData.config.tier) document.getElementById('t-tier').value = tData.config.tier; // 🔥 Restore Tier
+                if(tData.config.tier) document.getElementById('t-tier').value = tData.config.tier; 
             }
 
             const { data: mData } = await db.from('matches').select('*').eq('tournament_id', tournId);
@@ -611,10 +619,11 @@
             let tName = document.getElementById('t-name').value.trim();
             let tFormat = document.getElementById('t-format').value;
             let tDate = document.getElementById('t-date').value;
-            let tHost = document.getElementById('t-host').value; // 🔥 Grab Association Host
-            let tTier = document.getElementById('t-tier').value; // 🔥 Grab Match Tier
+            let tTier = document.getElementById('t-tier').value; 
             
-            // Save tier metadata in config JSON to avoid schema changes
+            // 🔥 Smart Save: Uses logged in admin's association
+            let tHost = currentAdminAssociation; 
+            
             let configPayload = { winPoints: document.getElementById('tWinPoints').value, tier: tTier }; 
 
             if (!tName || !tDate) { 
@@ -636,7 +645,8 @@
                     const { error } = await db.from('tournaments').update({ name: tName, format: tFormat, start_date: tDate, host: tHost, config: configPayload }).eq('tournament_id', currentTournamentId);
                     tError = error;
                 } else {
-                    const { data: tData, error } = await db.from('tournaments').insert([{ name: tName, format: tFormat, start_date: tDate, host: tHost, config: configPayload }]).select();
+                    // 🔥 Injects admin_id permanently to database record
+                    const { data: tData, error } = await db.from('tournaments').insert([{ name: tName, format: tFormat, start_date: tDate, host: tHost, admin_id: currentAdminId, config: configPayload }]).select();
                     tError = error; if (tData && tData.length > 0) currentTournamentId = tData[0].tournament_id;
                 }
 
@@ -1113,7 +1123,7 @@
 
             let tName = document.getElementById('t-name').value;
             let tFormat = document.getElementById('t-format').value;
-            let tHost = document.getElementById('t-host').value;     // 🔥 Grab Association
+            let tHost = currentAdminAssociation;     // 🔥 Grab Association securely
             let tTier = document.getElementById('t-tier').value;     // 🔥 Grab Tier
 
             for (let m of masterFixtures) {
