@@ -28,11 +28,24 @@ function undoLastAction() {
     } else { alert("Nothing to undo!"); } 
 }
 
+// 🔥 FIXED: Preserves Association, Tier, and Format tags during match reset
 async function restartCloudMatch() {
     let conf = confirm("🚨 DANGER 🚨\nAre you sure you want to RESTART this entire match?\nAll runs, wickets, and history will be permanently wiped from the cloud."); if (!conf) return;
     let pin = prompt("To confirm, please enter the 4-Digit Scorer PIN for this match:"); if (pin !== activeMatch.scorer_pin) { alert("❌ Incorrect PIN. Match restart aborted."); return; }
+    
     let tName = (activeMatch && activeMatch.tournaments && activeMatch.tournaments.name) ? activeMatch.tournaments.name : (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament ? activeMatch.full_state.tournament : "INDEPENDENT MATCH");
-    let resetState = { tournament: tName, format: activeMatch.full_state.format || "T20", team1: activeMatch.full_state.team1 || (activeMatch.full_state.teams ? activeMatch.full_state.teams.A.name : "Team A"), team2: activeMatch.full_state.team2 || (activeMatch.full_state.teams ? activeMatch.full_state.teams.B.name : "Team B"), matchName: activeMatch.full_state.matchName || "", match_status: 'upcoming' };
+    
+    let resetState = { 
+        tournament: tName, 
+        format: activeMatch?.full_state?.format || "T20",
+        tier: activeMatch?.full_state?.tier || "Local",
+        host: activeMatch?.full_state?.host || "Independent / Open",
+        team1: activeMatch?.full_state?.team1 || (activeMatch?.full_state?.teams ? activeMatch.full_state.teams.A.name : "Team A"), 
+        team2: activeMatch?.full_state?.team2 || (activeMatch?.full_state?.teams ? activeMatch.full_state.teams.B.name : "Team B"), 
+        matchName: activeMatch?.full_state?.matchName || "", 
+        match_status: 'upcoming' 
+    };
+    
     try { await supabaseClient.from('matches').update({ full_state: resetState }).eq('match_id', state.matchId); await supabaseClient.from('live_matches').delete().eq('match_id', state.matchId); await supabaseClient.from('ball_by_ball').delete().eq('match_id', state.matchId); } catch(e) { console.error(e); }
     localStorage.removeItem('cricStat_activeMatch'); localStorage.removeItem('cricStat_activeMatchMetadata'); localStorage.removeItem('cricStat_stateHistory');
     alert("✅ Match has been wiped and reset to Upcoming. Returning to login..."); window.location.reload();
@@ -120,14 +133,24 @@ function buildFanPortalSummary() {
     };
 }
 
+// 🔥 FIXED: Preserves Association, Tier, and Format tags during cloud sync
 async function triggerCloudSync() {
     if (!supabaseClient || !state.matchId) return;
     
     let fps = buildFanPortalSummary();
     
     let fullStatePayload = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
-    fullStatePayload.match_status = 'live'; fullStatePayload.team1 = state.teams.A.name; fullStatePayload.team2 = state.teams.B.name;
-    fullStatePayload.tournament = (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament) ? activeMatch.full_state.tournament : "Independent Match";
+    fullStatePayload.match_status = 'live'; 
+    fullStatePayload.team1 = state.teams.A.name; 
+    fullStatePayload.team2 = state.teams.B.name;
+    
+    if (activeMatch && activeMatch.full_state) {
+        fullStatePayload.tournament = activeMatch.full_state.tournament || "Independent Match";
+        fullStatePayload.format = activeMatch.full_state.format || "T20";
+        fullStatePayload.tier = activeMatch.full_state.tier || "Local";
+        fullStatePayload.host = activeMatch.full_state.host || "Independent / Open";
+    }
+    
     fullStatePayload.fan_portal_summary = fps;
     
     try { await supabaseClient.from('matches').update({ full_state: fullStatePayload }).eq('match_id', state.matchId); } catch(e) {}
@@ -139,6 +162,7 @@ async function triggerCloudSync() {
     try { await supabaseClient.from('live_matches').upsert({ match_id: state.matchId, live_data: lightWeightLiveData }, { onConflict: 'match_id' }); } catch(e) {}
 }
 
+// 🔥 FIXED: Preserves Association, Tier, and Format tags permanently upon match completion
 async function logCareerStats() {
     if (!supabaseClient || !state.matchId) return;
     
@@ -148,7 +172,14 @@ async function logCareerStats() {
     finalState.match_status = 'completed'; 
     finalState.team1 = state.teams.A.name; 
     finalState.team2 = state.teams.B.name;
-    finalState.tournament = (activeMatch && activeMatch.full_state && activeMatch.full_state.tournament) ? activeMatch.full_state.tournament : "Independent Match";
+    
+    if (activeMatch && activeMatch.full_state) {
+        finalState.tournament = activeMatch.full_state.tournament || "Independent Match";
+        finalState.format = activeMatch.full_state.format || "T20";
+        finalState.tier = activeMatch.full_state.tier || "Local";
+        finalState.host = activeMatch.full_state.host || "Independent / Open";
+    }
+    
     finalState.fan_portal_summary = fps;
     
     try { await supabaseClient.from('matches').update({ full_state: finalState }).eq('match_id', state.matchId); } catch(e){}
@@ -256,7 +287,6 @@ function showMatchSummary() {
     let currentAllowances = state.current.allowances || 0; if (state.inningsSummaries.length > 0 && state.inningsNum === state.inningsSummaries.length) { currentAllowances = state.inningsSummaries[state.inningsSummaries.length - 1].allowances || 0; }
     html += `</div><div style="border-top:1px solid var(--border); padding-top:10px;"><label class="text-accent">Official Match Result / Status</label><input type="text" id="finalMatchResult" class="modal-input w-100" value="${state.matchResult || autoRes}" placeholder="e.g., Match Awarded, Follow-on, etc."><label class="text-accent mt-5">Allowances for Inning (Mins)</label><input type="number" id="inningAllowancesInput" class="modal-input w-100" placeholder="e.g. 15" value="${currentAllowances}">`;
     
-    // 🔥 NEW: Inject Points Allocation Fields when the match is over
     let pointsHtml = "";
     if (isGameOver) {
         let ptsA = state.teams.A.points || 0; let ptsB = state.teams.B.points || 0;
@@ -270,7 +300,6 @@ function showMatchSummary() {
         state.matchResult = el('finalMatchResult') ? el('finalMatchResult').value : autoRes; 
         if(el('inningAllowancesInput')) { let val = parseInt(el('inningAllowancesInput').value) || 0; state.current.allowances = val; if (state.inningsSummaries.length > 0 && state.inningsNum === state.inningsSummaries.length) { state.inningsSummaries[state.inningsSummaries.length - 1].allowances = val; } }
         
-        // 🔥 Capture the points and save them to the state before ending the match
         if(isGameOver && el('teamAPoints') && el('teamBPoints')) { 
             state.teams.A.points = parseFloat(el('teamAPoints').value) || 0; 
             state.teams.B.points = parseFloat(el('teamBPoints').value) || 0; 
@@ -330,6 +359,7 @@ function openMatchStartModal() {
         closeModal(); updateUI(); 
     }, false, "500px", "Start Innings"); 
 }
+
 function openManualRun() { showModal("Manual Runs", `<label class="text-primary">Enter Runs Scored</label><input type="number" id="mRunVal" value="5" min="0" class="modal-input w-100">`, () => { let r = parseInt(el('mRunVal').value) || 0; closeModal(); ballScored(r, false); }); }
 
 function openExtra(type) { 
@@ -427,8 +457,6 @@ function openEditSquad() { let html = `<select id="editSqTeam" class="modal-inpu
 function buildEditSq() { let k = el('editSqTeam').value, t = state.teams[k].players; let html = `<table class="roster-table" style="color:white; margin-top:0; min-width:100%;"><thead style="position:sticky; top:0; background:#020617; z-index:5;"><tr><th style="width:10%;">#</th><th style="width:65%;">Player Name</th><th style="width:25%; text-align:center;">Playing 11</th></tr></thead><tbody>`; t.forEach((p, i) => { html += `<tr><td style="text-align:center; color:var(--text-muted);">${i+1}</td><td><input type="text" id="es-n-${i}" value="${p.name}" class="w-100" style="padding:6px; font-size:0.85rem; border:none; background:transparent; border-bottom:1px solid #334155; border-radius:0;"></td><td style="text-align:center;"><input type="checkbox" id="es-p-${i}" ${p.isPlayingXI ? 'checked' : ''} style="width:18px;height:18px; cursor:pointer;"></td></tr>`; }); html += `</tbody></table>`; el('editSqDiv').innerHTML = html; }
 function saveEditSquad() { let k = el('editSqTeam').value, t = state.teams[k].players; let activeIdxs = []; if (k === state.battingKey) { if(state.current.sIdx !== null) activeIdxs.push(state.current.sIdx); if(state.current.nsIdx !== null) activeIdxs.push(state.current.nsIdx); } if (k === state.bowlingKey) { if(state.current.bIdx !== null) activeIdxs.push(state.current.bIdx); } for(let i=0; i<t.length; i++) { let isChecked = el(`es-p-${i}`).checked; if (!isChecked && activeIdxs.includes(i)) { alert(`Cannot remove ${t[i].name} from Playing XI because they are active!`); return; } } for(let i=0; i<t.length; i++) { t[i].name = el(`es-n-${i}`).value.trim(); t[i].isPlayingXI = el(`es-p-${i}`).checked; } syncMetadataToHistory(true); closeModal(); updateUI(); }
 
-// 🔥 UPDATED: Includes Soft-Warnings and Deadlock Protection
-// 🔥 UPDATED: Includes Smart Auto-Selection, Soft-Warnings, and Deadlock Protection
 function openSelector(typ, title) { 
     let cur = state.current, lst = typ === 'bowler' ? getBowlTeam().players : getBatTeam().players; 
     
@@ -440,7 +468,6 @@ function openSelector(typ, title) {
         let s = false;
         
         if (typ === 'bowler') {
-            // Soft-Restriction: Only hide the currently active bowler. 
             s = (i !== cur.bIdx); 
         } else {
             s = ((!p.hasBatted || p.out === 'retiredHurt') && i !== cur.sIdx && i !== cur.nsIdx);
@@ -457,7 +484,6 @@ function openSelector(typ, title) {
         }
         
         let selectedStr = "";
-        // 🔥 SMART DEFAULT: Auto-selects the first player who DOES NOT have a warning
         if (!hasValidDefault && !isWarning) {
             selectedStr = "selected";
             hasValidDefault = true;
@@ -466,14 +492,12 @@ function openSelector(typ, title) {
         optOptions.push(`<option value="${i}" ${selectedStr}>${label}</option>`); 
     });
 
-    // 🔥 DEADLOCK FIX: If no batters are left
     if (typ !== 'bowler' && optOptions.length === 0) {
         alert("No more batters available! The innings will now end automatically.");
         setTimeout(endInnings, 500);
         return;
     }
 
-    // If everyone has a warning, force a manual selection placeholder
     let finalOptHtml = "";
     if (typ === 'bowler' && !hasValidDefault) {
         finalOptHtml = `<option value="-1" selected disabled>-- Select Bowler --</option>` + optOptions.join('');
@@ -484,10 +508,9 @@ function openSelector(typ, title) {
     showModal(title, `<select id="gSel" class="modal-input w-100">${finalOptHtml}</select>`, () => { 
         let val = parseInt(el('gSel').value); 
         
-        // Safety check if they try to bypass the placeholder
         if (isNaN(val) || val < 0) {
             alert("Please select a valid player from the dropdown.");
-            return; // Blocks confirm, forces user to pick
+            return;
         }
 
         saveState(); 
@@ -495,12 +518,10 @@ function openSelector(typ, title) {
         if(typ === 'bowler') { 
             let selectedBowler = getBowlTeam().players[val];
             
-            // 🚨 SOFT WARNING 1: Bowler Exceeded Quota
             if (selectedBowler.quotaOvers >= state.matchSettings.bowlerQuota) {
                 if(!confirm(`⚠️ WARNING: ${selectedBowler.name} has already bowled their quota of ${state.matchSettings.bowlerQuota} overs!\n\nAre you absolutely sure the umpire is allowing them to bowl an extra over?`)) return;
             }
             
-            // 🚨 SOFT WARNING 2: Consecutive Overs (Umpire mistake)
             if (cur.lastOverBowlers.has(val)) {
                 if(!confirm(`🛑 RULE BREACH WARNING: ${selectedBowler.name} bowled the previous over!\n\nBowlers cannot bowl consecutive overs. Are you sure the umpire is allowing this?`)) return;
             }
@@ -588,7 +609,6 @@ function updateUI() {
         if(actB.desig === 'C' || actB.desig === 'C/WK' || actB.desig.includes('C')) bName += ' (C)'; 
         if(actB.skill && actB.skill.includes('WK')) bName += ' *'; 
         
-        // 🔥 NEW: Add warning star to active bowler if over quota
         if(actB.quotaOvers > state.matchSettings.bowlerQuota) bName += ' <span style="color:#f59e0b;" title="Exceeded Quota">⚠️</span>';
         
         el('activeBowlerNameRight').innerHTML = bName; 
@@ -606,7 +626,6 @@ function updateUI() {
         if(p.desig === 'C' || p.desig === 'C/WK' || p.desig.includes('C')) bName += ' (C)'; 
         if(p.skill && p.skill.includes('WK')) bName += ' *'; 
         
-        // 🔥 NEW: Add warning star to table list if over quota
         if(p.quotaOvers > state.matchSettings.bowlerQuota) bName += ' <span style="color:#f59e0b;" title="Exceeded Quota">⚠️</span>';
         
         let totalRuns = p.rc || 0; 
@@ -621,7 +640,6 @@ function manualRotate() { [state.current.sIdx, state.current.nsIdx] = [state.cur
 function executeEndOver() {
     saveState(); 
     
-    // 🔥 AUTO-WIPE FREE HIT: If an over ends (even manually on a 7th ball), the free hit is killed.
     if (state.current.isFreeHit) {
         state.current.isFreeHit = false;
     }
@@ -638,10 +656,8 @@ function executeEndOver() {
     }
 }
 
-// 🔥 MANUAL TOGGLE FAILSAFE
 function toggleFreeHit() {
     saveState();
-    // Flips it: If it's true, makes it false. If false, makes it true.
     state.current.isFreeHit = !state.current.isFreeHit;
     updateUI();
 }
@@ -657,31 +673,23 @@ function manualEndOver() {
     if (currentOverBalls === 0) { alert("No legal deliveries bowled in this over yet!"); return; }
 
     const confirmAndEndOver = () => {
-        // 1. Wipe Free Hit if Umpire calls over
         if (state.current.isFreeHit) {
             state.current.isFreeHit = false;
             const fhBadge = document.getElementById('freeHitBadge');
             if (fhBadge) fhBadge.classList.add('hidden');
         }
 
-        // 2. THE GHOST TRIM: Fixes Umpire Miscounts (7-ball, 8-ball, etc.)
         if (currentOverBalls > 6) {
             let excess = currentOverBalls - 6;
-            
-            // Trim the raw ball counts so the math stays perfectly aligned
             state.current.balls -= excess;
-            
-            // Trim the bowler's raw ball count so their stats show whole overs
             let b = getBowlTeam().players[state.current.bIdx];
             if (b) b.o -= excess;
-            
             console.log(`Umpire miscount handled: Trimmed ${excess} excess balls. Runs & wickets kept.`);
         }
 
         executeEndOver();
     };
 
-    // If Umpire calls over EARLY (e.g., 5 balls)
     if (currentOverBalls < 6) { 
         showModal(
             "⚠️ Early Over Call", 
@@ -698,7 +706,6 @@ function manualEndOver() {
         return; 
     }
     
-    // If 6 balls (normal) or 7+ balls (Umpire miscount late call)
     confirmAndEndOver(); 
 }  
 
