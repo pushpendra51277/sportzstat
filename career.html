@@ -598,24 +598,29 @@
             let btnTextEl = document.getElementById(`btn-text-${filterCategory}`);
             let arr = selectedFilters[filterCategory];
             let prefix = "";
+            let fieldName = "";
             
-            if(filterCategory === 'association') prefix = "🏛️ ";
-            if(filterCategory === 'tier') prefix = "⭐ ";
-            if(filterCategory === 'format') prefix = "🏏 ";
-            if(filterCategory === 'tourney') prefix = "🏆 ";
-            if(filterCategory === 'team') prefix = "🛡️ ";
-            if(filterCategory === 'opponent') prefix = "⚔️ ";
-            if(filterCategory === 'year') prefix = "📅 ";
+            // Map categories to their UI labels
+            if(filterCategory === 'association') { prefix = "🏛️ "; fieldName = "Assoc."; }
+            if(filterCategory === 'tier') { prefix = "⭐ "; fieldName = "Tiers"; }
+            if(filterCategory === 'format') { prefix = "🏏 "; fieldName = "Formats"; }
+            if(filterCategory === 'tourney') { prefix = "🏆 "; fieldName = "Tourneys"; }
+            if(filterCategory === 'team') { prefix = "🛡️ "; fieldName = "Teams"; }
+            if(filterCategory === 'opponent') { prefix = "⚔️ "; fieldName = "Opponents"; }
+            if(filterCategory === 'year') { prefix = "📅 "; fieldName = "Years"; }
 
             if (arr.length === 0) {
-                btnTextEl.innerText = `${prefix}All Selected`;
+                // E.g., "🏆 All Tourneys"
+                btnTextEl.innerText = `${prefix}All ${fieldName}`;
             } else if (arr.length === 1) {
-                btnTextEl.innerText = `${prefix}${arr[0]}`;
+                // E.g., "🏆 Tourneys: VPL 2026" (shortened if too long)
+                let displayVal = arr[0].length > 12 ? arr[0].substring(0, 12) + '...' : arr[0];
+                btnTextEl.innerText = `${prefix}${fieldName}: ${displayVal}`;
             } else {
-                btnTextEl.innerText = `${prefix}${arr.length} Selected`;
+                // E.g., "🏆 3 Tourneys"
+                btnTextEl.innerText = `${prefix}${arr.length} ${fieldName}`;
             }
         }
-
         function buildMultiSelectOptions(dropdownId, filterCategory, dataSet) {
             let container = document.getElementById(dropdownId);
             let html = "";
