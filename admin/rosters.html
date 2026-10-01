@@ -85,8 +85,8 @@
                     
                     <div id="independent-reg-form" class="hidden" style="margin-top: 15px; border-top: 1px dashed #475569; padding-top: 15px;">
                         <div class="input-group"><label>Full Name *</label><input type="text" id="ind-name"></div>
-                        <div class="input-group"><label>Father's Name *</label><input type="text" id="ind-father"></div>
-                        <div class="input-group"><label>Date of Birth *</label><input type="date" id="ind-dob" style="color-scheme: dark;"></div>
+                        <div class="input-group"><label>Father's Name</label><input type="text" id="ind-father" placeholder="Required in Strict Mode"></div>
+                        <div class="input-group"><label>Date of Birth</label><input type="date" id="ind-dob" style="color-scheme: dark;"></div>
                         <div class="input-group"><label>Primary Role</label>
                             <select id="ind-role"><option>Batter</option><option>Bowler</option><option>All-Rounder</option><option>Wicketkeeper</option></select>
                         </div>
@@ -115,8 +115,8 @@
                     <!-- Strict Single Registration Form -->
                     <div id="strict-registration-form" class="hidden" style="margin-top: 15px; border-top: 1px dashed #475569; padding-top: 15px;">
                         <div class="input-group"><label>Full Name *</label><input type="text" id="reg-name"></div>
-                        <div class="input-group"><label>Father's Name *</label><input type="text" id="reg-father"></div>
-                        <div class="input-group"><label>Date of Birth *</label><input type="date" id="reg-dob" style="color-scheme: dark;"></div>
+                        <div class="input-group"><label>Father's Name</label><input type="text" id="reg-father" placeholder="Required in Strict Mode"></div>
+                        <div class="input-group"><label>Date of Birth</label><input type="date" id="reg-dob" style="color-scheme: dark;"></div>
                         <div class="input-group"><label>Primary Role</label>
                             <select id="reg-role"><option>Batter</option><option>Bowler</option><option>All-Rounder</option><option>Wicketkeeper</option></select>
                         </div>
@@ -124,7 +124,7 @@
                     </div>
                 </div>
 
-                <!-- 🔥 NEW: BULK REGISTRATION GRID (Hidden by default) -->
+                <!-- 🔥 BULK REGISTRATION GRID (Hidden by default) -->
                 <div id="bulk-registration-panel" class="hidden" style="background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #f59e0b; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                         <div>
@@ -146,8 +146,8 @@
                                 <tr>
                                     <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">#</th>
                                     <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Full Name *</th>
-                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Father's Name *</th>
-                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">DOB *</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Father's Name</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">DOB</th>
                                     <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Playing Role</th>
                                     <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Batting Style</th>
                                     <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Bowling Arm</th>
@@ -161,9 +161,9 @@
                         </table>
                     </div>
                     
-                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
                         <button type="button" class="btn-action" style="background: #475569;" onclick="addBulkRows(5, true)">+ Add 5 Empty Rows</button>
-                        <button type="button" class="btn-action w-100" style="background: #f59e0b; color: black; font-size: 1rem; padding: 12px;" onclick="submitBulkSquad()">💾 Save & Add to Squad</button>
+                        <button type="button" class="btn-action" style="background: #f59e0b; color: black; font-size: 1rem; padding: 12px 20px;" onclick="submitBulkSquad()">💾 Save & Add to Squad</button>
                     </div>
                 </div>
 
@@ -179,6 +179,13 @@
         const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
         const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ==========================================
+        // 👑 SUPER ADMIN MASTER SWITCH
+        // ==========================================
+        // Set to false for testing (allows missing Father Name / DOB). 
+        // Set to true before official launch to make them strictly mandatory for everyone.
+        const ENFORCE_STRICT_REGISTRATION = false;
 
         let currentActiveTeam = null;
 
@@ -227,10 +234,17 @@
             const dob = document.getElementById('ind-dob').value;
             const role = document.getElementById('ind-role').value;
 
-            if(!name || !father || !dob) { alert("Name, Father's Name, and DOB are strictly required."); return; }
+            const isStrict = ENFORCE_STRICT_REGISTRATION;
 
-            const { data: existing } = await db.from('players').select('player_id')
-                .ilike('full_name', name).eq('father_name', father).eq('dob', dob);
+            if(!name) { alert("Full Name is strictly required."); return; }
+            if(isStrict && (!father || !dob)) { alert("Strict Mode is ON: Father's Name and DOB are required."); return; }
+
+            // Dynamic duplicate check based on provided fields
+            let query = db.from('players').select('player_id').ilike('full_name', name);
+            if (father) query = query.eq('father_name', father);
+            if (dob) query = query.eq('dob', dob);
+
+            const { data: existing } = await query;
 
             if (existing && existing.length > 0) {
                 alert(`Duplicate Blocked: ${name} is already registered in the Master Database as a Free Agent.`);
@@ -306,7 +320,7 @@
                 <div class="search-result" onclick="assignPlayerToSquad('${p.player_id}')">
                     <div>
                         <div style="font-weight:bold; color:white;">${p.full_name}</div>
-                        <div style="font-size:0.7rem; color:#94a3b8;">DOB: ${p.dob} | Father: ${p.father_name}</div>
+                        <div style="font-size:0.7rem; color:#94a3b8;">DOB: ${p.dob || 'N/A'} | Father: ${p.father_name || 'N/A'}</div>
                     </div>
                     <span style="color:#10b981; font-weight:bold; font-size:0.8rem;">+ Add to Squad</span>
                 </div>
@@ -336,9 +350,16 @@
             const dob = document.getElementById('reg-dob').value;
             const role = document.getElementById('reg-role').value;
 
-            if(!name || !father || !dob) { alert("Name, Father's Name, and DOB are strictly required."); return; }
+            const isStrict = ENFORCE_STRICT_REGISTRATION;
 
-            const { data: existing } = await db.from('players').select('player_id').ilike('full_name', name).eq('father_name', father).eq('dob', dob);
+            if(!name) { alert("Full Name is strictly required."); return; }
+            if(isStrict && (!father || !dob)) { alert("Strict Mode is ON: Father's Name and DOB are required."); return; }
+
+            let query = db.from('players').select('player_id').ilike('full_name', name);
+            if (father) query = query.eq('father_name', father);
+            if (dob) query = query.eq('dob', dob);
+
+            const { data: existing } = await query;
 
             if (existing && existing.length > 0) {
                 alert(`Duplicate Blocked: ${name} is already registered in the Master Database.\n\nThey have been automatically added to ${currentActiveTeam} instead of creating a duplicate.`);
@@ -431,7 +452,7 @@
                         </select>
                     </td>
                     <td style="padding: 6px;"><input type="text" class="bp-reg input-dark w-100" value="${regVal}" placeholder="Opt. ID" style="margin:bottom:0; font-size:0.8rem; text-transform:uppercase;"></td>
-        `;
+                `;
                 tbody.appendChild(tr);
             }
         }
@@ -478,6 +499,8 @@
             if (!currentActiveTeam) { alert("Please select or create a team first!"); return; }
             
             const rows = document.querySelectorAll('#bulk-player-grid tr');
+            const isStrict = ENFORCE_STRICT_REGISTRATION; 
+            
             let payload = [];
             let hasErrors = false;
 
@@ -492,16 +515,24 @@
                 let regNo = row.querySelector('.bp-reg').value.trim();
 
                 if (name !== "" || fname !== "" || dob !== "") {
-                    if (name === "" || fname === "" || dob === "") {
-                        alert(`Row ${index + 1} Error: Full Name, Father's Name, and DOB are ALL mandatory to register a player.`);
+                    
+                    if (!name) {
+                        alert(`Row ${index + 1} Error: Full Name is always required.`);
                         row.style.backgroundColor = "rgba(239, 68, 68, 0.2)"; 
                         hasErrors = true;
                         return;
                     }
+
+                    if (isStrict && (!fname || !dob)) {
+                        alert(`Row ${index + 1} Error: Strict Mode is ON. Father's Name and DOB are mandatory.`);
+                        row.style.backgroundColor = "rgba(239, 68, 68, 0.2)"; 
+                        hasErrors = true;
+                        return;
+                    }
+                    
                     row.style.backgroundColor = "transparent"; 
 
                     payload.push({
-                        team_id: currentActiveTeam, // Note: Players table tracks Team Name (currentActiveTeam), not ID in your schema
                         full_name: name,
                         father_name: fname,
                         dob: dob,
