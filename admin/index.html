@@ -326,7 +326,7 @@
                     <button type="button" class="btn-action" style="margin-top:20px; background:#f59e0b; color:black;" onclick="toggleBulkForm()">⚡ Bulk / Excel Upload</button>
                 </div>
 
-                <!-- 🔥 NEW: BULK REGISTRATION GRID IN TOURNAMENT HUB -->
+                <!-- 🔥 BULK REGISTRATION GRID IN TOURNAMENT HUB -->
                 <div id="bulk-registration-panel" class="hidden" style="background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #f59e0b; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                         <div>
@@ -348,8 +348,8 @@
                                 <tr>
                                     <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">#</th>
                                     <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Full Name *</th>
-                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Father's Name *</th>
-                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">DOB *</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Father's Name</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">DOB</th>
                                     <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Playing Role</th>
                                     <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Batting Style</th>
                                     <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Bowling Arm</th>
@@ -363,16 +363,10 @@
                         </table>
                     </div>
                     
-                    <div style="display: flex; gap: 15px; margin-top: 15px; align-items: center; flex-wrap: wrap;">
-                        <!-- SUPER ADMIN STRICT MODE TOGGLE -->
-                        <label style="color: #f59e0b; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                            <input type="checkbox" id="strict-mode-chk" style="width:18px; height:18px; accent-color:#f59e0b;"> 
-                            🛡️ Strict Mode: Enforce Father's Name & DOB
-                        </label>
-                        <div style="margin-left: auto; display: flex; gap: 10px;">
-                            <button type="button" class="btn-action" style="background: #475569;" onclick="addBulkRows(5, true)">+ Add 5 Empty Rows</button>
-                            <button type="button" class="btn-action" style="background: #10b981; font-size: 1rem; padding: 12px 20px;" onclick="submitBulkSquad()">💾 Save & Add to Squad</button>
-                        </div>
+                    <!-- Clean, right-aligned buttons. Master Switch controls rules invisibly. -->
+                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                        <button type="button" class="btn-action" style="background: #475569;" onclick="addBulkRows(5, true)">+ Add 5 Empty Rows</button>
+                        <button type="button" class="btn-action" style="background: #10b981; font-size: 1rem; padding: 12px 20px;" onclick="submitBulkSquad()">💾 Save & Add to Squad</button>
                     </div>
                 </div>
                 <!-- END BULK PANEL -->
@@ -412,7 +406,7 @@
 
     </main>
 
-    <!-- QUICK-ADD PLAYER MODAL (Manual strict mode validation enabled here too) -->
+    <!-- QUICK-ADD PLAYER MODAL -->
     <div class="modal-overlay" id="quick-player-modal" onclick="closeAllModals(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button type="button" class="modal-close" onclick="closeAllModals()">&times;</button>
@@ -420,8 +414,8 @@
             <p style="font-size: 0.8rem; color: #94a3b8;">Target Team: <strong id="quick-player-target-team" style="color:white;"></strong></p>
             
             <div class="input-group"><label>Full Name *</label><input type="text" id="quick-p-name" class="input-dark w-100"></div>
-            <div class="input-group"><label>Father's Name (Required in Strict Mode)</label><input type="text" id="quick-p-father" class="input-dark w-100"></div>
-            <div class="input-group"><label>Date of Birth (Required in Strict Mode)</label><input type="date" id="quick-p-dob" class="input-dark w-100" style="color-scheme: dark;"></div>
+            <div class="input-group"><label>Father's Name</label><input type="text" id="quick-p-father" class="input-dark w-100"></div>
+            <div class="input-group"><label>Date of Birth</label><input type="date" id="quick-p-dob" class="input-dark w-100" style="color-scheme: dark;"></div>
             <div class="input-group"><label>Primary Role</label>
                 <select id="quick-p-role" class="input-dark w-100">
                     <option>Batter</option><option>Bowler</option><option>All-Rounder</option><option>Wicketkeeper</option>
@@ -458,6 +452,13 @@
         const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
         const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ==========================================
+        // 👑 SUPER ADMIN MASTER SWITCH
+        // ==========================================
+        // Set to false for testing (allows missing Father Name / DOB). 
+        // Set to true before official launch to make them strictly mandatory for everyone.
+        const ENFORCE_STRICT_REGISTRATION = false; 
 
         let currentAdminId = null;
         let currentAdminAssociation = 'Independent';
@@ -1071,7 +1072,7 @@
             openModal('quick-player-modal');
         }
 
-        // 🔥 Strict Check applies here too
+        // 🔥 Uses Master Switch for Strict Mode
         async function quickSavePlayer(btn) {
             const teamName = document.getElementById('squad-team-select').value;
             const name = document.getElementById('quick-p-name').value.trim();
@@ -1083,7 +1084,7 @@
             const bType = document.getElementById('quick-p-btype').value;
             const regNo = document.getElementById('quick-p-reg').value.trim();
 
-            const isStrict = document.getElementById('strict-mode-chk').checked;
+            const isStrict = ENFORCE_STRICT_REGISTRATION;
 
             if(!name) { alert("Full Name is strictly required."); return; }
             if(isStrict && (!father || !dob)) { alert("Strict Mode is ON: Father's Name and DOB are required."); return; }
@@ -1294,6 +1295,7 @@
             reader.readAsArrayBuffer(file);
         }
 
+        // 🔥 Uses Master Switch for Strict Mode
         async function submitBulkSquad() {
             const teamName = document.getElementById('squad-team-select').value;
             if (!teamName) { alert("Please select a team from the dropdown to review first."); return; }
@@ -1304,7 +1306,7 @@
             if (!tObj) { alert("Team not found in tournament selection."); return; }
 
             const rows = document.querySelectorAll('#bulk-player-grid tr');
-            const isStrict = document.getElementById('strict-mode-chk').checked;
+            const isStrict = ENFORCE_STRICT_REGISTRATION;
             
             let payload = [];
             let hasErrors = false;
