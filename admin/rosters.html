@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sportzstat - Master Roster Manager</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 30px; text-align: center; }
-        .container { max-width: 1000px; margin: 0 auto; text-align: left; }
+        .container { max-width: 1200px; margin: 0 auto; text-align: left; }
         .header-link { color: #cbd5e1; text-decoration: none; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 20px; }
         
         .grid-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; align-items: start; }
@@ -22,6 +23,9 @@
         .btn-primary { background: #3b82f6; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
         .btn-success { background: #10b981; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
         .btn-outline { background: transparent; border: 1px dashed #10b981; color: #10b981; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px;}
+        .btn-action { background: #8b5cf6; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; }
+        .btn-action:hover { opacity: 0.9; }
+        .w-100 { width: 100%; }
         
         .roster-list { max-height: 500px; overflow-y: auto; margin-top: 15px; }
         .player-row { background: #0f172a; border: 1px solid #334155; padding: 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
@@ -33,7 +37,14 @@
         /* Search Results */
         .search-result { background: #0f172a; border: 1px solid #3b82f6; padding: 10px; margin-top: 5px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;}
         .search-result:hover { background: rgba(59, 130, 246, 0.1); }
-        .hidden { display: none; }
+        .hidden { display: none !important; }
+        
+        /* Grid Table Styles */
+        .input-dark { background: #0f172a; color: white; border: 1px solid #475569; border-radius: 4px; padding: 6px; outline: none; }
+        .input-dark:focus { border-color: #38bdf8; }
+        .custom-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #0f172a; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -65,7 +76,7 @@
 
                 <hr style="border: 0; border-top: 1px solid #334155; margin: 25px 0;">
 
-                <!-- NEW: INDEPENDENT PLAYER REGISTRY -->
+                <!-- INDEPENDENT PLAYER REGISTRY -->
                 <div style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #10b981;">
                     <label style="color: #10b981; font-weight: bold; margin-bottom: 5px; display: block;">Global Player Registry</label>
                     <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 0;">Register free agents for local tournaments (no club required).</p>
@@ -75,7 +86,7 @@
                     <div id="independent-reg-form" class="hidden" style="margin-top: 15px; border-top: 1px dashed #475569; padding-top: 15px;">
                         <div class="input-group"><label>Full Name *</label><input type="text" id="ind-name"></div>
                         <div class="input-group"><label>Father's Name *</label><input type="text" id="ind-father"></div>
-                        <div class="input-group"><label>Date of Birth *</label><input type="date" id="ind-dob"></div>
+                        <div class="input-group"><label>Date of Birth *</label><input type="date" id="ind-dob" style="color-scheme: dark;"></div>
                         <div class="input-group"><label>Primary Role</label>
                             <select id="ind-role"><option>Batter</option><option>Bowler</option><option>All-Rounder</option><option>Wicketkeeper</option></select>
                         </div>
@@ -91,22 +102,68 @@
                 
                 <!-- Player Search & Add Area -->
                 <div style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 10px 0; color: #10b981; font-size: 0.9rem;">Add Player to Squad</h4>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="margin: 0; color: #10b981; font-size: 0.9rem;">Add Player to Squad</h4>
+                        <button class="btn-action" style="font-size: 0.75rem; padding: 6px 10px; background: #f59e0b; color: black;" onclick="toggleBulkForm()">⚡ Bulk / Excel Upload</button>
+                    </div>
                     
                     <input type="text" id="player-search" placeholder="Search Master Database by Name..." style="width: 100%; padding: 10px; background: #1e293b; border: 1px solid #475569; color: white; border-radius: 4px;" oninput="searchGlobalPlayers(this.value)">
                     <div id="search-results-area"></div>
                     
                     <button class="btn-outline" onclick="toggleNewPlayerForm()">+ Register Brand New Player</button>
                     
-                    <!-- Strict Registration Form -->
+                    <!-- Strict Single Registration Form -->
                     <div id="strict-registration-form" class="hidden" style="margin-top: 15px; border-top: 1px dashed #475569; padding-top: 15px;">
                         <div class="input-group"><label>Full Name *</label><input type="text" id="reg-name"></div>
                         <div class="input-group"><label>Father's Name *</label><input type="text" id="reg-father"></div>
-                        <div class="input-group"><label>Date of Birth *</label><input type="date" id="reg-dob"></div>
+                        <div class="input-group"><label>Date of Birth *</label><input type="date" id="reg-dob" style="color-scheme: dark;"></div>
                         <div class="input-group"><label>Primary Role</label>
                             <select id="reg-role"><option>Batter</option><option>Bowler</option><option>All-Rounder</option><option>Wicketkeeper</option></select>
                         </div>
                         <button class="btn-success" onclick="registerStrictPlayer()">Save to Master & Add to Squad</button>
+                    </div>
+                </div>
+
+                <!-- 🔥 NEW: BULK REGISTRATION GRID (Hidden by default) -->
+                <div id="bulk-registration-panel" class="hidden" style="background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #f59e0b; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h3 style="color: #f59e0b; margin: 0 0 5px 0;">⚡ Bulk Squad Registration</h3>
+                            <p style="color: #94a3b8; font-size: 0.85rem; margin: 0;">Fill manually OR upload an Excel file.<br>
+                            <b>Excel Columns:</b> A: Name | B: Father | C: DOB | D: Role | E: Bat Style | F: Bowl Arm | G: Bowl Type | H: Reg No</p>
+                        </div>
+                        <div>
+                            <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
+                            <button type="button" class="btn-action" style="background: #10b981; border: none; padding: 10px 15px; color: white;" onclick="document.getElementById('excel-upload').click()">
+                                📁 Upload Excel (.xlsx)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="custom-scroll" style="max-height: 450px; overflow-y: auto; overflow-x: auto; background: #0f172a; border-radius: 6px; padding: 10px;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; min-width: 1100px;">
+                            <thead style="background: #0f172a; position: sticky; top: -10px; z-index: 10;">
+                                <tr>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">#</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Full Name *</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Father's Name *</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">DOB *</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Playing Role</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Batting Style</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Bowling Arm</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Bowling Type</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Reg No.</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bulk-player-grid">
+                                <!-- JavaScript will inject rows here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button type="button" class="btn-action" style="background: #475569;" onclick="addBulkRows(5, true)">+ Add 5 Empty Rows</button>
+                        <button type="button" class="btn-action w-100" style="background: #f59e0b; color: black; font-size: 1rem; padding: 12px;" onclick="submitBulkSquad()">💾 Save & Add to Squad</button>
                     </div>
                 </div>
 
@@ -129,6 +186,7 @@
             const { data: { session } } = await db.auth.getSession();
             if (!session) { alert("Admin access required."); window.location.href = '../index.html'; return; }
             await loadAllTeams();
+            addBulkRows(15); // Initialize bulk grid invisibly
         };
 
         // 1. LOAD TEAMS
@@ -159,9 +217,6 @@
             loadTeamRoster(teamName);
         }
 
-        // ==========================================
-        // NEW: INDEPENDENT REGISTRATION LOGIC
-        // ==========================================
         function toggleIndependentForm() {
             document.getElementById('independent-reg-form').classList.toggle('hidden');
         }
@@ -174,7 +229,6 @@
 
             if(!name || !father || !dob) { alert("Name, Father's Name, and DOB are strictly required."); return; }
 
-            // DUPLICATE CHECK
             const { data: existing } = await db.from('players').select('player_id')
                 .ilike('full_name', name).eq('father_name', father).eq('dob', dob);
 
@@ -183,7 +237,6 @@
                 return;
             }
 
-            // INSERT NEW PLAYER (Bypasses team_rosters)
             const { data: newP, error } = await db.from('players').insert([{ 
                 full_name: name, father_name: father, dob: dob, playing_role: role 
             }]).select();
@@ -192,7 +245,6 @@
 
             alert(`✅ ${name} has been successfully registered as an Independent Free Agent! You can search for them during live scoring or tournament creation.`);
             
-            // Clear inputs
             document.getElementById('ind-name').value = "";
             document.getElementById('ind-father').value = "";
             document.getElementById('ind-dob').value = "";
@@ -216,16 +268,7 @@
             const listArea = document.getElementById('active-roster-list');
             listArea.innerHTML = '<p style="color: #94a3b8; text-align: center;">Loading roster...</p>';
 
-            // Join team_rosters with players table
-            const { data, error } = await db
-                .from('team_rosters')
-                .select(`
-                    id, 
-                    player_id, 
-                    players (full_name, father_name, dob, playing_role)
-                `)
-                .eq('team_name', teamName)
-                .order('added_at', { ascending: false });
+            const { data, error } = await db.from('team_rosters').select(`id, player_id, players (full_name, father_name, dob, playing_role)`).eq('team_name', teamName).order('added_at', { ascending: false });
 
             if(error) { listArea.innerHTML = `<p style="color:#ef4444;">Error fetching roster.</p>`; return; }
 
@@ -235,7 +278,6 @@
             }
 
             listArea.innerHTML = data.map((row, idx) => {
-                // Safety check for deleted global players
                 if(!row.players) return '';
                 return `
                 <div class="player-row">
@@ -274,10 +316,7 @@
         async function assignPlayerToSquad(playerId) {
             if(!currentActiveTeam) return;
 
-            const { error } = await db.from('team_rosters').insert([{ 
-                team_name: currentActiveTeam, 
-                player_id: playerId 
-            }]);
+            const { error } = await db.from('team_rosters').insert([{ team_name: currentActiveTeam, player_id: playerId }]);
 
             if(error) {
                 if(error.code === '23505') alert("This player is already in the squad!");
@@ -289,10 +328,7 @@
             }
         }
 
-        // 4. STRICT NEW PLAYER REGISTRATION
-        function toggleNewPlayerForm() {
-            document.getElementById('strict-registration-form').classList.toggle('hidden');
-        }
+        function toggleNewPlayerForm() { document.getElementById('strict-registration-form').classList.toggle('hidden'); }
 
         async function registerStrictPlayer() {
             const name = document.getElementById('reg-name').value.trim();
@@ -302,9 +338,7 @@
 
             if(!name || !father || !dob) { alert("Name, Father's Name, and DOB are strictly required."); return; }
 
-            // DUPLICATE CHECK
-            const { data: existing } = await db.from('players').select('player_id')
-                .ilike('full_name', name).eq('father_name', father).eq('dob', dob);
+            const { data: existing } = await db.from('players').select('player_id').ilike('full_name', name).eq('father_name', father).eq('dob', dob);
 
             if (existing && existing.length > 0) {
                 alert(`Duplicate Blocked: ${name} is already registered in the Master Database.\n\nThey have been automatically added to ${currentActiveTeam} instead of creating a duplicate.`);
@@ -313,31 +347,198 @@
                 return;
             }
 
-            // INSERT NEW PLAYER
-            const { data: newP, error } = await db.from('players').insert([{ 
-                full_name: name, father_name: father, dob: dob, playing_role: role 
-            }]).select();
+            const { data: newP, error } = await db.from('players').insert([{ full_name: name, father_name: father, dob: dob, playing_role: role }]).select();
 
             if (error) { alert("Registration Error: " + error.message); return; }
 
-            // ASSIGN TO SQUAD
             await assignPlayerToSquad(newP[0].player_id);
             alert(`✅ ${name} registered globally and added to ${currentActiveTeam}!`);
             
-            // Clear inputs
-            document.getElementById('reg-name').value = "";
-            document.getElementById('reg-father').value = "";
-            document.getElementById('reg-dob').value = "";
+            document.getElementById('reg-name').value = ""; document.getElementById('reg-father').value = ""; document.getElementById('reg-dob').value = "";
             toggleNewPlayerForm();
         }
 
-        // 5. REMOVE FROM SQUAD (Does not delete the global player)
         async function removePlayerFromTeam(rosterId) {
             if(!confirm("Remove this player from the squad? (They will remain in the global master database).")) return;
-            
             const { error } = await db.from('team_rosters').delete().eq('id', rosterId);
-            if(error) alert("Error: " + error.message);
-            else loadTeamRoster(currentActiveTeam);
+            if(error) alert("Error: " + error.message); else loadTeamRoster(currentActiveTeam);
+        }
+
+        // ==========================================
+        // 🔥 BULK REGISTRATION LOGIC
+        // ==========================================
+        function toggleBulkForm() { document.getElementById('bulk-registration-panel').classList.toggle('hidden'); }
+
+        function addBulkRows(count, append = false, dataArray = []) {
+            const tbody = document.getElementById('bulk-player-grid');
+            if (!append) tbody.innerHTML = ''; 
+            
+            const currentRows = tbody.children.length;
+            const rowsToGenerate = Math.max(count, dataArray.length);
+            
+            for (let i = 0; i < rowsToGenerate; i++) {
+                let rowNum = currentRows + i + 1;
+                let d = dataArray[i] || [];
+                
+                let nameVal = d[0] || '';
+                let fnameVal = d[1] || '';
+                let dobVal = formatExcelDate(d[2]);
+                let roleVal = d[3] || 'Batter';
+                let batStyleVal = d[4] || 'Right-hand bat';
+                let bowlArmVal = d[5] || 'None';
+                let bowlTypeVal = d[6] || 'None';
+                let regVal = d[7] || '';
+
+                let tr = document.createElement('tr');
+                tr.style.borderBottom = "1px solid #334155";
+                
+                tr.innerHTML = `
+                    <td style="padding: 6px; color: #64748b;">${rowNum}</td>
+                    <td style="padding: 6px;"><input type="text" class="bp-name input-dark w-100" value="${nameVal}" placeholder="Name" style="margin:bottom:0; font-size:0.8rem;"></td>
+                    <td style="padding: 6px;"><input type="text" class="bp-fname input-dark w-100" value="${fnameVal}" placeholder="Father" style="margin:bottom:0; font-size:0.8rem;"></td>
+                    <td style="padding: 6px;"><input type="date" class="bp-dob input-dark w-100" value="${dobVal}" style="margin:bottom:0; font-size:0.8rem; color-scheme: dark;"></td>
+                    <td style="padding: 6px;">
+                        <select class="bp-role input-dark w-100" style="margin:bottom:0; font-size:0.8rem;">
+                            <option value="Batter" ${roleVal.toLowerCase().includes('bat') ? 'selected' : ''}>Batter</option>
+                            <option value="Bowler" ${roleVal.toLowerCase().includes('bowl') ? 'selected' : ''}>Bowler</option>
+                            <option value="All-Rounder" ${roleVal.toLowerCase().includes('all') ? 'selected' : ''}>All-Rounder</option>
+                            <option value="Wicket-Keeper" ${roleVal.toLowerCase().includes('wk') || roleVal.toLowerCase().includes('keep') ? 'selected' : ''}>Wicket-Keeper</option>
+                        </select>
+                    </td>
+                    <td style="padding: 6px;">
+                        <select class="bp-bat input-dark w-100" style="margin:bottom:0; font-size:0.8rem;">
+                            <option value="Right-hand bat" ${batStyleVal.toLowerCase().includes('right') ? 'selected' : ''}>Right-hand bat</option>
+                            <option value="Left-hand bat" ${batStyleVal.toLowerCase().includes('left') ? 'selected' : ''}>Left-hand bat</option>
+                        </select>
+                    </td>
+                    <td style="padding: 6px;">
+                        <select class="bp-barm input-dark w-100" style="margin:bottom:0; font-size:0.8rem;">
+                            <option value="Right-arm" ${bowlArmVal.toLowerCase().includes('right') ? 'selected' : ''}>Right-arm</option>
+                            <option value="Left-arm" ${bowlArmVal.toLowerCase().includes('left') ? 'selected' : ''}>Left-arm</option>
+                            <option value="None" ${bowlArmVal.toLowerCase().includes('none') ? 'selected' : ''}>None</option>
+                        </select>
+                    </td>
+                    <td style="padding: 6px;">
+                        <select class="bp-btype input-dark w-100" style="margin:bottom:0; font-size:0.8rem;">
+                            <option value="Fast" ${bowlTypeVal.toLowerCase() === 'fast' ? 'selected' : ''}>Fast</option>
+                            <option value="Fast-Medium" ${bowlTypeVal.toLowerCase().includes('fast-med') ? 'selected' : ''}>Fast-Medium</option>
+                            <option value="Medium" ${bowlTypeVal.toLowerCase() === 'medium' ? 'selected' : ''}>Medium</option>
+                            <option value="Off-spin" ${bowlTypeVal.toLowerCase().includes('off') ? 'selected' : ''}>Off-spin</option>
+                            <option value="Leg-spin" ${bowlTypeVal.toLowerCase().includes('leg') ? 'selected' : ''}>Leg-spin</option>
+                            <option value="Orthodox" ${bowlTypeVal.toLowerCase().includes('ortho') ? 'selected' : ''}>Orthodox</option>
+                            <option value="Wrist-spin" ${bowlTypeVal.toLowerCase().includes('wrist') ? 'selected' : ''}>Wrist-spin</option>
+                            <option value="None" ${bowlTypeVal.toLowerCase().includes('none') ? 'selected' : ''}>None</option>
+                        </select>
+                    </td>
+                    <td style="padding: 6px;"><input type="text" class="bp-reg input-dark w-100" value="${regVal}" placeholder="Opt. ID" style="margin:bottom:0; font-size:0.8rem; text-transform:uppercase;"></td>
+        `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        function formatExcelDate(val) {
+            if (!val) return '';
+            if (typeof val === 'number') {
+                let dateObj = new Date(Math.round((val - 25569) * 86400 * 1000));
+                return dateObj.toISOString().split('T')[0];
+            }
+            if (typeof val === 'string') {
+                let d = new Date(val);
+                if (!isNaN(d)) return d.toISOString().split('T')[0];
+            }
+            return val;
+        }
+
+        function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                const jsonArr = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                let cleanData = jsonArr.filter(row => row.length > 0);
+                
+                let firstRowStr = cleanData[0].join(' ').toLowerCase();
+                if (firstRowStr.includes('name') || firstRowStr.includes('dob')) {
+                    cleanData.shift(); 
+                }
+
+                addBulkRows(Math.max(15, cleanData.length), false, cleanData);
+                document.getElementById('excel-upload').value = ""; 
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function submitBulkSquad() {
+            if (!currentActiveTeam) { alert("Please select or create a team first!"); return; }
+            
+            const rows = document.querySelectorAll('#bulk-player-grid tr');
+            let payload = [];
+            let hasErrors = false;
+
+            rows.forEach((row, index) => {
+                let name = row.querySelector('.bp-name').value.trim();
+                let fname = row.querySelector('.bp-fname').value.trim();
+                let dob = row.querySelector('.bp-dob').value;
+                let role = row.querySelector('.bp-role').value;
+                let bStyle = row.querySelector('.bp-bat').value;
+                let bArm = row.querySelector('.bp-barm').value;
+                let bType = row.querySelector('.bp-btype').value;
+                let regNo = row.querySelector('.bp-reg').value.trim();
+
+                if (name !== "" || fname !== "" || dob !== "") {
+                    if (name === "" || fname === "" || dob === "") {
+                        alert(`Row ${index + 1} Error: Full Name, Father's Name, and DOB are ALL mandatory to register a player.`);
+                        row.style.backgroundColor = "rgba(239, 68, 68, 0.2)"; 
+                        hasErrors = true;
+                        return;
+                    }
+                    row.style.backgroundColor = "transparent"; 
+
+                    payload.push({
+                        team_id: currentActiveTeam, // Note: Players table tracks Team Name (currentActiveTeam), not ID in your schema
+                        full_name: name,
+                        father_name: fname,
+                        dob: dob,
+                        playing_role: role,
+                        batting_style: bStyle,
+                        bowling_arm: bArm,
+                        bowling_type: bType,
+                        reg_no: regNo || null
+                    });
+                } else {
+                    row.style.backgroundColor = "transparent"; 
+                }
+            });
+
+            if (hasErrors) return; 
+            if (payload.length === 0) { alert("Please completely fill out at least one player row."); return; }
+
+            // 1. Upload to Master Database
+            const { data: newPlayers, error } = await db.from('players').insert(payload).select('player_id');
+            if (error) { alert("Error saving squad: " + error.message); return; }
+
+            // 2. Link them directly to the active team roster
+            const rosterLinks = newPlayers.map(p => ({
+                team_name: currentActiveTeam,
+                player_id: p.player_id
+            }));
+            
+            const { error: linkError } = await db.from('team_rosters').insert(rosterLinks);
+            
+            if (linkError) { 
+                alert("Players saved globally, but failed to link to squad: " + linkError.message); 
+            } else {
+                alert(`✅ Successfully registered ${payload.length} players to the cloud and added them to ${currentActiveTeam}!`);
+                addBulkRows(15, false); // Wipes grid clean
+                toggleBulkForm(); // Hides the bulk panel
+                loadTeamRoster(currentActiveTeam); // Refreshes the squad list
+            }
         }
     </script>
 </body>
