@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sportzstat - Tournament Hub</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <style>
         body { margin: 0; background-color: #020617; color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; height: 100vh; overflow: hidden; }
@@ -42,6 +43,8 @@
         .btn-success:hover { background: #059669; }
         .btn-danger { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.75rem;}
         .btn-outline { background: transparent; color: #38bdf8; border: 1px dashed #38bdf8; padding: 12px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-action { background: #8b5cf6; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; }
+        .btn-action:hover { opacity: 0.9; }
         
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         
@@ -52,7 +55,7 @@
         .team-list-item { background: #1e293b; padding: 8px 10px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; border: 1px solid transparent; transition: 0.2s; }
         .team-list-item:hover { border-color: #38bdf8; background: rgba(56, 189, 248, 0.1); }
         .custom-scroll { overflow-y: auto; padding: 5px; }
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
         
         .pool-box { background: #020617; border: 1px solid #334155; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
@@ -85,6 +88,11 @@
         .modal-overlay.active .modal-content { transform: translateY(0); }
         .modal-close { background: transparent; border: none; color: #94a3b8; font-size: 1.5rem; position: absolute; top: 10px; right: 15px; cursor: pointer; }
         .modal-close:hover { color: #ef4444; }
+
+        .hidden { display: none !important; }
+        .input-dark { background: #0f172a; color: white; border: 1px solid #475569; border-radius: 4px; padding: 6px; outline: none; }
+        .input-dark:focus { border-color: #38bdf8; }
+        .w-100 { width: 100%; }
     </style>
 </head>
 <body>
@@ -145,7 +153,6 @@
                             <input type="text" id="t-name" placeholder="e.g. Veda Premier League">
                         </div>
                         
-                        <!-- 🔥 Match Tier Dropdown remains (Association Dropdown is Removed for Security) -->
                         <div class="input-group">
                             <label>Match Tier (Scouting Context) *</label>
                             <select id="t-tier">
@@ -166,7 +173,7 @@
                             </div>
                             <div class="input-group">
                                 <label>Starting Date *</label>
-                                <input type="date" id="t-date">
+                                <input type="date" id="t-date" style="color-scheme: dark;">
                             </div>
                         </div>
                         <div class="input-group" style="margin-bottom:0;">
@@ -308,15 +315,67 @@
                 <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px;">3. Verify & Select Squads</h3>
                 <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 0; margin-bottom: 15px;">Select the specific players from the Master DB who are allowed to play in this tournament.</p>
                 
-                <div style="margin-bottom: 20px; display: flex; gap: 15px; align-items: center;">
-                    <div class="input-group" style="flex:1; margin:0;">
+                <div style="margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    <div class="input-group" style="flex:1; margin:0; min-width: 250px;">
                         <label>Select Team to Review</label>
                         <select id="squad-team-select" onchange="loadWizardSquad(this.value)" style="border-color: #3b82f6;">
                             <option value="">Select a team...</option>
                         </select>
                     </div>
                     <button type="button" class="btn-success" style="margin-top:20px;" onclick="openPlayerModal()">➕ Quick-Add New Player</button>
+                    <button type="button" class="btn-action" style="margin-top:20px; background:#f59e0b; color:black;" onclick="toggleBulkForm()">⚡ Bulk / Excel Upload</button>
                 </div>
+
+                <!-- 🔥 NEW: BULK REGISTRATION GRID IN TOURNAMENT HUB -->
+                <div id="bulk-registration-panel" class="hidden" style="background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #f59e0b; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h3 style="color: #f59e0b; margin: 0 0 5px 0;">⚡ Bulk Squad Registration</h3>
+                            <p style="color: #94a3b8; font-size: 0.85rem; margin: 0;">Fill manually OR upload an Excel file.<br>
+                            <b>Excel Columns:</b> A: Name | B: Father | C: DOB | D: Role | E: Bat Style | F: Bowl Arm | G: Bowl Type | H: Reg No</p>
+                        </div>
+                        <div>
+                            <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
+                            <button type="button" class="btn-action" style="background: #10b981; border: none; padding: 10px 15px; color: white;" onclick="document.getElementById('excel-upload').click()">
+                                📁 Upload Excel (.xlsx)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="custom-scroll" style="max-height: 450px; overflow-y: auto; overflow-x: auto; background: #0f172a; border-radius: 6px; padding: 10px;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; min-width: 1200px;">
+                            <thead style="background: #0f172a; position: sticky; top: -10px; z-index: 10;">
+                                <tr>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">#</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Full Name *</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Father's Name *</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">DOB *</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Playing Role</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Batting Style</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Bowling Arm</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Bowling Type</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Reg No.</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bulk-player-grid">
+                                <!-- JavaScript will inject rows here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="display: flex; gap: 15px; margin-top: 15px; align-items: center; flex-wrap: wrap;">
+                        <!-- SUPER ADMIN STRICT MODE TOGGLE -->
+                        <label style="color: #f59e0b; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="strict-mode-chk" style="width:18px; height:18px; accent-color:#f59e0b;"> 
+                            🛡️ Strict Mode: Enforce Father's Name & DOB
+                        </label>
+                        <div style="margin-left: auto; display: flex; gap: 10px;">
+                            <button type="button" class="btn-action" style="background: #475569;" onclick="addBulkRows(5, true)">+ Add 5 Empty Rows</button>
+                            <button type="button" class="btn-action" style="background: #10b981; font-size: 1rem; padding: 12px 20px;" onclick="submitBulkSquad()">💾 Save & Add to Squad</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- END BULK PANEL -->
 
                 <div id="wizard-player-slots-container">
                     <div style="text-align: center; color: #475569; padding: 40px; font-style: italic;">Select a team above to view and assign players.</div>
@@ -353,21 +412,43 @@
 
     </main>
 
-    <!-- QUICK-ADD PLAYER MODAL -->
+    <!-- QUICK-ADD PLAYER MODAL (Manual strict mode validation enabled here too) -->
     <div class="modal-overlay" id="quick-player-modal" onclick="closeAllModals(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <button type="button" class="modal-close" onclick="closeAllModals()">&times;</button>
             <h3 style="margin-top: 0; color: #10b981;">➕ Quick-Add Player</h3>
             <p style="font-size: 0.8rem; color: #94a3b8;">Target Team: <strong id="quick-player-target-team" style="color:white;"></strong></p>
             
-            <div class="input-group"><label>Full Name *</label><input type="text" id="quick-p-name"></div>
-            <div class="input-group"><label>Father's Name *</label><input type="text" id="quick-p-father"></div>
-            <div class="input-group"><label>Date of Birth *</label><input type="date" id="quick-p-dob"></div>
+            <div class="input-group"><label>Full Name *</label><input type="text" id="quick-p-name" class="input-dark w-100"></div>
+            <div class="input-group"><label>Father's Name (Required in Strict Mode)</label><input type="text" id="quick-p-father" class="input-dark w-100"></div>
+            <div class="input-group"><label>Date of Birth (Required in Strict Mode)</label><input type="date" id="quick-p-dob" class="input-dark w-100" style="color-scheme: dark;"></div>
             <div class="input-group"><label>Primary Role</label>
-                <select id="quick-p-role">
+                <select id="quick-p-role" class="input-dark w-100">
                     <option>Batter</option><option>Bowler</option><option>All-Rounder</option><option>Wicketkeeper</option>
                 </select>
             </div>
+            
+            <div class="grid-2">
+                <div class="input-group"><label>Batting Style</label>
+                    <select id="quick-p-bat" class="input-dark w-100">
+                        <option value="Right-hand bat">Right-hand bat</option><option value="Left-hand bat">Left-hand bat</option>
+                    </select>
+                </div>
+                <div class="input-group"><label>Bowling Arm</label>
+                    <select id="quick-p-barm" class="input-dark w-100">
+                        <option value="Right-arm">Right-arm</option><option value="Left-arm">Left-arm</option><option value="None">None</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="input-group"><label>Bowling Type</label>
+                    <select id="quick-p-btype" class="input-dark w-100">
+                        <option value="Fast">Fast</option><option value="Medium">Medium</option><option value="Off-spin">Off-spin</option><option value="Leg-spin">Leg-spin</option><option value="None">None</option>
+                    </select>
+                </div>
+                <div class="input-group"><label>Reg No.</label><input type="text" id="quick-p-reg" class="input-dark w-100" style="text-transform:uppercase;"></div>
+            </div>
+            
             <button type="button" class="btn-success" style="width: 100%;" onclick="quickSavePlayer(this)">Save to Master & Add to Squad</button>
         </div>
     </div>
@@ -378,7 +459,6 @@
         const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // 🔥 NEW: Global variables for the logged-in Admin Workspace
         let currentAdminId = null;
         let currentAdminAssociation = 'Independent';
 
@@ -400,21 +480,19 @@
         function generateUniquePin() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
         document.addEventListener('DOMContentLoaded', async () => { 
-            await checkAdminSession(); // 🔥 Check identity before loading data
+            await checkAdminSession();
             await fetchAllMasterTeams();
             await loadExistingTournamentsList();
             initPoolsWorkspace("1"); 
             renderCanvas();
+            addBulkRows(15); // Pre-load bulk grid
         });
 
-        // 🔥 NEW: Gatekeeper Function
         async function checkAdminSession() {
             const { data: { session }, error: sessionError } = await db.auth.getSession();
             
             if (sessionError || !session) {
                 console.warn("No active session found. Running in offline/testing mode.");
-                // In production, uncomment the line below to enforce login
-                // window.location.href = "login.html"; 
                 return;
             }
 
@@ -433,7 +511,6 @@
             }
         }
 
-        // --- UI NAVIGATION ---
         function switchTab(targetId, navElement) {
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             navElement.classList.add('active');
@@ -453,7 +530,6 @@
             document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
         }
 
-        // --- LIVE SYNC & TEAMS ---
         function syncActiveTeams() {
             let activeNames = selectedTourneyTeams.map(t => t.name);
             Object.keys(poolsData).forEach(p => { poolsData[p] = poolsData[p].filter(t => activeNames.includes(t)); });
@@ -530,7 +606,6 @@
             } catch(e) { alert("Error saving team to cloud."); document.getElementById('newTeamName').value = tName; }
         }
 
-        // --- TOURNAMENT SAVE & LOAD ---
         async function loadExistingTournamentsList() {
             const { data, error } = await db.from('tournaments').select('tournament_id, name, format');
             const select = document.getElementById('existing-tournament-select');
@@ -620,8 +695,6 @@
             let tFormat = document.getElementById('t-format').value;
             let tDate = document.getElementById('t-date').value;
             let tTier = document.getElementById('t-tier').value; 
-            
-            // 🔥 Smart Save: Uses logged in admin's association
             let tHost = currentAdminAssociation; 
             
             let configPayload = { winPoints: document.getElementById('tWinPoints').value, tier: tTier }; 
@@ -645,7 +718,6 @@
                     const { error } = await db.from('tournaments').update({ name: tName, format: tFormat, start_date: tDate, host: tHost, config: configPayload }).eq('tournament_id', currentTournamentId);
                     tError = error;
                 } else {
-                    // 🔥 Injects admin_id permanently to database record
                     const { data: tData, error } = await db.from('tournaments').insert([{ name: tName, format: tFormat, start_date: tDate, host: tHost, admin_id: currentAdminId, config: configPayload }]).select();
                     tError = error; if (tData && tData.length > 0) currentTournamentId = tData[0].tournament_id;
                 }
@@ -809,7 +881,6 @@
             let count = 0;
             let activeNames = selectedTourneyTeams.map(t => t.name);
 
-            // OPTION 1: THE TBD PLACEHOLDER
             if (template === 'standard') {
                 if (size >= 16) { for(let i=1; i<=8; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Round of 16 - Match ${i}`, t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); }
                 if (size >= 8) { for(let i=1; i<=4; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Quarter-Final ${i}`, t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); }
@@ -817,7 +888,6 @@
                 masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); 
                 alert(`Generated Standard Placeholder Matches! Moved to Master Canvas.`);
             
-            // OPTION 2: DIRECT BRACKET
             } else if (template === 'direct') {
                 let totalTeams = activeNames.length;
                 if(totalTeams < 2) { alert("Not enough teams for a direct knockout."); return; }
@@ -867,7 +937,6 @@
                 if(numByes > 0) msg += `\n\n🚨 NOTE: To mathematically balance the bracket, ${numByes} team(s) received a BYE into the second round:\n${teamsGettingByes.join(', ')}`;
                 alert(msg + "\n\nMoved to Master Canvas.");
             
-            // OPTION 3: ROLLING KNOCKOUT
             } else if (template === 'rolling') {
                 let totalTeams = activeNames.length;
                 if(totalTeams < 2) { alert("Not enough teams for a rolling knockout."); return; }
@@ -905,7 +974,6 @@
                 }
                 alert(`Generated ${count} Rolling Knockout Matches!\n\nOdd teams automatically received byes and were carried forward.\nMoved to Master Canvas.`);
             
-            // OPTION 4: IPL STYLE
             } else if (template === 'ipl') {
                 masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Qualifier 1", t1: "Rank 1", t2: "Rank 2", pin: generateUniquePin(), isLive: false });
                 masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Eliminator", t1: "Rank 3", t2: "Rank 4", pin: generateUniquePin(), isLive: false });
@@ -913,7 +981,6 @@
                 masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "Winner of Qualifier 1", t2: "Winner of Qualifier 2", pin: generateUniquePin(), isLive: false });
                 alert(`Generated 4 IPL Playoff Matches! Moved to Master Canvas.`);
             
-            // OPTION 5: SUPER LEAGUE
             } else if (template === 'super') {
                 for(let i=1; i<=size; i++) { masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Super League Match`, t1: `Super Rank ${i}`, t2: "TBD", pin: generateUniquePin(), isLive: false }); }
                 alert(`Generated Super League Matches! Moved to Master Canvas.`);
@@ -988,7 +1055,10 @@
             switchTab('sec-squads', navItem); 
         }
 
-        // --- SQUADS & CLOUD DEPLOY ---
+        // ==========================================
+        // 🔥 SQUADS & BULK REGISTRATION LOGIC
+        // ==========================================
+        
         function updateSquadSelectCount(safeTeamClass) {
             let count = document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).length;
             document.getElementById('squad-select-count').innerText = `${count} Selected`;
@@ -1001,29 +1071,53 @@
             openModal('quick-player-modal');
         }
 
+        // 🔥 Strict Check applies here too
         async function quickSavePlayer(btn) {
             const teamName = document.getElementById('squad-team-select').value;
             const name = document.getElementById('quick-p-name').value.trim();
             const father = document.getElementById('quick-p-father').value.trim();
             const dob = document.getElementById('quick-p-dob').value;
             const role = document.getElementById('quick-p-role').value;
+            const bStyle = document.getElementById('quick-p-bat').value;
+            const bArm = document.getElementById('quick-p-barm').value;
+            const bType = document.getElementById('quick-p-btype').value;
+            const regNo = document.getElementById('quick-p-reg').value.trim();
 
-            if(!name || !father || !dob) { alert("Name, Father, and DOB are required."); return; }
+            const isStrict = document.getElementById('strict-mode-chk').checked;
+
+            if(!name) { alert("Full Name is strictly required."); return; }
+            if(isStrict && (!father || !dob)) { alert("Strict Mode is ON: Father's Name and DOB are required."); return; }
+            
             btn.innerText = "Saving to Cloud..."; btn.disabled = true;
 
-            const { data: existing } = await db.from('players').select('player_id').ilike('full_name', name).eq('father_name', father).eq('dob', dob);
+            let query = db.from('players').select('player_id').ilike('full_name', name);
+            if(father) query = query.eq('father_name', father);
+            if(dob) query = query.eq('dob', dob);
+            
+            const { data: existing } = await query;
             let playerIdToUse;
 
             if (existing && existing.length > 0) {
                 playerIdToUse = existing[0].player_id;
             } else {
-                const { data: newP, error } = await db.from('players').insert([{ full_name: name, father_name: father, dob: dob, playing_role: role }]).select();
+                const { data: newP, error } = await db.from('players').insert([{ 
+                    full_name: name, father_name: father, dob: dob, 
+                    playing_role: role, batting_style: bStyle, bowling_arm: bArm, bowling_type: bType, reg_no: regNo || null 
+                }]).select();
+                
                 if (error) { alert("Player Insert Error: " + error.message); btn.innerText = "Save to Master & Add to Squad"; btn.disabled = false; return; }
                 playerIdToUse = newP[0].player_id;
             }
 
             let tObj = selectedTourneyTeams.find(t => t.name === teamName);
+            
+            // 1. Link to Master Roster
             await db.from('team_rosters').upsert([{ team_name: teamName, player_id: playerIdToUse }], {onConflict: 'team_name, player_id'});
+            
+            // 2. Link directly to this Tournament Squad automatically
+            if(currentTournamentId) {
+                await db.from('tournament_squads').upsert([{ tournament_id: currentTournamentId, team_id: tObj.team_id, player_id: playerIdToUse }], {onConflict: 'tournament_id, team_id, player_id'});
+            }
 
             let safeTeamClass = teamName.replace(/\s+/g, '_');
             let previouslyCheckedIds = [];
@@ -1033,7 +1127,12 @@
             tournamentSquadsCache[teamName] = previouslyCheckedIds;
             await loadWizardSquad(teamName);
 
-            closeAllModals(); document.getElementById('quick-p-name').value = ''; document.getElementById('quick-p-father').value = ''; document.getElementById('quick-p-dob').value = '';
+            closeAllModals(); 
+            document.getElementById('quick-p-name').value = ''; 
+            document.getElementById('quick-p-father').value = ''; 
+            document.getElementById('quick-p-dob').value = '';
+            document.getElementById('quick-p-reg').value = '';
+            
             btn.innerText = "Save to Master & Add to Squad"; btn.disabled = false;
         }
 
@@ -1042,7 +1141,7 @@
             if(!teamName) { container.innerHTML = '<div style="text-align: center; color: #475569; padding: 40px; font-style: italic;">Select a team above to view and assign players.</div>'; return; }
             container.innerHTML = `<div style="text-align: center; color: #94a3b8; padding: 20px;">Fetching Master Roster for ${teamName}...</div>`;
             
-            const { data, error } = await db.from('team_rosters').select('player_id, players(full_name)').eq('team_name', teamName);
+            const { data, error } = await db.from('team_rosters').select('player_id, players(full_name, playing_role)').eq('team_name', teamName);
             if (error || !data || data.length === 0) {
                 container.innerHTML = `<div style="color: #fca5a5; padding: 15px; border: 1px dashed #ef4444; border-radius: 6px;">No players found for "${teamName}". Please use the <strong style="color:white;">+ Quick-Add New Player</strong> button above to start building this team's roster!</div>`;
                 return;
@@ -1056,7 +1155,7 @@
                 if(row.players) {
                     let isChecked = "checked";
                     if(tournamentSquadsCache[teamName] && !tournamentSquadsCache[teamName].includes(row.player_id)) isChecked = "";
-                    html += `<label class="team-checkbox-item" style="margin-bottom:0;"><input type="checkbox" class="squad-chk-${safeTeamClass}" value="${row.player_id}" ${isChecked} onchange="updateSquadSelectCount('${safeTeamClass}')" style="width: 18px; height: 18px; margin-right: 15px; cursor: pointer;"><span style="color: white; font-weight: bold; font-size: 0.95rem;">${count}. ${row.players.full_name}</span></label>`;
+                    html += `<label class="team-checkbox-item" style="margin-bottom:0;"><input type="checkbox" class="squad-chk-${safeTeamClass}" value="${row.player_id}" ${isChecked} onchange="updateSquadSelectCount('${safeTeamClass}')" style="width: 18px; height: 18px; margin-right: 15px; cursor: pointer;"><span style="color: white; font-weight: bold; font-size: 0.95rem;">${count}. ${row.players.full_name} <span style="font-size:0.75rem; color:#f59e0b; font-weight:normal;">(${row.players.playing_role || 'Player'})</span></span></label>`;
                     count++;
                 }
             });
@@ -1075,11 +1174,213 @@
             if(selectedIds.length === 0) { alert("Please select at least one player to sync."); return; }
             
             const btn = event.target; const originalText = btn.innerText; btn.innerText = "⏳ Syncing...";
+            
+            // First, remove old links for this team to avoid ghost players
+            await db.from('tournament_squads').delete().eq('tournament_id', currentTournamentId).eq('team_id', tObj.team_id);
+            
+            // Then insert the new cleanly checked list
             let payload = selectedIds.map(pid => ({ tournament_id: currentTournamentId, team_id: tObj.team_id, player_id: pid }));
-            const { error } = await db.from('tournament_squads').upsert(payload, {onConflict: 'tournament_id, team_id, player_id'});
+            const { error } = await db.from('tournament_squads').insert(payload);
             
             if(error) { alert("Error syncing squad: " + error.message); btn.innerText = originalText; } 
             else { alert(`✅ Successfully synced ${selectedIds.length} players to the live tournament!`); btn.innerText = "✅ Synced Successfully!"; setTimeout(() => btn.innerText = originalText, 3000); }
+        }
+
+        // --- BULK EXCEL LOGIC ---
+        function toggleBulkForm() { document.getElementById('bulk-registration-panel').classList.toggle('hidden'); }
+
+        function addBulkRows(count, append = false, dataArray = []) {
+            const tbody = document.getElementById('bulk-player-grid');
+            if (!append) tbody.innerHTML = ''; 
+            
+            const currentRows = tbody.children.length;
+            const rowsToGenerate = Math.max(count, dataArray.length);
+            
+            for (let i = 0; i < rowsToGenerate; i++) {
+                let rowNum = currentRows + i + 1;
+                let d = dataArray[i] || [];
+                
+                let nameVal = d[0] || '';
+                let fnameVal = d[1] || '';
+                let dobVal = formatExcelDate(d[2]);
+                let roleVal = d[3] || 'Batter';
+                let batStyleVal = d[4] || 'Right-hand bat';
+                let bowlArmVal = d[5] || 'None';
+                let bowlTypeVal = d[6] || 'None';
+                let regVal = d[7] || '';
+
+                let tr = document.createElement('tr');
+                tr.style.borderBottom = "1px solid #334155";
+                
+                tr.innerHTML = `
+                    <td style="padding: 6px; color: #64748b;">${rowNum}</td>
+                    <td style="padding: 6px;"><input type="text" class="bp-name input-dark w-100" value="${nameVal}" placeholder="Name" style="margin:bottom:0; font-size:0.8rem;"></td>
+                    <td style="padding: 6px;"><input type="text" class="bp-fname input-dark w-100" value="${fnameVal}" placeholder="Father" style="margin:bottom:0; font-size:0.8rem;"></td>
+                    <td style="padding: 6px;"><input type="date" class="bp-dob input-dark w-100" value="${dobVal}" style="margin:bottom:0; font-size:0.8rem; color-scheme: dark;"></td>
+                    <td style="padding: 6px;">
+                        <select class="bp-role input-dark w-100" style="margin:bottom:0; font-size:0.8rem;">
+                            <option value="Batter" ${roleVal.toLowerCase().includes('bat') ? 'selected' : ''}>Batter</option>
+                            <option value="Bowler" ${roleVal.toLowerCase().includes('bowl') ? 'selected' : ''}>Bowler</option>
+                            <option value="All-Rounder" ${roleVal.toLowerCase().includes('all') ? 'selected' : ''}>All-Rounder</option>
+                            <option value="Wicket-Keeper" ${roleVal.toLowerCase().includes('wk') || roleVal.toLowerCase().includes('keep') ? 'selected' : ''}>Wicket-Keeper</option>
+                        </select>
+                    </td>
+                    <td style="padding: 6px;">
+                        <select class="bp-bat input-dark w-100" style="margin:bottom:0; font-size:0.8rem;">
+                            <option value="Right-hand bat" ${batStyleVal.toLowerCase().includes('right') ? 'selected' : ''}>Right-hand bat</option>
+                            <option value="Left-hand bat" ${batStyleVal.toLowerCase().includes('left') ? 'selected' : ''}>Left-hand bat</option>
+                        </select>
+                    </td>
+                    <td style="padding: 6px;">
+                        <select class="bp-barm input-dark w-100" style="margin:bottom:0; font-size:0.8rem;">
+                            <option value="Right-arm" ${bowlArmVal.toLowerCase().includes('right') ? 'selected' : ''}>Right-arm</option>
+                            <option value="Left-arm" ${bowlArmVal.toLowerCase().includes('left') ? 'selected' : ''}>Left-arm</option>
+                            <option value="None" ${bowlArmVal.toLowerCase().includes('none') ? 'selected' : ''}>None</option>
+                        </select>
+                    </td>
+                    <td style="padding: 6px;">
+                        <select class="bp-btype input-dark w-100" style="margin:bottom:0; font-size:0.8rem;">
+                            <option value="Fast" ${bowlTypeVal.toLowerCase() === 'fast' ? 'selected' : ''}>Fast</option>
+                            <option value="Fast-Medium" ${bowlTypeVal.toLowerCase().includes('fast-med') ? 'selected' : ''}>Fast-Medium</option>
+                            <option value="Medium" ${bowlTypeVal.toLowerCase() === 'medium' ? 'selected' : ''}>Medium</option>
+                            <option value="Off-spin" ${bowlTypeVal.toLowerCase().includes('off') ? 'selected' : ''}>Off-spin</option>
+                            <option value="Leg-spin" ${bowlTypeVal.toLowerCase().includes('leg') ? 'selected' : ''}>Leg-spin</option>
+                            <option value="Orthodox" ${bowlTypeVal.toLowerCase().includes('ortho') ? 'selected' : ''}>Orthodox</option>
+                            <option value="Wrist-spin" ${bowlTypeVal.toLowerCase().includes('wrist') ? 'selected' : ''}>Wrist-spin</option>
+                            <option value="None" ${bowlTypeVal.toLowerCase().includes('none') ? 'selected' : ''}>None</option>
+                        </select>
+                    </td>
+                    <td style="padding: 6px;"><input type="text" class="bp-reg input-dark w-100" value="${regVal}" placeholder="Opt. ID" style="margin:bottom:0; font-size:0.8rem; text-transform:uppercase;"></td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        function formatExcelDate(val) {
+            if (!val) return '';
+            if (typeof val === 'number') {
+                let dateObj = new Date(Math.round((val - 25569) * 86400 * 1000));
+                return dateObj.toISOString().split('T')[0];
+            }
+            if (typeof val === 'string') {
+                let d = new Date(val);
+                if (!isNaN(d)) return d.toISOString().split('T')[0];
+            }
+            return val;
+        }
+
+        function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                const jsonArr = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                let cleanData = jsonArr.filter(row => row.length > 0);
+                
+                let firstRowStr = cleanData[0].join(' ').toLowerCase();
+                if (firstRowStr.includes('name') || firstRowStr.includes('dob')) {
+                    cleanData.shift(); 
+                }
+
+                addBulkRows(Math.max(15, cleanData.length), false, cleanData);
+                document.getElementById('excel-upload').value = ""; 
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function submitBulkSquad() {
+            const teamName = document.getElementById('squad-team-select').value;
+            if (!teamName) { alert("Please select a team from the dropdown to review first."); return; }
+            
+            if(!currentTournamentId) { alert("Please make sure you have saved the tournament settings in Tab 1 first."); return; }
+            
+            let tObj = selectedTourneyTeams.find(t => t.name === teamName);
+            if (!tObj) { alert("Team not found in tournament selection."); return; }
+
+            const rows = document.querySelectorAll('#bulk-player-grid tr');
+            const isStrict = document.getElementById('strict-mode-chk').checked;
+            
+            let payload = [];
+            let hasErrors = false;
+
+            rows.forEach((row, index) => {
+                let name = row.querySelector('.bp-name').value.trim();
+                let fname = row.querySelector('.bp-fname').value.trim();
+                let dob = row.querySelector('.bp-dob').value;
+                let role = row.querySelector('.bp-role').value;
+                let bStyle = row.querySelector('.bp-bat').value;
+                let bArm = row.querySelector('.bp-barm').value;
+                let bType = row.querySelector('.bp-btype').value;
+                let regNo = row.querySelector('.bp-reg').value.trim();
+
+                if (name !== "" || fname !== "" || dob !== "") {
+                    
+                    if (!name) {
+                        alert(`Row ${index + 1} Error: Full Name is always required.`);
+                        row.style.backgroundColor = "rgba(239, 68, 68, 0.2)"; 
+                        hasErrors = true;
+                        return;
+                    }
+                    
+                    // 🔥 SUPER ADMIN STRICT MODE ENFORCEMENT
+                    if (isStrict && (!fname || !dob)) {
+                        alert(`Row ${index + 1} Error: Strict Mode is ON. Father's Name and DOB are mandatory.`);
+                        row.style.backgroundColor = "rgba(239, 68, 68, 0.2)"; 
+                        hasErrors = true;
+                        return;
+                    }
+
+                    row.style.backgroundColor = "transparent"; 
+
+                    payload.push({
+                        full_name: name, father_name: fname, dob: dob,
+                        playing_role: role, batting_style: bStyle, bowling_arm: bArm, bowling_type: bType, reg_no: regNo || null
+                    });
+                } else {
+                    row.style.backgroundColor = "transparent"; 
+                }
+            });
+
+            if (hasErrors) return; 
+            if (payload.length === 0) { alert("Please fill out at least one player row."); return; }
+
+            // 1. Upload to Master DB (players table)
+            const { data: newPlayers, error } = await db.from('players').insert(payload).select('player_id');
+            if (error) { alert("Error saving squad to master: " + error.message); return; }
+
+            // 2. Link to Global Roster (team_rosters)
+            const globalRosterLinks = newPlayers.map(p => ({
+                team_name: teamName,
+                player_id: p.player_id
+            }));
+            await db.from('team_rosters').upsert(globalRosterLinks, {onConflict: 'team_name, player_id'});
+            
+            // 3. Link to specific live tournament (tournament_squads)
+            const tournamentLinks = newPlayers.map(p => ({
+                tournament_id: currentTournamentId,
+                team_id: tObj.team_id,
+                player_id: p.player_id
+            }));
+            await db.from('tournament_squads').upsert(tournamentLinks, {onConflict: 'tournament_id, team_id, player_id'});
+
+            // Keep local UI cache updated
+            let safeTeamClass = teamName.replace(/\s+/g, '_');
+            let previouslyCheckedIds = [];
+            if(tournamentSquadsCache[teamName]) previouslyCheckedIds = tournamentSquadsCache[teamName];
+            
+            newPlayers.forEach(p => previouslyCheckedIds.push(p.player_id));
+            tournamentSquadsCache[teamName] = previouslyCheckedIds;
+            
+            alert(`✅ Successfully registered ${payload.length} players to the cloud and linked them to ${teamName} in this tournament!`);
+            addBulkRows(15, false); // Wipes grid clean
+            toggleBulkForm(); // Hides panel
+            loadWizardSquad(teamName); // Refresh the visible checkbox list
         }
 
         function finishSquadsAndProceed() { 
@@ -1123,8 +1424,8 @@
 
             let tName = document.getElementById('t-name').value;
             let tFormat = document.getElementById('t-format').value;
-            let tHost = currentAdminAssociation;     // 🔥 Grab Association securely
-            let tTier = document.getElementById('t-tier').value;     // 🔥 Grab Tier
+            let tHost = currentAdminAssociation; 
+            let tTier = document.getElementById('t-tier').value; 
 
             for (let m of masterFixtures) {
                 let t1Obj = selectedTourneyTeams.find(t => t.name === m.t1);
@@ -1132,7 +1433,6 @@
                 let team1UUID = t1Obj ? t1Obj.team_id : null; 
                 let team2UUID = t2Obj ? t2Obj.team_id : null;
 
-                // 🔥 Injecting host and tier into the full_state json so career stats hub can read it later!
                 let matchPayload = {
                     match_id: m.id,
                     tournament_id: currentTournamentId,
@@ -1146,11 +1446,9 @@
                 m.isLive = true; 
             }
             
-            // Re-render the table so tags change from DRAFT to LIVE
             updateFinalLockedMatches();
             renderCanvas(); 
             
-            // Replace Action Card with Success Message
             document.getElementById('deploy-action-card').innerHTML = `
                 <h3 style="color: #10b981; font-size: 1.5rem; margin-top: 0;">✅ Successfully Deployed!</h3>
                 <p style="color: #cbd5e1; max-width: 600px; margin: 0 auto;">Your tournament is now live. Scorers can log in using the exact Match IDs and PINs listed above.</p>
