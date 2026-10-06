@@ -249,8 +249,8 @@
 
                         <!-- Row 11: Flexible Wrapper -->
                         <div class="col-4" style="display: flex; gap: 8px;">
-                            <button type="button" id="breakBtn" class="scorer-btn hidden" style="flex:1; background:#fb923c; color:black; text-shadow:none;" onclick="openBreakModal()">⏱️ STUMPS / BREAK</button>
-                            <button type="button" id="intBtn" class="scorer-btn" style="flex:1; background:#38bdf8; color:black; text-shadow:none;" onclick="openInterruptionModal()">⛈️️ DELAY</button>
+                            <button type="button" id="breakBtn" class="scorer-btn hidden" style="flex:1; background:#fb923c; color:black; text-shadow:none;" onclick="openBreakModal()">⏱️️ STUMPS / BREAK</button>
+                            <button type="button" id="intBtn" class="scorer-btn" style="flex:1; background:#38bdf8; color:black; text-shadow:none;" onclick="openInterruptionModal()">⛈️ DELAY</button>
                         </div>
                         
                         <!-- Row 12: Full Width -->
@@ -291,82 +291,31 @@
     <script src="reports.js"></script>
     <script src="scorer.js"></script>
     
-    <!-- 🔥 SMART AUTO-LOGIN & QUICK MATCH SQUAD SYNCING -->
+    <!-- 🔥 SMART AUTO-LOGIN LISTENER FOR QUICK MATCHES -->
     <script>
         window.addEventListener('load', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const autoMatchId = urlParams.get('match');
             const autoPin = urlParams.get('pin');
 
-            // 1. Instantly Bypass the Login Screen
             if (autoMatchId && autoPin) {
+                // Instantly auto-fill the hidden input fields
                 document.getElementById('login-match-id').value = autoMatchId;
                 document.getElementById('login-pin').value = autoPin;
                 
+                // Show a quick, friendly connecting message
                 const errorBox = document.getElementById('login-error');
                 errorBox.style.color = '#10b981'; 
                 errorBox.innerText = "⚡ Quick Match detected. Auto-connecting...";
                 
+                // Give external scripts (like setup.js) a tiny fraction of a second 
+                // to fully load into the browser's memory, then execute the login automatically.
                 setTimeout(() => {
                     if (typeof authenticateMatch === 'function') {
                         authenticateMatch();
                     }
                 }, 400); 
             }
-
-            // 2. Intercept and Sync Quick Match Squads & Toss
-            const observer = new MutationObserver(() => {
-                const benchA = document.getElementById('bench-A');
-                const benchB = document.getElementById('bench-B');
-                
-                // When setup.js finishes rendering the bench elements for the first time
-                if (benchA && benchA.children.length > 0 && window.matchData && window.matchData.full_state && window.matchData.full_state.tournament === "Quick Match") {
-                    
-                    if (window.quickSquadsSynced) return;
-                    window.quickSquadsSynced = true;
-
-                    // Sync Toss
-                    const toss = window.matchData.full_state.toss;
-                    if (toss) {
-                        const tossWinnerDropdown = document.getElementById('tossWinner');
-                        const tossDecisionDropdown = document.getElementById('tossDecision');
-                        
-                        if (tossWinnerDropdown) tossWinnerDropdown.value = toss.winner;
-                        if (tossDecisionDropdown) tossDecisionDropdown.value = toss.decision.toLowerCase();
-                    }
-
-                    // Sync Custom Player Names
-                    const sqA = window.matchData.full_state.teams?.A?.squad || [];
-                    const sqB = window.matchData.full_state.teams?.B?.squad || [];
-
-                    function replaceBenchNames(benchElement, squadArray) {
-                        const items = Array.from(benchElement.children);
-                        for (let i = 0; i < items.length; i++) {
-                            if (squadArray[i] && squadArray[i].name) {
-                                items[i].innerHTML = `<span>${squadArray[i].name}</span> <span style="color:#64748b;">➡</span>`;
-                                items[i].setAttribute('data-name', squadArray[i].name);
-                                items[i].id = 'player-' + squadArray[i].name.replace(/\s+/g, '-');
-                            } else {
-                                // Hide excess placeholders if squad is smaller than 11
-                                items[i].style.display = 'none';
-                                items[i].classList.remove('player-item');
-                            }
-                        }
-                    }
-
-                    replaceBenchNames(benchA, sqA);
-                    replaceBenchNames(benchB, sqB);
-
-                    // Auto-Tap Players into Playing XI to save time
-                    setTimeout(() => {
-                        Array.from(benchA.children).forEach(item => { if(item.style.display !== 'none') item.click(); });
-                        Array.from(benchB.children).forEach(item => { if(item.style.display !== 'none') item.click(); });
-                    }, 300);
-                }
-            });
-
-            // Start observing the DOM to catch the UI render
-            observer.observe(document.body, { childList: true, subtree: true });
         });
     </script>
 </body>
