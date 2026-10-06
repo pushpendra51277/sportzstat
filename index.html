@@ -222,7 +222,7 @@
         <div class="modal-content" onclick="event.stopPropagation()">
             <button type="button" class="modal-close" onclick="closeAllModals()">&times;</button>
             <h3 style="margin-top: 0; color: #f59e0b;">⚡ Quick Match Setup</h3>
-            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 20px;">Instantly generate a match to score. A default PIN (1234) will be assigned.</p>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 20px;">Fill out the details below to instantly boot up the Live Scoring Engine.</p>
             
             <div class="input-group">
                 <label>Format</label>
@@ -264,15 +264,16 @@
             </div>
 
             <div class="input-group">
-                <label>Team 1 Squad (Comma separated)</label>
+                <label>Team 1 Squad (Comma separated names)</label>
                 <textarea id="qm-sq1" rows="2" placeholder="Rohit, Kohli, Surya..."></textarea>
             </div>
             <div class="input-group" style="margin-bottom: 25px;">
-                <label>Team 2 Squad (Comma separated)</label>
+                <label>Team 2 Squad (Comma separated names)</label>
                 <textarea id="qm-sq2" rows="2" placeholder="Cummins, Starc, Head..."></textarea>
             </div>
             
-            <button type="button" class="btn-launch" style="background: #f59e0b; color: black; font-size: 1.1rem; padding: 14px;" onclick="generateQuickMatch(this)">🚀 Create Match & Get Credentials</button>
+            <!-- BUTTON INSTANTLY LAUNCHES MATCH -->
+            <button type="button" class="btn-launch" style="background: #f59e0b; color: black; font-size: 1.1rem; padding: 14px;" onclick="generateQuickMatch(this)">🚀 Create & Start Match Instantly</button>
         </div>
     </div>
 
@@ -585,7 +586,7 @@
             }
 
             const btnOriginalText = btn.innerText;
-            btn.innerText = "⏳ Generating Engine...";
+            btn.innerText = "⏳ Booting Live Engine...";
             btn.disabled = true;
 
             // Parse text areas into player objects
@@ -594,7 +595,7 @@
 
             const tossWinnerName = tossWinnerSelect === 'Team 1' ? t1 : t2;
             const matchId = `QM-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-            const pin = "1234"; // Default automatic PIN as requested
+            const pin = "1234"; // Default automatic PIN
 
             const matchPayload = {
                 match_id: matchId,
@@ -626,23 +627,14 @@
                 btn.innerText = btnOriginalText;
                 btn.disabled = false;
             } else {
-                alert(`✅ Quick Match Ready!\n\nMatch ID: ${matchId}\nScorer PIN: ${pin}\n\nThis match has been added to your dashboard.`);
-                closeAllModals();
-                
-                // Clear the form
-                document.getElementById('qm-t1').value = "";
-                document.getElementById('qm-t2').value = "";
-                document.getElementById('qm-sq1').value = "";
-                document.getElementById('qm-sq2').value = "";
-                updateTossOptions();
-                
-                btn.innerText = btnOriginalText;
-                btn.disabled = false;
+                // Save to local storage for automatic Live Engine login
+                localStorage.setItem('sportzstat_active_match', matchId);
+                localStorage.setItem('sportzstat_active_pin', pin);
 
-                // Refresh the hub widget to show the new match
-                if (currentUserProfile) {
-                    fetchMatchHubData(currentUserProfile.association, currentUserProfile.role);
-                }
+                alert(`✅ Match Initialized!\n\nRouting directly to the Live Scoring Engine...`);
+                
+                // Immediately route to the scorer folder, passing the credentials via URL
+                window.location.href = `scorer/live.html?match=${matchId}&pin=${pin}`;
             }
         }
 
