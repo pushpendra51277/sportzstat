@@ -242,7 +242,7 @@
                         
                         <!-- Row 9: 2+2 = 4 -->
                         <button type="button" class="scorer-btn col-2" style="background:#ca8a04;" onclick="openPlayerSwap()">🔄 INJURY SUB</button>
-                        <button type="button" class="scorer-btn col-2" style="background:#4f46e5;" onclick="openEditSquad()">🛠️ SQUAD</button>
+                        <button type="button" class="scorer-btn col-2" style="background:#4f46e5;" onclick="openEditSquad()">🛠️️ SQUAD</button>
 
                         <!-- Row 10: 4 -->
                         <button type="button" class="scorer-btn col-4" style="background:#be123c;" onclick="restartCloudMatch()">🚨 RESTART MATCH (WIPE)</button>
@@ -291,7 +291,7 @@
     <script src="reports.js"></script>
     <script src="scorer.js"></script>
     
-    <!-- 🔥 ADVANCED QUICK MATCH DATA SYNC & INTERCEPTOR -->
+    <!-- 🔥 SMART DATA SYNC & AUTO-LOGIN INTERCEPTOR -->
     <script>
         window.addEventListener('load', async () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -300,117 +300,122 @@
 
             if (!autoMatchId || !autoPin) return;
 
-            // 1. Instantly Auto-Fill and Bypass the Login Screen
+            // 1. Instantly Auto-Fill and Bypass Login
             document.getElementById('login-match-id').value = autoMatchId;
             document.getElementById('login-pin').value = autoPin;
             const errorBox = document.getElementById('login-error');
             errorBox.style.color = '#10b981'; 
             errorBox.innerText = "⚡ Quick Match detected. Auto-connecting...";
-            
-            setTimeout(() => {
-                if (typeof authenticateMatch === 'function') {
-                    authenticateMatch();
-                }
-            }, 400); 
+            setTimeout(() => { if (typeof authenticateMatch === 'function') authenticateMatch(); }, 400); 
 
-            // 2. Fetch the custom squads directly from Supabase (Bypassing setup.js)
             if (!autoMatchId.startsWith('QM-')) return; 
 
-            // Initialize local db client purely for reading the custom squad JSON
-            const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
-            const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
-            const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+            // 2. Fetch custom squads directly from the cloud
             const { data, error } = await db.from('matches').select('full_state').eq('match_id', autoMatchId).single();
             if (error || !data || !data.full_state) return;
 
             const fs = data.full_state;
-            const t1 = fs.team1;
-            const t2 = fs.team2;
-            const sqA = (fs.teams?.A?.squad || []).filter(p => p.name.trim() !== '');
-            const sqB = (fs.teams?.B?.squad || []).filter(p => p.name.trim() !== '');
-            const toss = fs.toss;
+            window.t1 = fs.team1;
+            window.t2 = fs.team2;
+            window.sqA = (fs.teams?.A?.squad || []).map(p => p.name).filter(n => n.trim() !== '');
+            window.sqB = (fs.teams?.B?.squad || []).map(p => p.name).filter(n => n.trim() !== '');
 
-            // 3. Search and Destroy the dummy elements in setup.js
+            // LAYER 1: Intercept Database Saves to sanitize data before cloud push
+            // This prevents setup.js from saving dummy names back to the database.
+            const originalDbFrom = db.from;
+            db.from = function(tableName) {
+                const queryBuilder = originalDbFrom.apply(this, arguments);
+                if (tableName === 'matches') {
+                    const originalUpdate = queryBuilder.update;
+                    queryBuilder.update = function(payload, options) {
+                        if (payload && payload.full_state) {
+                            let f = payload.full_state;
+                            const fixArr = (arr, team, squad) => {
+                                if (!arr) return;
+                                arr.forEach(p => {
+                                    if (p && p.name) {
+                                        let m = p.name.match(/(.+) Player (\d+)/);
+                                        if (m && m[1] === team) {
+                                            let idx = parseInt(m[2]) - 1;
+                                            if (squad[idx]) p.name = squad[idx];
+                                        }
+                                    }
+                                });
+                            };
+                            fixArr(f.teams?.A?.squad, window.t1, window.sqA);
+                            fixArr(f.teams?.B?.squad, window.t2, window.sqB);
+                            fixArr(f.batters, window.t1, window.sqA);
+                            fixArr(f.batters, window.t2, window.sqB);
+                            fixArr(f.bowlers, window.t1, window.sqA);
+                            fixArr(f.bowlers, window.t2, window.sqB);
+                        }
+                        return originalUpdate.apply(this, arguments);
+                    };
+                }
+                return queryBuilder;
+            };
+
+            // LAYER 2: Aggressive Visual Text Replacer (Runs every 200ms)
+            // This ensures that the scorer ALWAYS sees the custom names instead of dummies.
+            setInterval(() => {
+                const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+                let node;
+                while (node = walker.nextNode()) {
+                    let txt = node.nodeValue;
+                    if (txt && txt.includes(' Player ')) {
+                        let regex = new RegExp(`(${window.t1}|${window.t2}) Player (\\d+)`, 'g');
+                        let newTxt = txt.replace(regex, (match, team, numStr) => {
+                            let idx = parseInt(numStr) - 1;
+                            if (team === window.t1 && window.sqA[idx]) return window.sqA[idx];
+                            if (team === window.t2 && window.sqB[idx]) return window.sqB[idx];
+                            return match; 
+                        });
+                        if (newTxt !== txt) node.nodeValue = newTxt;
+                    }
+                }
+            }, 200);
+
+            // LAYER 3: DOM Mutator for Bench Setup & Auto-Tap
+            // This cleans out ghost players and automatically clicks the active ones into the Playing XI.
             const observer = new MutationObserver(() => {
                 const benchA = document.getElementById('bench-A');
                 const benchB = document.getElementById('bench-B');
                 
-                // Detect when setup.js finishes drawing the dummy players
                 if (benchA && benchA.children.length > 0 && benchA.innerHTML.includes('Player 1')) {
-                    observer.disconnect(); // We caught it, stop observing
-                    
+                    observer.disconnect(); 
                     if (window.quickSquadsSynced) return;
                     window.quickSquadsSynced = true;
 
-                    // --- A. SYNC THE TOSS DROPDOWNS ---
-                    if (toss) {
-                        const tossWinnerDropdown = document.getElementById('tossWinner');
-                        const tossDecisionDropdown = document.getElementById('tossDecision');
-                        
-                        if (tossWinnerDropdown) {
-                            Array.from(tossWinnerDropdown.options).forEach(opt => {
-                                if (opt.text.toLowerCase() === toss.winner.toLowerCase() || opt.value === toss.winner) {
-                                    tossWinnerDropdown.value = opt.value;
-                                }
-                            });
-                        }
-                        if (tossDecisionDropdown) {
-                            Array.from(tossDecisionDropdown.options).forEach(opt => {
-                                if (opt.value.toLowerCase().includes(toss.decision.toLowerCase()) || opt.text.toLowerCase().includes(toss.decision.toLowerCase())) {
-                                    tossDecisionDropdown.value = opt.value;
-                                }
-                            });
-                        }
-                    }
-
-                    // --- B. WIPE HIDDEN MEMORY ARRAYS IN SETUP.JS ---
-                    for (let key in window) {
-                        if (Array.isArray(window[key]) && window[key].length > 0) {
-                            let first = window[key][0];
-                            if (first && typeof first === 'object' && first.name) {
-                                if (first.name.includes('Player 1') && first.name.includes(t1)) {
-                                    window[key] = sqA.map((p, i) => ({ id: p.id || ('QA-'+i), name: p.name }));
-                                }
-                                else if (first.name.includes('Player 1') && first.name.includes(t2)) {
-                                    window[key] = sqB.map((p, i) => ({ id: p.id || ('QB-'+i), name: p.name }));
-                                }
-                            }
-                        }
-                    }
-
-                    // --- C. PRUNE AND FIX THE VISUAL DOM ---
-                    function enforceDOM(benchEl, squadArray) {
+                    function sanitizeBench(benchEl, squadArray, teamName) {
                         const children = Array.from(benchEl.children);
                         for (let i = 0; i < children.length; i++) {
+                            let el = children[i];
                             if (i < squadArray.length) {
-                                children[i].innerHTML = `<span>${squadArray[i].name}</span> <span style="color:#64748b;">➡</span>`;
+                                let customName = squadArray[i];
+                                let dummyName = teamName + " Player " + (i + 1);
+                                
+                                // Crucial: Re-write the onclick event to trick setup.js into registering the custom name!
+                                let clickCode = el.getAttribute('onclick');
+                                if (clickCode) {
+                                    clickCode = clickCode.split(dummyName).join(customName);
+                                    el.setAttribute('onclick', clickCode);
+                                }
                             } else {
-                                children[i].remove(); // Completely destroy the excess dummy elements
+                                el.style.display = 'none';
+                                el.remove(); 
                             }
                         }
                     }
-                    
-                    enforceDOM(benchA, sqA);
-                    enforceDOM(benchB, sqB);
 
-                    // --- D. AUTOMATICALLY MOVE SQUAD TO PLAYING XI ---
+                    sanitizeBench(benchA, window.sqA, window.t1);
+                    sanitizeBench(benchB, window.sqB, window.t2);
+
                     setTimeout(() => {
-                        // "Click" each remaining real player to pop them into the Playing XI list instantly
-                        Array.from(benchA.children).forEach(el => { if (el && typeof el.click === 'function') el.click(); });
-                        Array.from(benchB.children).forEach(el => { if (el && typeof el.click === 'function') el.click(); });
-                        
-                        // Show a temporary success banner
-                        const alertBanner = document.createElement('div');
-                        alertBanner.innerHTML = '✅ Quick Match Squads Synced!';
-                        alertBanner.style = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#10b981; color:white; padding:10px 20px; border-radius:8px; font-weight:bold; z-index:10000; box-shadow:0 4px 10px rgba(0,0,0,0.5);';
-                        document.body.appendChild(alertBanner);
-                        setTimeout(() => alertBanner.remove(), 3000);
-                        
-                    }, 400); // 400ms delay ensures setup.js is totally done rendering before we click
+                        Array.from(benchA.children).forEach(el => { if (el.style.display !== 'none') el.click(); });
+                        Array.from(benchB.children).forEach(el => { if (el.style.display !== 'none') el.click(); });
+                    }, 400);
                 }
             });
-            
             observer.observe(document.body, { childList: true, subtree: true });
         });
     </script>
