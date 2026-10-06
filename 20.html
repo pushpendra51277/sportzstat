@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CricStat Pro | Match Controller</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 🔥 SUPABASE SDK ADDED -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --bg-dark: #0b0f1a; --card-bg: #1e293b; --primary: #3b82f6; --success: #10b981; --text: #f8fafc; --text-muted: #94a3b8; --border: #334155; --accent: #f59e0b; --danger: #ef4444; --b4: #a855f7; --b6: #ec4899; --manual: #64748b; }
         body { font-family: 'Inter', sans-serif; background: var(--bg-dark); color: var(--text); margin: 0; padding: 15px; overflow-x: hidden; } 
@@ -152,7 +154,7 @@
 
     <div id="manualEntryView" class="setup-screen hidden">
         <h1 class="text-center text-primary mb-10">Manual Data Entry Sync</h1>
-        <p class="text-center text-muted mb-20" style="font-size:0.85rem;">Use this portal to enter stats for historical matches not scored live on the app. Data will sync directly to your Google Sheet.</p>
+        <p class="text-center text-muted mb-20" style="font-size:0.85rem;">Use this portal to enter stats for historical matches not scored live on the app. Data will sync directly to your Supabase Database.</p>
         
         <div class="admin-grid" style="grid-template-columns: repeat(3, 1fr);">
             <div class="input-group"><label>Match Date</label><input type="date" id="meDate" onclick="this.showPicker && this.showPicker()"></div>
@@ -182,7 +184,7 @@
             </div>
             <div class="flex-row gap-10 mt-20">
                 <button type="button" class="btn-action w-100" style="background:#334155; padding:15px;" onclick="closeManualEntryView()">🔙 Back to Setup</button>
-                <button type="button" class="btn-action w-100" style="background:#0284c7; padding:15px; font-size:1.1rem;" onclick="syncManualMatchData()">☁️ 2. Sync Manual Match to Cloud</button>
+                <button type="button" class="btn-action w-100" style="background:#0284c7; padding:15px; font-size:1.1rem;" onclick="syncManualMatchData()">☁️ 2. Sync Manual Match to Supabase</button>
             </div>
         </div>
         <div id="meNoGridsBtn" class="mt-20"><button type="button" class="btn-action" style="background:#334155; width:200px;" onclick="closeManualEntryView()">🔙 Back to Setup</button></div>
@@ -279,8 +281,10 @@
 <div id="dynamicModal" class="modal-overlay hidden"><div id="modalBoxElement" class="modal-box"><h3 id="modalHeading" class="text-primary mt-0">Modal</h3><div id="modalBody"></div><div class="flex-row gap-10 mt-15"><button type="button" id="modalCancelBtn" class="btn-action w-100" style="background:transparent; border:1px solid var(--border);" onclick="closeModal()">Cancel</button><button type="button" id="modalConfirmBtn" class="btn-action w-100" style="background:var(--success);">Confirm</button></div></div></div>
 
 <script>
-    const GOOGLE_CLOUD_API = "https://script.google.com/macros/s/AKfycbwmOLvEzGxF_GKmkUHk8CYLq_HdCKOHK7XZpwP5pvEkqCAerL7x2-K7k_Qd1faszF-I/exec";
-    const LIVE_VIEWER_URL = "file:///C:/Users/pushp/Desktop/scoring/fan%20app/2.html";
+    // 🔥 SUPABASE INITIALIZATION
+    const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
+    const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     if (typeof window.Chart !== 'undefined') { Chart.defaults.color = '#cbd5e1'; Chart.defaults.borderColor = '#334155'; } window.matchChart = null; 
     const el = id => document.getElementById(id); const getBatTeam = () => state.teams[state.battingKey]; const getBowlTeam = () => state.teams[state.bowlingKey]; const formatOver = balls => Math.floor(balls/6) + "." + (balls%6); const getBadgeHtml = b => b.type === 'divider' ? `<span class="over-divider">/</span>` : `<div class="ball-badge ball-${b.type}">${b.label}</div>`;
@@ -380,7 +384,7 @@
         if (type === 'reg') { let foundName = playerRegistry["REG_" + val]; if (foundName && !nameInput.value) nameInput.value = foundName; else if (nameInput.value) { playerRegistry["REG_" + val] = nameInput.value.trim(); playerRegistry["NAME_" + nameInput.value.trim()] = val; localStorage.setItem('cricStatRegistry', JSON.stringify(playerRegistry)); } } else if (type === 'name') { let foundReg = playerRegistry["NAME_" + val]; if (foundReg && !regInput.value) regInput.value = foundReg; else if (regInput.value) { playerRegistry["NAME_" + val] = regInput.value.trim(); playerRegistry["REG_" + regInput.value.trim()] = val; localStorage.setItem('cricStatRegistry', JSON.stringify(playerRegistry)); } } 
     }
 
-    // --- MANUAL DATA ENTRY SYSTEM ---
+    // --- MANUAL DATA ENTRY SYSTEM (Supabase Update) ---
     function openManualEntryView() {
         el('setupView').classList.add('hidden');
         el('manualEntryView').classList.remove('hidden');
@@ -451,11 +455,6 @@
     }
 
     function syncManualMatchData() {
-        if (!GOOGLE_CLOUD_API || GOOGLE_CLOUD_API.trim() === "") {
-            alert("No Google API configured! Cannot sync.");
-            return;
-        }
-
         let mId = el('meId').value.trim();
         if (!mId) {
             let d = el('meDate').value;
@@ -493,12 +492,12 @@
                     
                     if (!playerStats[pKey]) {
                         playerStats[pKey] = {
-                            matchId: mId, regNo: pReg, playerName: pName, 
+                            match_id: mId, reg_no: pReg || "-", player_name: pName || "-", 
                             tournament: mTourn, team: teamName, opposition: oppName, 
-                            matchType: mType, year: matchDateYear, matches: 1, 
-                            inns: 0, runs: 0, ballsFaced: 0, fours: 0, sixes: 0, 
-                            notOuts: 0, outOnDuck: 0, ballsBowled: 0, maidens: 0, 
-                            runsConceded: 0, wkts: 0, w5: 0, w4: 0, wides: 0, noBalls: 0, 
+                            match_type: mType, year: matchDateYear, matches: 1, 
+                            inns: 0, runs: 0, balls_faced: 0, fours: 0, sixes: 0, 
+                            not_outs: 0, out_on_duck: 0, balls_bowled: 0, maidens: 0, 
+                            runs_conceded: 0, wkts: 0, w5: 0, w4: 0, wides: 0, no_balls: 0, 
                             catches: 0, stumpings: 0, runouts: 0
                         };
                     }
@@ -506,62 +505,36 @@
                     let st = playerStats[pKey];
 
                     if (!isNaN(r) || !isNaN(b)) {
-                        st.inns += 1;
-                        st.runs += (r || 0);
-                        st.ballsFaced += (b || 0);
-                        st.fours += (parseInt(el(`${pfx}-${i}-4s`).value) || 0);
-                        st.sixes += (parseInt(el(`${pfx}-${i}-6s`).value) || 0);
-                        if(isNO) { st.notOuts += 1; }
-                        else if((r || 0) === 0 && !isNO) { st.outOnDuck += 1; }
+                        st.inns += 1; st.runs += (r || 0); st.balls_faced += (b || 0); st.fours += (parseInt(el(`${pfx}-${i}-4s`).value) || 0); st.sixes += (parseInt(el(`${pfx}-${i}-6s`).value) || 0);
+                        if(isNO) { st.not_outs += 1; } else if((r || 0) === 0 && !isNO) { st.out_on_duck += 1; }
                     }
 
                     if (!isNaN(overs) || !isNaN(br) || !isNaN(wd) || !isNaN(nb)) {
-                        let ov = overs || 0;
-                        let ovFull = Math.floor(ov);
-                        let ovDec = Math.round((ov - ovFull)*10);
-                        st.ballsBowled += (ovFull * 6) + ovDec;
-                        st.maidens += (parseInt(el(`${pfx}-${i}-m`).value) || 0);
-                        st.runsConceded += (br || 0);
+                        let ov = overs || 0; let ovFull = Math.floor(ov); let ovDec = Math.round((ov - ovFull)*10);
+                        st.balls_bowled += (ovFull * 6) + ovDec; st.maidens += (parseInt(el(`${pfx}-${i}-m`).value) || 0); st.runs_conceded += (br || 0);
                         let wkts = parseInt(el(`${pfx}-${i}-w`).value) || 0;
                         st.wkts += wkts;
-                        if(wkts >= 5) st.w5 += 1;
-                        else if(wkts === 4) st.w4 += 1;
-                        st.wides += (wd || 0);
-                        st.noBalls += (nb || 0);
+                        if(wkts >= 5) st.w5 += 1; else if(wkts === 4) st.w4 += 1;
+                        st.wides += (wd || 0); st.no_balls += (nb || 0);
                     }
                     
-                    st.catches += (ct || 0);
-                    st.stumpings += (stmp || 0);
-                    st.runouts += (ro || 0);
+                    st.catches += (ct || 0); st.stumpings += (stmp || 0); st.runouts += (ro || 0);
                 }
             }
         }
 
-        extractGrid(tA, tB, "mea");
-        extractGrid(tB, tA, "meb");
+        extractGrid(tA, tB, "mea"); extractGrid(tB, tA, "meb");
 
         let matchDataArray = Object.values(playerStats);
-        if (matchDataArray.length === 0) {
-            alert("No data entered. Please enter stats for at least one player.");
-            return;
-        }
+        if (matchDataArray.length === 0) { alert("No data entered."); return; }
 
-        let payload = { action: "careerStats", matchData: matchDataArray };
-        
-        event.target.innerText = "⏳ Syncing...";
+        event.target.innerText = "⏳ Syncing to Supabase...";
         event.target.style.opacity = "0.5";
 
-        fetch(GOOGLE_CLOUD_API, { 
-            method: 'POST', mode: 'no-cors', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify(payload) 
-        }).then(() => {
-            alert("✅ Manual Match Data Synced Successfully!");
-            closeManualEntryView();
-        }).catch(e => {
-            console.log(e);
-            alert("Sync completed (CORS note: success response hidden by browser, check your sheet).");
-            closeManualEntryView();
+        db.from('career_stats').insert(matchDataArray)
+        .then(({error}) => {
+            if(error) { alert("Supabase Error: " + error.message); } 
+            else { alert("✅ Manual Match Data Synced Successfully!"); closeManualEntryView(); }
         });
     }
     // --- END MANUAL DATA ENTRY ---
@@ -1139,16 +1112,20 @@
     }
 
     function triggerCloudSync() {
-        if (!GOOGLE_CLOUD_API || GOOGLE_CLOUD_API.trim() === "" || !state.matchId) return;
-        let cur = state.current;
-        let crrVal = cur.balls > 0 ? ((cur.runs / cur.balls) * 6).toFixed(2) : "0.00";
-        let lightWeightLiveData = { matchId: state.matchId, batTeam: getBatTeam() ? getBatTeam().name : "", bowlTeam: getBowlTeam() ? getBowlTeam().name : "", runs: cur.runs, wkts: cur.wkts, overs: formatOver(cur.balls), crr: crrVal, target: el('dispTargetText') ? el('dispTargetText').innerText : "", batters: [ cur.sIdx !== null ? { name: getBatTeam().players[cur.sIdx].name, r: getBatTeam().players[cur.sIdx].r, b: getBatTeam().players[cur.sIdx].b, isStriker: true } : null, cur.nsIdx !== null ? { name: getBatTeam().players[cur.nsIdx].name, r: getBatTeam().players[cur.nsIdx].r, b: getBatTeam().players[cur.nsIdx].b, isStriker: false } : null ], bowler: cur.bIdx !== null ? { name: getBowlTeam().players[cur.bIdx].name, o: formatOver(getBowlTeam().players[cur.bIdx].o), r: getBowlTeam().players[cur.bIdx].rc, w: getBowlTeam().players[cur.bIdx].w } : null, recentBalls: cur.recentBalls };
-        let syncPayload = { action: "liveSync", matchId: state.matchId, liveData: lightWeightLiveData };
-        fetch(GOOGLE_CLOUD_API, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(syncPayload) }).catch(e => console.log("Cloud sync note: ", e));
+        if (!state.matchId) return;
+        
+        db.from('matches').upsert({
+            match_id: state.matchId,
+            scorer_pin: "LOCAL", 
+            full_state: state
+        }, { onConflict: 'match_id' })
+        .then(({error}) => {
+            if (error) console.error("Supabase Live Sync Error: ", error.message);
+        });
     }
     
     function logCareerStats() {
-        if (!GOOGLE_CLOUD_API || GOOGLE_CLOUD_API.trim() === "" || !state.matchId) return;
+        if (!state.matchId) return;
         
         let playerStats = {}; 
         let matchDateYear = el('setupDate').value ? el('setupDate').value.split('-')[0] : new Date().getFullYear(); 
@@ -1163,11 +1140,11 @@
                     let pKey = (pReg && pReg !== "-") ? pReg : (p.name + "|||" + tObj.name); 
 
                     playerStats[pKey] = { 
-                        matchId: state.matchId, regNo: pReg || "-", playerName: p.name || "-", 
+                        match_id: state.matchId, reg_no: pReg || "-", player_name: p.name || "-", 
                         tournament: tourneyName, team: tObj.name, opposition: oppObj.name, 
-                        matchType: mType, year: matchDateYear, matches: 1, inns: 0, runs: 0, 
-                        ballsFaced: 0, fours: 0, sixes: 0, notOuts: 0, outOnDuck: 0, ballsBowled: 0, 
-                        maidens: 0, runsConceded: 0, wkts: 0, w5: 0, w4: 0, wides: 0, noBalls: 0, 
+                        match_type: mType, year: matchDateYear, matches: 1, inns: 0, runs: 0, 
+                        balls_faced: 0, fours: 0, sixes: 0, not_outs: 0, out_on_duck: 0, balls_bowled: 0, 
+                        maidens: 0, runs_conceded: 0, wkts: 0, w5: 0, w4: 0, wides: 0, no_balls: 0, 
                         catches: p.catches || 0, stumpings: p.stumpings || 0, runouts: p.runouts || 0 
                     };
                 }
@@ -1180,10 +1157,9 @@
                 if(p.hasBatted) {
                     let pReg = (p.regNo || "").trim();
                     let pKey = (pReg && pReg !== "-") ? pReg : (p.name + "|||" + batTeamName); 
-
                     if(!playerStats[pKey]) return; 
                     let st = playerStats[pKey];
-                    st.inns += 1; st.runs += p.r; st.ballsFaced += p.b; st.fours += p.f; st.sixes += p.s; if(!p.out) st.notOuts += 1; if(p.outOnDuck) st.outOnDuck += 1;
+                    st.inns += 1; st.runs += p.r; st.balls_faced += p.b; st.fours += p.f; st.sixes += p.s; if(!p.out) st.not_outs += 1; if(p.outOnDuck) st.out_on_duck += 1;
                 }
             });
 
@@ -1192,18 +1168,21 @@
                 if(p.o > 0 || p.rc > 0) {
                     let pReg = (p.regNo || "").trim();
                     let pKey = (pReg && pReg !== "-") ? pReg : (p.name + "|||" + bowlTeamName); 
-
                     if(!playerStats[pKey]) return; 
                     let st = playerStats[pKey];
-                    st.ballsBowled += p.o; st.maidens += p.m; st.runsConceded += p.rc; st.wkts += p.w; st.wides += p.wd; st.noBalls += p.nb;
+                    st.balls_bowled += p.o; st.maidens += p.m; st.runs_conceded += p.rc; st.wkts += p.w; st.wides += p.wd; st.no_balls += p.nb;
                     if(p.w >= 5) st.w5 += 1; else if(p.w === 4) st.w4 += 1;
                 }
             });
         });
         
         let matchDataArray = Object.values(playerStats);
-        let payload = { action: "careerStats", matchData: matchDataArray };
-        fetch(GOOGLE_CLOUD_API, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(e => console.log("Stats sync note: ", e));
+        if(matchDataArray.length === 0) return;
+
+        db.from('career_stats').insert(matchDataArray)
+        .then(({error}) => {
+            if (error) console.error("Supabase Stats Error: ", error.message);
+        });
     }
 
     function updateUI() {
@@ -1705,7 +1684,7 @@
             confirmBtnText = "🏁 End Match & Reset";
             requiresDownload = true;
         } else if (isTransition) {
-            confirmBtnText = "▶️ Start Next Innings";
+            confirmBtnText = "▶️️ Start Next Innings";
             requiresDownload = true;
         } else {
             confirmBtnText = "🔙 Continue Scoring";
@@ -1826,7 +1805,7 @@
         setTimeout(() => { openMatchStartModal(); }, 100); 
     }
 
-   function manualEndOver() {
+    function manualEndOver() {
         if (state.current.bIdx === null) {
             alert("No bowler is currently active!");
             return;
@@ -1875,5 +1854,52 @@
     function manualRotateUI() { saveState(); manualRotate(); }
     function manualRotate() { [state.current.sIdx, state.current.nsIdx] = [state.current.nsIdx, state.current.sIdx]; updateUI(); }
 </script>
+
+<!-- 🔥 QUICK MATCH AUTO-PILOT -->
+<script>
+    window.addEventListener('DOMContentLoaded', () => {
+        // Check if the Dashboard sent us a Quick Match
+        const qmDataStr = localStorage.getItem('sportzstat_quick_match');
+        
+        if (qmDataStr) {
+            const data = JSON.parse(qmDataStr);
+            
+            // 1. Auto-Fill Basic Match Settings
+            document.getElementById('setupTournament').value = "Quick Match (Local)";
+            document.getElementById('setupVenue').value = "Local Ground";
+            
+            const formatMap = {"T20": "t20", "T10": "t20", "One Day": "oneday", "Test / Multi-Day": "multiday", "Custom": "t20"};
+            document.getElementById('setupMatchType').value = formatMap[data.format] || "t20";
+
+            // 2. Auto-Fill Team Names
+            document.getElementById('nameTeamA').value = data.t1;
+            document.getElementById('nameTeamB').value = data.t2;
+            updateTeamNames(); // Triggers the native old engine function to update toss options
+
+            // 3. Auto-Fill Toss Settings
+            document.getElementById('tossWinner').value = data.tossWinner === data.t1 ? 'A' : 'B';
+            document.getElementById('tossDecision').value = data.tossDecision.toLowerCase();
+
+            // 4. Auto-Fill Squads into the HTML input grids
+            data.sq1.forEach((name, index) => {
+                if (index < 19) document.getElementById(`ta-n-${index + 1}`).value = name;
+            });
+            data.sq2.forEach((name, index) => {
+                if (index < 19) document.getElementById(`tb-n-${index + 1}`).value = name;
+            });
+
+            // 5. Generate Match ID
+            document.getElementById('setupDate').value = new Date().toISOString().split('T')[0];
+            generateMatchId();
+
+            // 6. Delete the payload so it doesn't loop if you refresh the page
+            localStorage.removeItem('sportzstat_quick_match');
+
+            // 7. Auto-click the start button!
+            setTimeout(() => { executeLockAndStart(); }, 500); // Slight delay ensures UI processes inputs
+        }
+    });
+</script>
+
 </body>
 </html>
