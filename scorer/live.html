@@ -229,7 +229,7 @@
                         
                         <!-- Row 6: 2+2 = 4 -->
                         <button type="button" class="scorer-btn col-2" style="background:#8b5cf6;" onclick="openRemarkModal()">📝 REMARK</button>
-                        <button type="button" class="scorer-btn col-2" style="background:#b91c1c;" onclick="openPenalty()">⚠️️ 5 PENALTY</button>
+                        <button type="button" class="scorer-btn col-2" style="background:#b91c1c;" onclick="openPenalty()">⚠️ 5 PENALTY</button>
                         
                         <!-- Row 7: 1+1+2 = 4 (UNDO Swap with FULL SCREEN applied) -->
                         <button type="button" class="scorer-btn col-1" style="background:#0f766e;" onclick="openChangeWK()">🧤 WK</button>
@@ -291,7 +291,7 @@
     <script src="reports.js"></script>
     <script src="scorer.js"></script>
     
-    <!-- 🔥 SMART DATA SYNC & AUTO-LOGIN INTERCEPTOR -->
+    <!-- 🔥 ADVANCED QUICK MATCH DATA SYNC & INTERCEPTOR -->
     <script>
         window.addEventListener('load', async () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -327,82 +327,87 @@
             const fs = data.full_state;
             const t1 = fs.team1;
             const t2 = fs.team2;
-            const sqA = (fs.teams?.A?.squad || []).map(p => p.name);
-            const sqB = (fs.teams?.B?.squad || []).map(p => p.name);
+            const sqA = (fs.teams?.A?.squad || []).filter(p => p.name.trim() !== '');
+            const sqB = (fs.teams?.B?.squad || []).filter(p => p.name.trim() !== '');
             const toss = fs.toss;
 
-            // 3. Hijack the Setup Screen to inject the real names
+            // 3. Search and Destroy the dummy elements in setup.js
             const observer = new MutationObserver(() => {
                 const benchA = document.getElementById('bench-A');
                 const benchB = document.getElementById('bench-B');
                 
                 // Detect when setup.js finishes drawing the dummy players
-                if (benchA && benchA.children.length > 0 && benchA.children[0].innerText.includes('Player 1')) {
+                if (benchA && benchA.children.length > 0 && benchA.innerHTML.includes('Player 1')) {
                     observer.disconnect(); // We caught it, stop observing
                     
+                    if (window.quickSquadsSynced) return;
+                    window.quickSquadsSynced = true;
+
                     // --- A. SYNC THE TOSS DROPDOWNS ---
                     if (toss) {
                         const tossWinnerDropdown = document.getElementById('tossWinner');
                         const tossDecisionDropdown = document.getElementById('tossDecision');
-                        if (tossWinnerDropdown) tossWinnerDropdown.value = toss.winner;
+                        
+                        if (tossWinnerDropdown) {
+                            Array.from(tossWinnerDropdown.options).forEach(opt => {
+                                if (opt.text.toLowerCase() === toss.winner.toLowerCase() || opt.value === toss.winner) {
+                                    tossWinnerDropdown.value = opt.value;
+                                }
+                            });
+                        }
                         if (tossDecisionDropdown) {
                             Array.from(tossDecisionDropdown.options).forEach(opt => {
-                                if (opt.value.toLowerCase().includes(toss.decision.toLowerCase())) {
+                                if (opt.value.toLowerCase().includes(toss.decision.toLowerCase()) || opt.text.toLowerCase().includes(toss.decision.toLowerCase())) {
                                     tossDecisionDropdown.value = opt.value;
                                 }
                             });
                         }
                     }
 
-                    // --- B. OVERWRITE HIDDEN MEMORY ARRAYS IN SETUP.JS ---
-                    // This dynamically finds the hidden setup.js dummy arrays and overwrites them with custom names
+                    // --- B. WIPE HIDDEN MEMORY ARRAYS IN SETUP.JS ---
                     for (let key in window) {
-                        try {
-                            if (Array.isArray(window[key])) {
-                                window[key].forEach((item, index) => {
-                                    if (typeof item === 'string' && item.includes('Player ')) {
-                                        let num = parseInt(item.split('Player ')[1]) - 1;
-                                        if (item.startsWith(t1) && sqA[num]) window[key][index] = sqA[num];
-                                        else if (item.startsWith(t2) && sqB[num]) window[key][index] = sqB[num];
-                                    } else if (item && typeof item === 'object' && typeof item.name === 'string' && item.name.includes('Player ')) {
-                                        let num = parseInt(item.name.split('Player ')[1]) - 1;
-                                        if (item.name.startsWith(t1) && sqA[num]) item.name = sqA[num];
-                                        else if (item.name.startsWith(t2) && sqB[num]) item.name = sqB[num];
-                                    }
-                                });
+                        if (Array.isArray(window[key]) && window[key].length > 0) {
+                            let first = window[key][0];
+                            if (first && typeof first === 'object' && first.name) {
+                                if (first.name.includes('Player 1') && first.name.includes(t1)) {
+                                    window[key] = sqA.map((p, i) => ({ id: p.id || ('QA-'+i), name: p.name }));
+                                }
+                                else if (first.name.includes('Player 1') && first.name.includes(t2)) {
+                                    window[key] = sqB.map((p, i) => ({ id: p.id || ('QB-'+i), name: p.name }));
+                                }
                             }
-                        } catch(e) {}
+                        }
                     }
 
-                    // --- C. OVERWRITE THE VISUAL DOM ---
-                    function syncBenchDOM(bench, squad) {
-                        Array.from(bench.children).forEach((el, i) => {
-                            if (squad[i]) {
-                                el.innerHTML = `<span>${squad[i]}</span> <span style="color:#64748b;">➡</span>`;
-                                el.setAttribute('data-name', squad[i]);
-                                el.id = `player-${squad[i].replace(/[^a-zA-Z0-9]/g, '-')}`;
+                    // --- C. PRUNE AND FIX THE VISUAL DOM ---
+                    function enforceDOM(benchEl, squadArray) {
+                        const children = Array.from(benchEl.children);
+                        for (let i = 0; i < children.length; i++) {
+                            if (i < squadArray.length) {
+                                children[i].innerHTML = `<span>${squadArray[i].name}</span> <span style="color:#64748b;">➡</span>`;
                             } else {
-                                el.style.display = 'none'; // Hide excess dummy players
+                                children[i].remove(); // Completely destroy the excess dummy elements
                             }
-                        });
+                        }
                     }
-                    syncBenchDOM(benchA, sqA);
-                    syncBenchDOM(benchB, sqB);
+                    
+                    enforceDOM(benchA, sqA);
+                    enforceDOM(benchB, sqB);
 
                     // --- D. AUTOMATICALLY MOVE SQUAD TO PLAYING XI ---
                     setTimeout(() => {
-                        // "Click" each visible bench player to pop them into the Playing XI list instantly
-                        Array.from(benchA.children).forEach(el => { if(el.style.display !== 'none') el.click(); });
-                        Array.from(benchB.children).forEach(el => { if(el.style.display !== 'none') el.click(); });
+                        // "Click" each remaining real player to pop them into the Playing XI list instantly
+                        Array.from(benchA.children).forEach(el => { if (el && typeof el.click === 'function') el.click(); });
+                        Array.from(benchB.children).forEach(el => { if (el && typeof el.click === 'function') el.click(); });
                         
                         // Show a temporary success banner
                         const alertBanner = document.createElement('div');
-                        alertBanner.innerHTML = '✅ Quick Match Squads & Toss Synced!';
+                        alertBanner.innerHTML = '✅ Quick Match Squads Synced!';
                         alertBanner.style = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#10b981; color:white; padding:10px 20px; border-radius:8px; font-weight:bold; z-index:10000; box-shadow:0 4px 10px rgba(0,0,0,0.5);';
                         document.body.appendChild(alertBanner);
                         setTimeout(() => alertBanner.remove(), 3000);
                         
-                    }, 300); // 300ms delay ensures setup.js click listeners are fully registered
+                    }, 400); // 400ms delay ensures setup.js is totally done rendering before we click
                 }
             });
             
