@@ -123,7 +123,6 @@
                 <h2 style="margin: 0; font-size: 1.5rem;">Welcome, <span id="user-name-display" style="color: #38bdf8;"></span></h2>
                 <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">
                     Role Permission: <span id="user-role-display" style="color: #f59e0b; text-transform: uppercase; font-weight: bold;"></span> 
-                    <!-- Workspace indicator -->
                     | Workspace: <span id="user-workspace-display" style="color: #10b981; font-weight: bold;"></span>
                 </div>
             </div>
@@ -145,7 +144,7 @@
         <!-- PORTAL GRID (App Navigation) -->
         <div class="portal-grid">
             
-            <!-- 🔥 NEW QUICK MATCH CARD -->
+            <!-- 🔥 QUICK MATCH CARD -->
             <div class="portal-card" id="card-quickmatch" style="border-color: #f59e0b; display: none;" onclick="openModal('quick-match-modal')">
                 <h3 style="color: #f59e0b;">⚡ Quick Match Setup</h3>
                 <p>Instantly generate a standalone match without a tournament setup. Best for friendlies.</p>
@@ -433,7 +432,7 @@
             if (role === 'scorer' && tabCategory !== 'completed') {
                 const userPin = prompt(`Please enter your Scorer PIN for match ${matchId}:`);
                 if (userPin === pin) {
-                    window.location.href = `scorer/live.html`; 
+                    window.location.href = `scorer/live.html?match=${matchId}&pin=${pin}`; 
                 } else if (userPin) {
                     alert("❌ Incorrect PIN. Access Denied.");
                 }
@@ -571,10 +570,11 @@
             document.getElementById('qm-toss-opt2').value = "Team 2";
         }
 
+        // 🔥 THE DB INJECTOR: Populates the Master DB so setup.js works flawlessly natively
         async function generateQuickMatch(btn) {
             const format = document.getElementById('qm-format').value;
-            const t1 = document.getElementById('qm-t1').value.trim();
-            const t2 = document.getElementById('qm-t2').value.trim();
+            const t1 = document.getElementById('qm-t1').value.trim() || "Team A";
+            const t2 = document.getElementById('qm-t2').value.trim() || "Team B";
             const tossWinnerSelect = document.getElementById('qm-toss-winner').value;
             const tossDecision = document.getElementById('qm-toss-decision').value;
             const sq1Raw = document.getElementById('qm-sq1').value;
@@ -586,16 +586,55 @@
             }
 
             const btnOriginalText = btn.innerText;
-            btn.innerText = "⏳ Booting Live Engine...";
+            btn.innerText = "⏳ Building Teams in Database...";
             btn.disabled = true;
 
-            // Parse text areas into player objects
-            const sq1 = sq1Raw.split(',').map(s => s.trim()).filter(s => s.length > 0).map(name => ({ name, id: 'Q-' + Math.random().toString(36).substr(2, 5).toUpperCase() }));
-            const sq2 = sq2Raw.split(',').map(s => s.trim()).filter(s => s.length > 0).map(name => ({ name, id: 'Q-' + Math.random().toString(36).substr(2, 5).toUpperCase() }));
+            // 1. Clean the comma-separated names
+            const sq1Names = sq1Raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            const sq2Names = sq2Raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
 
+            // 2. Ensure the Teams actually exist in the master 'teams' table
+            let { data: t1Check } = await db.from('teams').select('name').ilike('name', t1);
+            if (!t1Check || t1Check.length === 0) await db.from('teams').insert([{ name: t1 }]);
+
+            let { data: t2Check } = await db.from('teams').select('name').ilike('name', t2);
+            if (!t2Check || t2Check.length === 0) await db.from('teams').insert([{ name: t2 }]);
+
+            // 3. The DB Injector Helper: Checks if player exists, creates them if not, and links to team
+            async function buildSquadInDb(teamName, namesArray) {
+                let squadObjects = [];
+                for (let pName of namesArray) {
+                    let pid;
+                    // Check if player already exists in master database
+                    let { data: existing } = await db.from('players').select('player_id').ilike('full_name', pName).limit(1);
+                    
+                    if (existing && existing.length > 0) {
+                        pid = existing[0].player_id;
+                    } else {
+                        // Create a basic new profile for the quick match player
+                        let { data: newP } = await db.from('players').insert([{ full_name: pName, playing_role: 'Player' }]).select('player_id');
+                        if (newP && newP.length > 0) pid = newP[0].player_id;
+                    }
+
+                    if (pid) {
+                        // Link the player to the team roster so setup.js can find them
+                        await db.from('team_rosters').upsert([{ team_name: teamName, player_id: pid }], { onConflict: 'team_name, player_id' });
+                        squadObjects.push({ name: pName, id: pid });
+                    }
+                }
+                return squadObjects;
+            }
+
+            // Execute the injector for both teams
+            const sq1 = await buildSquadInDb(t1, sq1Names);
+            const sq2 = await buildSquadInDb(t2, sq2Names);
+
+            btn.innerText = "⏳ Initializing Match Engine...";
+
+            // 4. Generate the Match Payload
             const tossWinnerName = tossWinnerSelect === 'Team 1' ? t1 : t2;
             const matchId = `QM-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-            const pin = "1234"; // Default automatic PIN
+            const pin = "1234";
 
             const matchPayload = {
                 match_id: matchId,
@@ -627,23 +666,10 @@
                 btn.innerText = btnOriginalText;
                 btn.disabled = false;
             } else {
-                // Save to local storage for automatic Live Engine login
+                // Everything is securely in the database. Boot up the engine natively.
                 localStorage.setItem('sportzstat_active_match', matchId);
                 localStorage.setItem('sportzstat_active_pin', pin);
-
-                alert(`✅ Match Initialized!\n\nRouting directly to the Live Scoring Engine...`);
-                
-                // Immediately route to the scorer folder, passing the credentials via URL
                 window.location.href = `scorer/live.html?match=${matchId}&pin=${pin}`;
-            }
-        }
-
-        async function signOut(event) {
-            if (event && event.target) { event.target.innerText = "Signing out..."; event.target.style.opacity = "0.5"; event.target.style.pointerEvents = "none"; }
-            try { await db.auth.signOut(); } catch (error) { console.warn(error); } 
-            finally {
-                Object.keys(localStorage).forEach(key => { if (key.startsWith('sb-') || key === 'user_association') localStorage.removeItem(key); });
-                window.location.reload(); 
             }
         }
     </script>
