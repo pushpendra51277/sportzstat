@@ -68,14 +68,6 @@
         .btn-copy:hover { background: #38bdf8; color: #0f172a; }
         .btn-copy.copied { background: #10b981; color: white; border-color: #10b981; }
 
-        /* Modal Styles */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: 0.2s; }
-        .modal-overlay.active { opacity: 1; pointer-events: auto; }
-        .modal-content { background: #1e293b; border: 1px solid #f59e0b; border-radius: 12px; padding: 25px; width: 500px; max-width: 90%; text-align: left; transform: translateY(20px); transition: 0.3s; box-shadow: 0 15px 30px rgba(0,0,0,0.7); position: relative;}
-        .modal-overlay.active .modal-content { transform: translateY(0); }
-        .modal-close { background: transparent; border: none; color: #94a3b8; font-size: 1.5rem; position: absolute; top: 10px; right: 15px; cursor: pointer; }
-        .modal-close:hover { color: #ef4444; }
-
         @media (max-width: 768px) {
             .directory-box { padding: 15px; }
             .table-responsive { overflow-x: visible; }
@@ -144,11 +136,11 @@
         <!-- PORTAL GRID (App Navigation) -->
         <div class="portal-grid">
             
-            <!-- 🔥 QUICK MATCH CARD -->
-            <div class="portal-card" id="card-quickmatch" style="border-color: #f59e0b; display: none;" onclick="openModal('quick-match-modal')">
-                <h3 style="color: #f59e0b;">⚡ Quick Match Setup</h3>
-                <p>Instantly generate a standalone match without a tournament setup. Best for friendlies.</p>
-            </div>
+            <!-- 🔥 QUICK MATCH CARD (Now routes directly to 20.html) -->
+            <a href="20.html" class="portal-card" id="card-quickmatch" style="border-color: #f59e0b; display: none;">
+                <h3 style="color: #f59e0b;">⚡ Quick Match Engine</h3>
+                <p>Launch the standalone offline engine. Best for casual friendlies and local games.</p>
+            </a>
 
             <div class="portal-card" id="card-directory" style="border-color: #8b5cf6;" onclick="toggleDirectoryView()">
                 <h3 style="color: #8b5cf6;" id="directory-card-title">📁 Match Directory</h3>
@@ -216,65 +208,6 @@
         </div>
     </div>
 
-    <!-- 🔥 QUICK MATCH GENERATOR MODAL -->
-    <div class="modal-overlay" id="quick-match-modal" onclick="closeAllModals(event)">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <button type="button" class="modal-close" onclick="closeAllModals()">&times;</button>
-            <h3 style="margin-top: 0; color: #f59e0b;">⚡ Quick Match Setup</h3>
-            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 20px;">Fill out the details below to instantly boot up the Local Scoring Engine.</p>
-            
-            <div class="input-group">
-                <label>Format</label>
-                <select id="qm-format">
-                    <option value="T20">T20</option>
-                    <option value="T10">T10</option>
-                    <option value="One Day">One Day</option>
-                    <option value="Test / Multi-Day">Test / Multi-Day</option>
-                    <option value="Custom">Custom / Practice</option>
-                </select>
-            </div>
-            
-            <div style="display: flex; gap: 10px;">
-                <div class="input-group" style="flex: 1;">
-                    <label>Team 1 Name</label>
-                    <input type="text" id="qm-t1" placeholder="e.g. India" oninput="updateTossOptions()">
-                </div>
-                <div class="input-group" style="flex: 1;">
-                    <label>Team 2 Name</label>
-                    <input type="text" id="qm-t2" placeholder="e.g. Australia" oninput="updateTossOptions()">
-                </div>
-            </div>
-            
-            <div style="display: flex; gap: 10px;">
-                <div class="input-group" style="flex: 1;">
-                    <label>Toss Winner</label>
-                    <select id="qm-toss-winner">
-                        <option value="Team 1" id="qm-toss-opt1">Team 1</option>
-                        <option value="Team 2" id="qm-toss-opt2">Team 2</option>
-                    </select>
-                </div>
-                <div class="input-group" style="flex: 1;">
-                    <label>Elected To</label>
-                    <select id="qm-toss-decision">
-                        <option value="Bat">Bat</option>
-                        <option value="Bowl">Bowl</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="input-group">
-                <label>Team 1 Squad (Comma separated names)</label>
-                <textarea id="qm-sq1" rows="2" placeholder="Rohit, Kohli, Surya..."></textarea>
-            </div>
-            <div class="input-group" style="margin-bottom: 25px;">
-                <label>Team 2 Squad (Comma separated names)</label>
-                <textarea id="qm-sq2" rows="2" placeholder="Cummins, Starc, Head..."></textarea>
-            </div>
-            
-            <button type="button" class="btn-launch" style="background: #f59e0b; color: black; font-size: 1.1rem; padding: 14px;" onclick="generateQuickMatch(this)">🚀 Create & Start Match Instantly</button>
-        </div>
-    </div>
-
     <script>
         const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
         const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
@@ -332,6 +265,7 @@
 
             document.getElementById('portal-dashboard').style.display = 'block';
 
+            // Reset visibility
             document.getElementById('card-directory').style.display = 'none';
             document.getElementById('card-admin').style.display = 'none';
             document.getElementById('card-rosters').style.display = 'none';
@@ -546,62 +480,6 @@
                 console.error('Failed to copy text: ', err);
                 alert("Clipboard copy failed. Please copy manually.");
             });
-        }
-
-        function openModal(id) { document.getElementById(id).classList.add('active'); }
-        
-        function closeAllModals(e) {
-            if (e && e.target && e.target.classList && !e.target.classList.contains('modal-overlay') && !e.target.classList.contains('modal-close')) return;
-            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
-        }
-
-        function updateTossOptions() {
-            const t1 = document.getElementById('qm-t1').value || 'Team 1';
-            const t2 = document.getElementById('qm-t2').value || 'Team 2';
-            document.getElementById('qm-toss-opt1').innerText = t1;
-            document.getElementById('qm-toss-opt1').value = "Team 1";
-            document.getElementById('qm-toss-opt2').innerText = t2;
-            document.getElementById('qm-toss-opt2').value = "Team 2";
-        }
-
-        // 🔥 LOCAL GENERATOR: Bypasses Supabase and sends data to 20.html
-        function generateQuickMatch(btn) {
-            const format = document.getElementById('qm-format').value;
-            const t1 = document.getElementById('qm-t1').value.trim() || "Team A";
-            const t2 = document.getElementById('qm-t2').value.trim() || "Team B";
-            const tossWinnerSelect = document.getElementById('qm-toss-winner').value;
-            const tossDecision = document.getElementById('qm-toss-decision').value;
-            const sq1Raw = document.getElementById('qm-sq1').value;
-            const sq2Raw = document.getElementById('qm-sq2').value;
-
-            if (!t1 || !t2) {
-                alert("Please enter names for both Team 1 and Team 2.");
-                return;
-            }
-
-            btn.innerText = "⏳ Booting Local Engine...";
-            btn.disabled = true;
-
-            // Clean the comma-separated names
-            const sq1Names = sq1Raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
-            const sq2Names = sq2Raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
-
-            // Package the data for 20.html
-            const payload = {
-                format: format,
-                t1: t1,
-                t2: t2,
-                tossWinner: tossWinnerSelect === 'Team 1' ? t1 : t2,
-                tossDecision: tossDecision,
-                sq1: sq1Names,
-                sq2: sq2Names
-            };
-
-            // Save to browser memory
-            localStorage.setItem('sportzstat_quick_match', JSON.stringify(payload));
-
-            // Route to your offline engine (Make sure the file name matches your actual file)
-            window.location.href = `20.html`; 
         }
 
         async function signOut(event) {
