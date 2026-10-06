@@ -271,7 +271,6 @@
                 <textarea id="qm-sq2" rows="2" placeholder="Cummins, Starc, Head..."></textarea>
             </div>
             
-            <!-- BUTTON INSTANTLY LAUNCHES MATCH -->
             <button type="button" class="btn-launch" style="background: #f59e0b; color: black; font-size: 1.1rem; padding: 14px;" onclick="generateQuickMatch(this)">🚀 Create & Start Match Instantly</button>
         </div>
     </div>
@@ -458,7 +457,6 @@
             document.getElementById('directorySearchInput').value = "";
 
             const isSuperAdmin = currentUserProfile.role.toLowerCase() === 'superadmin';
-            // Use left join to include quick matches without tournaments
             let query = db.from('matches').select('match_id, scorer_pin, full_state, tournaments(admin_id, name)').order('created_at', { ascending: false });
             if (!isSuperAdmin) { query = query.eq('tournaments.admin_id', currentUser.id); }
 
@@ -552,7 +550,7 @@
         }
 
         // ==========================================
-        // ⚡ QUICK MATCH GENERATOR LOGIC
+        // ⚡ NATIVE QUICK MATCH GENERATOR LOGIC
         // ==========================================
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         
@@ -586,90 +584,107 @@
             }
 
             const btnOriginalText = btn.innerText;
-            btn.innerText = "⏳ Building Teams in Database...";
+            btn.innerText = "⏳ Building Native Architecture...";
             btn.disabled = true;
 
-            // 1. Clean the comma-separated names
-            const sq1Names = sq1Raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
-            const sq2Names = sq2Raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            try {
+                // 1. Create a "Ghost" Tournament so the system thinks this is a full valid event
+                let adminIdToUse = currentUserProfile?.id || currentUser?.id;
+                const { data: tournData, error: tournErr } = await db.from('tournaments')
+                    .insert([{ name: `Quick: ${t1} vs ${t2}`, format: format, admin_id: adminIdToUse }])
+                    .select('tournament_id');
+                if (tournErr) throw tournErr;
+                const qTournId = tournData[0].tournament_id;
 
-            // 2. Ensure the Teams actually exist in the master 'teams' table
-            let { data: t1Check } = await db.from('teams').select('name').ilike('name', t1);
-            if (!t1Check || t1Check.length === 0) await db.from('teams').insert([{ name: t1 }]);
+                // 2. Resolve Teams
+                async function resolveTeam(tName) {
+                    let { data } = await db.from('teams').select('team_id, name').ilike('name', tName).limit(1);
+                    if (data && data.length > 0) return data[0];
+                    let { data: newT } = await db.from('teams').insert([{ name: tName }]).select('team_id, name');
+                    return newT[0];
+                }
+                const teamA = await resolveTeam(t1);
+                const teamB = await resolveTeam(t2);
 
-            let { data: t2Check } = await db.from('teams').select('name').ilike('name', t2);
-            if (!t2Check || t2Check.length === 0) await db.from('teams').insert([{ name: t2 }]);
-
-            // 3. The DB Injector Helper: Checks if player exists, creates them if not, and links to team
-            async function buildSquadInDb(teamName, namesArray) {
-                let squadObjects = [];
-                for (let pName of namesArray) {
-                    let pid;
-                    // Check if player already exists in master database
-                    let { data: existing } = await db.from('players').select('player_id').ilike('full_name', pName).limit(1);
+                // 3. Resolve Players & Link to Tournament Squads natively
+                async function buildSquadNative(teamObj, rawNames) {
+                    const names = rawNames.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                    let squadArray = [];
                     
-                    if (existing && existing.length > 0) {
-                        pid = existing[0].player_id;
-                    } else {
-                        // Create a basic new profile for the quick match player
-                        let { data: newP } = await db.from('players').insert([{ full_name: pName, playing_role: 'Player' }]).select('player_id');
-                        if (newP && newP.length > 0) pid = newP[0].player_id;
+                    for (let pName of names) {
+                        let { data: existing } = await db.from('players').select('player_id').ilike('full_name', pName).limit(1);
+                        let pid;
+                        if (existing && existing.length > 0) { 
+                            pid = existing[0].player_id; 
+                        } else {
+                            let { data: newP } = await db.from('players').insert([{ full_name: pName, playing_role: 'Player' }]).select('player_id');
+                            pid = newP[0].player_id;
+                        }
+                        
+                        // Link to Master Roster
+                        await db.from('team_rosters').upsert([{ team_name: teamObj.name, player_id: pid }], {onConflict: 'team_name, player_id'});
+                        
+                        // Link to this specific Quick Tournament
+                        await db.from('tournament_squads').upsert([{ tournament_id: qTournId, team_id: teamObj.team_id, player_id: pid }], {onConflict: 'tournament_id, team_id, player_id'});
+                        
+                        squadArray.push({ name: pName, id: pid });
                     }
-
-                    if (pid) {
-                        // Link the player to the team roster so setup.js can find them
-                        await db.from('team_rosters').upsert([{ team_name: teamName, player_id: pid }], { onConflict: 'team_name, player_id' });
-                        squadObjects.push({ name: pName, id: pid });
-                    }
+                    return squadArray;
                 }
-                return squadObjects;
-            }
 
-            // Execute the injector for both teams
-            const sq1 = await buildSquadInDb(t1, sq1Names);
-            const sq2 = await buildSquadInDb(t2, sq2Names);
+                btn.innerText = "⏳ Injecting Squads...";
+                const sqA_objs = await buildSquadNative(teamA, sq1Raw);
+                const sqB_objs = await buildSquadNative(teamB, sq2Raw);
 
-            btn.innerText = "⏳ Initializing Match Engine...";
+                // 4. Create the Match payload mimicking a standard tournament match
+                const tossWinnerName = tossWinnerSelect === 'Team 1' ? teamA.name : teamB.name;
+                const matchId = `QM-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+                const pin = "1234";
 
-            // 4. Generate the Match Payload
-            const tossWinnerName = tossWinnerSelect === 'Team 1' ? t1 : t2;
-            const matchId = `QM-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-            const pin = "1234";
-
-            const matchPayload = {
-                match_id: matchId,
-                scorer_pin: pin,
-                full_state: {
-                    tournament: "Quick Match",
-                    format: format,
-                    host: currentUserProfile?.association || "Independent",
-                    tier: "Local",
-                    team1: t1,
-                    team2: t2,
-                    matchName: `${t1} vs ${t2}`,
-                    match_status: 'upcoming',
-                    toss: {
-                        winner: tossWinnerName,
-                        decision: tossDecision
-                    },
-                    teams: {
-                        A: { name: t1, squad: sq1 },
-                        B: { name: t2, squad: sq2 }
+                const matchPayload = {
+                    match_id: matchId,
+                    tournament_id: qTournId, // <--- CRITICAL FIX: The Engine demands a tournament ID!
+                    team_a_id: teamA.team_id,
+                    team_b_id: teamB.team_id,
+                    scorer_pin: pin,
+                    full_state: {
+                        tournament: `Quick: ${t1} vs ${t2}`,
+                        format: format,
+                        host: currentUserProfile?.association || "Independent",
+                        tier: "Local",
+                        team1: teamA.name,
+                        team2: teamB.name,
+                        matchName: `${teamA.name} vs ${teamB.name}`,
+                        match_status: 'upcoming',
+                        toss: { winner: tossWinnerName, decision: tossDecision },
+                        teams: {
+                            A: { name: teamA.name, squad: sqA_objs },
+                            B: { name: teamB.name, squad: sqB_objs }
+                        }
                     }
-                }
-            };
+                };
 
-            const { error } = await db.from('matches').insert([matchPayload]);
+                const { error: matchErr } = await db.from('matches').insert([matchPayload]);
+                if (matchErr) throw matchErr;
 
-            if (error) {
-                alert("Database Error: " + error.message);
-                btn.innerText = btnOriginalText;
-                btn.disabled = false;
-            } else {
                 // Everything is securely in the database. Boot up the engine natively.
                 localStorage.setItem('sportzstat_active_match', matchId);
                 localStorage.setItem('sportzstat_active_pin', pin);
                 window.location.href = `scorer/live.html?match=${matchId}&pin=${pin}`;
+
+            } catch (err) {
+                alert("Error generating Native Quick Match: " + err.message);
+                btn.innerText = btnOriginalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function signOut(event) {
+            if (event && event.target) { event.target.innerText = "Signing out..."; event.target.style.opacity = "0.5"; event.target.style.pointerEvents = "none"; }
+            try { await db.auth.signOut(); } catch (error) { console.warn(error); } 
+            finally {
+                Object.keys(localStorage).forEach(key => { if (key.startsWith('sb-') || key === 'user_association') localStorage.removeItem(key); });
+                window.location.reload(); 
             }
         }
     </script>
