@@ -12,7 +12,7 @@
         * { box-sizing: border-box; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
-        .sidebar { width: 280px; background: #0f172a; border-right: 1px solid #1e293b; display: flex; flex-direction: column; flex-shrink: 0; z-index: 10; }
+        .sidebar { width: 280px; background: #0f172a; border-right: 1px solid #1e293b; display: flex; flex-direction: column; flex-shrink: 0; z-index: 20; transition: transform 0.3s ease; }
         .sidebar-header { padding: 25px 20px; border-bottom: 1px solid #1e293b; }
         .back-link { color: #94a3b8; text-decoration: none; font-size: 0.85rem; font-weight: bold; display: inline-block; margin-bottom: 15px; transition: 0.2s; }
         .back-link:hover { color: #38bdf8; }
@@ -25,8 +25,9 @@
         .nav-item:hover { background: #1e293b; color: white; }
         .nav-item.active { background: #1e293b; color: #38bdf8; border-left-color: #38bdf8; font-weight: bold; }
         
-        .content-area { flex: 1; padding: 40px; overflow-y: auto; background: #020617; }
-        .hub-section { display: none; animation: fadeIn 0.3s ease; max-width: 1100px; margin: 0 auto; }
+        /* 🔥 MOBILE FIX: Adjusted padding and scrolling for content area */
+        .content-area { flex: 1; overflow-y: auto; background: #020617; position: relative; }
+        .hub-section { display: none; animation: fadeIn 0.3s ease; max-width: 1100px; margin: 0 auto; padding: 40px; }
         .hub-section.active { display: block; }
         
         .card { background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid #1e293b; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
@@ -93,9 +94,36 @@
         .input-dark { background: #0f172a; color: white; border: 1px solid #475569; border-radius: 4px; padding: 6px; outline: none; }
         .input-dark:focus { border-color: #38bdf8; }
         .w-100 { width: 100%; }
+
+        /* 🔥 MOBILE RESPONSIVENESS AND SUPER ADMIN CLASSES */
+        .super-admin-only { display: none !important; } /* Hidden by default until identity is verified */
+
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 15; opacity: 0; transition: opacity 0.3s; }
+        .sidebar-overlay.active { display: block; opacity: 1; }
+        .mobile-header { display: none; align-items: center; justify-content: space-between; padding: 15px 20px; background: #0f172a; border-bottom: 1px solid #1e293b; position: sticky; top: 0; z-index: 5; }
+        .menu-btn { background: none; border: none; color: #38bdf8; font-size: 1.8rem; cursor: pointer; padding: 0; margin-right: 15px; display: flex; align-items: center; }
+
+        @media (max-width: 768px) {
+            .sidebar { position: fixed; top: 0; left: 0; height: 100vh; transform: translateX(-100%); transition: transform 0.3s ease; z-index: 20; box-shadow: 4px 0 15px rgba(0,0,0,0.8); }
+            .sidebar.open { transform: translateX(0); }
+            .mobile-header { display: flex; }
+            .hub-section { padding: 20px; }
+            
+            .grid-2 { grid-template-columns: 1fr; }
+            .tourney-grid { grid-template-columns: 1fr; }
+            .team-dual-pane { flex-direction: column; height: auto; }
+            .team-list-box { height: 250px; }
+            .pools-workspace { grid-template-columns: 1fr; }
+            .sub-tab-nav { flex-direction: column; gap: 5px; }
+            .canvas-row { flex-direction: column; align-items: stretch; gap: 10px; }
+            .canvas-teams { flex-direction: column; align-items: stretch; }
+        }
     </style>
 </head>
 <body>
+
+    <!-- 🔥 MOBILE OVERLAY -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
     <!-- SIDEBAR NAVIGATION -->
     <aside class="sidebar">
@@ -109,6 +137,9 @@
             <div class="nav-group-title">Configuration</div>
             <div class="nav-item active" onclick="switchTab('sec-settings', this)">⚙️ Setup & Teams</div>
             
+            <!-- 🔥 SUPER ADMIN ONLY TAB -->
+            <div class="nav-item super-admin-only" id="nav-historical" onclick="switchTab('sec-historical', this)">⏳ Historical Data</div>
+
             <div class="nav-group-title">Scheduling</div>
             <div class="nav-item" id="nav-fixtures" onclick="switchTab('sec-fixtures', this)">📅 Fixture Engine</div>
             
@@ -123,19 +154,27 @@
     <!-- MAIN CONTENT AREA -->
     <main class="content-area">
         
+        <!-- 🔥 MOBILE HEADER (Only visible on phones) -->
+        <div class="mobile-header">
+            <div style="display: flex; align-items: center;">
+                <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+                <h2 id="mobile-app-title" style="margin: 0; color: #3b82f6; font-size: 1.1rem; letter-spacing: 1px; text-transform: uppercase;">Tournament Hub</h2>
+            </div>
+        </div>
+
         <!-- MODULE 1: SETUP & TEAMS -->
         <section id="sec-settings" class="hub-section active">
             <div class="admin-form">
                 
-                <div style="background: rgba(59, 130, 246, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #3b82f6; display: flex; gap: 15px; align-items: center;">
-                    <div style="flex: 1;">
+                <div style="background: rgba(59, 130, 246, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #3b82f6; display: flex; gap: 15px; align-items: center; flex-wrap:wrap;">
+                    <div style="flex: 1; min-width:200px;">
                         <label style="font-size: 0.8rem; color: #38bdf8; margin-bottom: 5px; font-weight: bold; display:block;">Mode Selection</label>
                         <select id="tournament-mode-select" onchange="toggleTournamentMode(this.value)" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #3b82f6; color: white; border-radius: 6px; outline:none;">
                             <option value="new">➕ Create New Tournament</option>
                             <option value="edit">✏️ Edit Existing Tournament</option>
                         </select>
                     </div>
-                    <div id="existing-tournament-wrapper" style="flex: 1; display: none;">
+                    <div id="existing-tournament-wrapper" style="flex: 1; min-width:200px; display: none;">
                         <label style="font-size: 0.8rem; color: #f59e0b; margin-bottom: 5px; font-weight: bold; display:block;">Select Tournament to Edit</label>
                         <select id="existing-tournament-select" onchange="loadExistingTournamentData(this.value)" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #f59e0b; color: white; border-radius: 6px; outline:none;">
                             <option value="">Loading tournaments...</option>
@@ -212,7 +251,60 @@
                 </div>
 
                 <div style="border-top: 1px solid #334155; margin-top: 30px; padding-top: 20px;">
-                    <button type="button" id="btn-save-proceed" style="background: linear-gradient(90deg, #f59e0b, #ea580c); width: 100%; padding: 18px; font-size: 1.2rem; font-weight: bold; border-radius: 8px; border: none; color: white; cursor:pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4);" onclick="saveTournamentAndProceed()">Save Tournament & Proceed to Fixtures ➡️</button>
+                    <button type="button" id="btn-save-proceed" style="background: linear-gradient(90deg, #f59e0b, #ea580c); width: 100%; padding: 18px; font-size: 1.2rem; font-weight: bold; border-radius: 8px; border: none; color: white; cursor:pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4);" onclick="saveTournamentAndProceed()">Save Tournament & Proceed to Fixtures ➡️️</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 🔥 MODULE: HISTORICAL DATA INJECTOR (SUPER ADMIN ONLY) -->
+        <section id="sec-historical" class="hub-section">
+            <div class="admin-form">
+                <h3 style="margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 10px;">⏳ Historical Match Injector</h3>
+                <p style="color:#94a3b8; font-size:0.85rem; margin-bottom: 25px;">Enter past performances directly. This creates a hidden, completed match in the database that instantly merges into the player's Master Career Stats.</p>
+                
+                <div class="card" style="margin-bottom: 0;">
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label>Match Date *</label>
+                            <input type="date" id="hist-date" style="color-scheme: dark;">
+                        </div>
+                        <div class="input-group">
+                            <label>Player Name (Must match Master DB exactly) *</label>
+                            <input type="text" id="hist-player" placeholder="e.g. Rajat Patidar">
+                        </div>
+                    </div>
+
+                    <h4 style="color: #f59e0b; margin-top: 15px; margin-bottom: 10px; border-bottom: 1px dashed #334155; padding-bottom: 5px;">Batting Stats</h4>
+                    <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));">
+                        <div class="input-group"><label>Runs</label><input type="number" id="hist-runs" value="0"></div>
+                        <div class="input-group"><label>Balls Faced</label><input type="number" id="hist-bf" value="0"></div>
+                        <div class="input-group"><label>Fours</label><input type="number" id="hist-4s" value="0"></div>
+                        <div class="input-group"><label>Sixes</label><input type="number" id="hist-6s" value="0"></div>
+                        <div class="input-group">
+                            <label>Out?</label>
+                            <select id="hist-out">
+                                <option value="true">Yes</option>
+                                <option value="false">Not Out</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <h4 style="color: #10b981; margin-top: 10px; margin-bottom: 10px; border-bottom: 1px dashed #334155; padding-bottom: 5px;">Bowling Stats</h4>
+                    <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));">
+                        <div class="input-group"><label>Overs</label><input type="number" id="hist-o" value="0" step="0.1"></div>
+                        <div class="input-group"><label>Maidens</label><input type="number" id="hist-m" value="0"></div>
+                        <div class="input-group"><label>Runs Conceded</label><input type="number" id="hist-rc" value="0"></div>
+                        <div class="input-group"><label>Wickets</label><input type="number" id="hist-wkts" value="0"></div>
+                    </div>
+
+                    <h4 style="color: #8b5cf6; margin-top: 10px; margin-bottom: 10px; border-bottom: 1px dashed #334155; padding-bottom: 5px;">Fielding Stats</h4>
+                    <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));">
+                        <div class="input-group"><label>Catches</label><input type="number" id="hist-catches" value="0"></div>
+                        <div class="input-group"><label>Stumpings</label><input type="number" id="hist-stumpings" value="0"></div>
+                        <div class="input-group"><label>Run Outs</label><input type="number" id="hist-runouts" value="0"></div>
+                    </div>
+
+                    <button type="button" class="btn-primary" style="background: #10b981; width: 100%; margin-top: 15px; font-size: 1.1rem; padding: 15px;" onclick="injectHistoricalMatch()">💾 Inject Historical Data to Cloud</button>
                 </div>
             </div>
         </section>
@@ -265,9 +357,9 @@
                 <!-- ENGINE 2: PLAYOFFS & KNOCKOUTS -->
                 <div id="tab-knockouts" class="sub-tab-pane">
                     <div style="background: rgba(16, 185, 129, 0.05); padding: 20px; border-radius: 8px; border: 1px dashed #10b981; margin-bottom: 20px;">
-                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap:wrap;">
                             <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Playoff Structure:</label>
-                            <select id="ko-template-select" class="postings-select" style="width: auto; flex:1;">
+                            <select id="ko-template-select" class="postings-select" style="width: auto; flex:1; min-width:200px;">
                                 <option value="standard">📌 Standard Knockout Bracket (TBD Placeholders)</option>
                                 <option value="direct">🔥 Auto-Fill Bracket (Calculates Byes & Plugs Real Teams)</option>
                                 <option value="rolling">🔄 Rolling Knockout (Passes odd team to next round)</option>
@@ -275,7 +367,7 @@
                                 <option value="super">🏆 Super League (Super Six / Super Eight)</option>
                             </select>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap:wrap;">
                             <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Teams Involved:</label>
                             <select id="ko-size-select" class="postings-select" style="width: auto;">
                                 <option value="2">Top 2 (Final Only)</option>
@@ -291,7 +383,7 @@
 
                 <!-- THE MASTER CANVAS -->
                 <div id="tab-canvas" class="sub-tab-pane">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
                         <p style="color: #94a3b8; font-size: 0.85rem; margin:0;">The Single Source of Truth. You can manually edit any team, placeholder, or match name below.</p>
                         <button type="button" class="btn-outline" style="padding: 8px 15px; font-size:0.85rem;" onclick="addManualMatch()">+ Add Custom Match Row</button>
                     </div>
@@ -326,7 +418,7 @@
                     <button type="button" class="btn-action" style="margin-top:20px; background:#f59e0b; color:black;" onclick="toggleBulkForm()">⚡ Bulk / Excel Upload</button>
                 </div>
 
-                <!-- 🔥 BULK REGISTRATION GRID IN TOURNAMENT HUB -->
+                <!-- BULK REGISTRATION GRID IN TOURNAMENT HUB -->
                 <div id="bulk-registration-panel" class="hidden" style="background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #f59e0b; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                         <div>
@@ -363,13 +455,11 @@
                         </table>
                     </div>
                     
-                    <!-- Clean, right-aligned buttons. Master Switch controls rules invisibly. -->
                     <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
                         <button type="button" class="btn-action" style="background: #475569;" onclick="addBulkRows(5, true)">+ Add 5 Empty Rows</button>
                         <button type="button" class="btn-action" style="background: #10b981; font-size: 1rem; padding: 12px 20px;" onclick="submitBulkSquad()">💾 Save & Add to Squad</button>
                     </div>
                 </div>
-                <!-- END BULK PANEL -->
 
                 <div id="wizard-player-slots-container">
                     <div style="text-align: center; color: #475569; padding: 40px; font-style: italic;">Select a team above to view and assign players.</div>
@@ -456,12 +546,11 @@
         // ==========================================
         // 👑 SUPER ADMIN MASTER SWITCH
         // ==========================================
-        // Set to false for testing (allows missing Father Name / DOB). 
-        // Set to true before official launch to make them strictly mandatory for everyone.
         const ENFORCE_STRICT_REGISTRATION = false; 
 
         let currentAdminId = null;
         let currentAdminAssociation = 'Independent';
+        let isSuperAdmin = false; // 🔥 Tracks Super Admin Status
 
         let currentTournamentId = null;
         let allDbTeams = [];        
@@ -486,8 +575,14 @@
             await loadExistingTournamentsList();
             initPoolsWorkspace("1"); 
             renderCanvas();
-            addBulkRows(15); // Pre-load bulk grid
+            addBulkRows(15); 
         });
+
+        // 🔥 MOBILE SIDEBAR TOGGLE
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.querySelector('.sidebar-overlay').classList.toggle('active');
+        }
 
         async function checkAdminSession() {
             const { data: { session }, error: sessionError } = await db.auth.getSession();
@@ -501,22 +596,36 @@
 
             const { data: profileData, error: profileError } = await db
                 .from('profiles')
-                .select('association')
+                .select('association, role') // 🔥 Fetches the role to verify identity
                 .eq('id', currentAdminId)
                 .single();
 
             if (!profileError && profileData && profileData.association) {
                 currentAdminAssociation = profileData.association;
-                console.log("Logged in as Admin for:", currentAdminAssociation);
                 document.querySelector('.app-title').innerText = `${currentAdminAssociation} TOURNAMENT HUB`;
+                document.getElementById('mobile-app-title').innerText = `${currentAdminAssociation} HUB`; // Sync Mobile header
+            }
+
+            // 🔥 SUPER ADMIN VERIFICATION (Using your email or db role)
+            if (session.user.email === 'pushpendra51277@gmail.com' || (profileData && profileData.role === 'superadmin')) {
+                isSuperAdmin = true;
+                // Unhide the Historical Data menu item
+                document.querySelectorAll('.super-admin-only').forEach(el => el.classList.remove('super-admin-only'));
             }
         }
 
+        // 🔥 MOBILE FRIENDLY SWITCH TAB
         function switchTab(targetId, navElement) {
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             navElement.classList.add('active');
             document.querySelectorAll('.hub-section').forEach(sec => sec.classList.remove('active'));
             document.getElementById(targetId).classList.add('active');
+            
+            // Auto-close sidebar on mobile after tapping a link
+            if (window.innerWidth <= 768) {
+                document.querySelector('.sidebar').classList.remove('open');
+                document.querySelector('.sidebar-overlay').classList.remove('active');
+            }
         }
 
         function switchSubTab(tabId, btn) {
@@ -1072,7 +1181,6 @@
             openModal('quick-player-modal');
         }
 
-        // 🔥 Uses Master Switch for Strict Mode
         async function quickSavePlayer(btn) {
             const teamName = document.getElementById('squad-team-select').value;
             const name = document.getElementById('quick-p-name').value.trim();
@@ -1112,10 +1220,8 @@
 
             let tObj = selectedTourneyTeams.find(t => t.name === teamName);
             
-            // 1. Link to Master Roster
             await db.from('team_rosters').upsert([{ team_name: teamName, player_id: playerIdToUse }], {onConflict: 'team_name, player_id'});
             
-            // 2. Link directly to this Tournament Squad automatically
             if(currentTournamentId) {
                 await db.from('tournament_squads').upsert([{ tournament_id: currentTournamentId, team_id: tObj.team_id, player_id: playerIdToUse }], {onConflict: 'tournament_id, team_id, player_id'});
             }
@@ -1176,10 +1282,8 @@
             
             const btn = event.target; const originalText = btn.innerText; btn.innerText = "⏳ Syncing...";
             
-            // First, remove old links for this team to avoid ghost players
             await db.from('tournament_squads').delete().eq('tournament_id', currentTournamentId).eq('team_id', tObj.team_id);
             
-            // Then insert the new cleanly checked list
             let payload = selectedIds.map(pid => ({ tournament_id: currentTournamentId, team_id: tObj.team_id, player_id: pid }));
             const { error } = await db.from('tournament_squads').insert(payload);
             
@@ -1295,7 +1399,6 @@
             reader.readAsArrayBuffer(file);
         }
 
-        // 🔥 Uses Master Switch for Strict Mode
         async function submitBulkSquad() {
             const teamName = document.getElementById('squad-team-select').value;
             if (!teamName) { alert("Please select a team from the dropdown to review first."); return; }
@@ -1306,7 +1409,7 @@
             if (!tObj) { alert("Team not found in tournament selection."); return; }
 
             const rows = document.querySelectorAll('#bulk-player-grid tr');
-            const isStrict = ENFORCE_STRICT_REGISTRATION;
+            const isStrict = ENFORCE_STRICT_REGISTRATION; 
             
             let payload = [];
             let hasErrors = false;
@@ -1329,20 +1432,25 @@
                         hasErrors = true;
                         return;
                     }
-                    
-                    // 🔥 SUPER ADMIN STRICT MODE ENFORCEMENT
+
                     if (isStrict && (!fname || !dob)) {
                         alert(`Row ${index + 1} Error: Strict Mode is ON. Father's Name and DOB are mandatory.`);
                         row.style.backgroundColor = "rgba(239, 68, 68, 0.2)"; 
                         hasErrors = true;
                         return;
                     }
-
+                    
                     row.style.backgroundColor = "transparent"; 
 
                     payload.push({
-                        full_name: name, father_name: fname, dob: dob,
-                        playing_role: role, batting_style: bStyle, bowling_arm: bArm, bowling_type: bType, reg_no: regNo || null
+                        full_name: name,
+                        father_name: fname,
+                        dob: dob,
+                        playing_role: role,
+                        batting_style: bStyle,
+                        bowling_arm: bArm,
+                        bowling_type: bType,
+                        reg_no: regNo || null
                     });
                 } else {
                     row.style.backgroundColor = "transparent"; 
@@ -1350,20 +1458,25 @@
             });
 
             if (hasErrors) return; 
-            if (payload.length === 0) { alert("Please fill out at least one player row."); return; }
+            if (payload.length === 0) { alert("Please completely fill out at least one player row."); return; }
 
-            // 1. Upload to Master DB (players table)
+            // 1. Upload to Master Database
             const { data: newPlayers, error } = await db.from('players').insert(payload).select('player_id');
-            if (error) { alert("Error saving squad to master: " + error.message); return; }
+            if (error) { alert("Error saving squad: " + error.message); return; }
 
-            // 2. Link to Global Roster (team_rosters)
-            const globalRosterLinks = newPlayers.map(p => ({
+            // 2. Link them directly to the active team roster
+            const rosterLinks = newPlayers.map(p => ({
                 team_name: teamName,
                 player_id: p.player_id
             }));
-            await db.from('team_rosters').upsert(globalRosterLinks, {onConflict: 'team_name, player_id'});
             
-            // 3. Link to specific live tournament (tournament_squads)
+            const { error: linkError } = await db.from('team_rosters').upsert(rosterLinks, {onConflict: 'team_name, player_id'});
+            
+            if (linkError) { 
+                alert("Players saved globally, but failed to link to master team roster: " + linkError.message); 
+            }
+
+            // 3. Link directly to this Tournament Squad automatically
             const tournamentLinks = newPlayers.map(p => ({
                 tournament_id: currentTournamentId,
                 team_id: tObj.team_id,
@@ -1371,18 +1484,17 @@
             }));
             await db.from('tournament_squads').upsert(tournamentLinks, {onConflict: 'tournament_id, team_id, player_id'});
 
-            // Keep local UI cache updated
             let safeTeamClass = teamName.replace(/\s+/g, '_');
             let previouslyCheckedIds = [];
             if(tournamentSquadsCache[teamName]) previouslyCheckedIds = tournamentSquadsCache[teamName];
             
             newPlayers.forEach(p => previouslyCheckedIds.push(p.player_id));
             tournamentSquadsCache[teamName] = previouslyCheckedIds;
-            
+
             alert(`✅ Successfully registered ${payload.length} players to the cloud and linked them to ${teamName} in this tournament!`);
             addBulkRows(15, false); // Wipes grid clean
-            toggleBulkForm(); // Hides panel
-            loadWizardSquad(teamName); // Refresh the visible checkbox list
+            toggleBulkForm(); // Hides the bulk panel
+            loadWizardSquad(teamName); // Refreshes the squad list
         }
 
         function finishSquadsAndProceed() { 
@@ -1455,6 +1567,100 @@
                 <h3 style="color: #10b981; font-size: 1.5rem; margin-top: 0;">✅ Successfully Deployed!</h3>
                 <p style="color: #cbd5e1; max-width: 600px; margin: 0 auto;">Your tournament is now live. Scorers can log in using the exact Match IDs and PINs listed above.</p>
             `;
+        }
+
+        // ==========================================
+        // ⏳ HISTORICAL DATA INJECTOR (SUPER ADMIN ONLY)
+        // ==========================================
+        async function injectHistoricalMatch() {
+            if (!isSuperAdmin) {
+                alert("Access Denied: You must be a Super Admin to inject historical legacy records.");
+                return;
+            }
+
+            const pName = document.getElementById('hist-player').value.trim();
+            const dateStr = document.getElementById('hist-date').value;
+            
+            if (!pName || !dateStr) { 
+                alert("Player Name and Match Date are strictly required."); 
+                return; 
+            }
+
+            // Parse Batting
+            const r = parseInt(document.getElementById('hist-runs').value) || 0;
+            const b = parseInt(document.getElementById('hist-bf').value) || 0;
+            const f = parseInt(document.getElementById('hist-4s').value) || 0;
+            const s = parseInt(document.getElementById('hist-6s').value) || 0;
+            const isOut = document.getElementById('hist-out').value === "true";
+
+            // Parse Bowling
+            const o = parseFloat(document.getElementById('hist-o').value) || 0;
+            const m = parseInt(document.getElementById('hist-m').value) || 0;
+            const rc = parseInt(document.getElementById('hist-rc').value) || 0;
+            const w = parseInt(document.getElementById('hist-wkts').value) || 0;
+
+            // Parse Fielding
+            const catches = parseInt(document.getElementById('hist-catches').value) || 0;
+            const stumpings = parseInt(document.getElementById('hist-stumpings').value) || 0;
+            const runouts = parseInt(document.getElementById('hist-runouts').value) || 0;
+
+            if (r === 0 && b === 0 && o === 0 && catches === 0 && stumpings === 0 && runouts === 0) {
+                if(!confirm("All stats are currently zero. Are you sure you want to upload a blank match?")) return;
+            }
+
+            // Construct the "Ghost Match" JSON exactly as career.html expects it
+            const historicalPayload = {
+                matchName: "Historical Entry",
+                match_status: "completed",
+                format: "Historical",
+                tournament: "Legacy Database",
+                host: currentAdminAssociation || "Independent",
+                tier: "Local",
+                inningsSummaries: [
+                    {
+                        batTeam: "Legacy Team",
+                        bowlTeam: "Opponent",
+                        batters: [
+                            {
+                                name: pName,
+                                r: r, b: b, f: f, s: s,
+                                out: isOut,
+                                hasBatted: true
+                            }
+                        ],
+                        bowlers: [
+                            {
+                                name: pName,
+                                o: o, m: m, rc: rc, w: w,
+                                catches: catches, stumpings: stumpings, runouts: runouts
+                            }
+                        ]
+                    }
+                ]
+            };
+
+            const fakeMatchId = `HIST-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+
+            const { error } = await db.from('matches').insert([{
+                match_id: fakeMatchId,
+                scorer_pin: "HIST",
+                full_state: historicalPayload,
+                created_at: new Date(dateStr).toISOString()
+            }]);
+
+            if (error) {
+                alert("Error injecting historical data: " + error.message);
+            } else {
+                alert(`✅ Historical stats for ${pName} injected successfully! They will now automatically appear in the Analytics Hub.`);
+                
+                // Reset inputs
+                ['hist-runs', 'hist-bf', 'hist-4s', 'hist-6s', 'hist-o', 'hist-m', 'hist-rc', 'hist-wkts', 'hist-catches', 'hist-stumpings', 'hist-runouts'].forEach(id => {
+                    document.getElementById(id).value = "0";
+                });
+                document.getElementById('hist-out').value = "true";
+                document.getElementById('hist-player').value = "";
+                document.getElementById('hist-player').focus(); 
+            }
         }
     </script>
 </body>
