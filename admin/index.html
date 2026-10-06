@@ -227,6 +227,12 @@
                             <span id="teamCountBadge" style="background:#10b981; color:#020617; padding:3px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold;">0 Selected</span>
                         </div>
                         
+                        <!-- 🔥 BOLD "CREATE NEW TEAM" MOVED HERE -->
+                        <div style="display: flex; gap: 5px; margin-bottom: 15px;">
+                            <input type="text" id="newTeamName" placeholder="Create new team..." style="flex:1; padding:10px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:white; font-weight: bold; font-size: 0.95rem;">
+                            <button type="button" class="btn-success" style="padding: 10px 20px; font-size: 0.9rem;" onclick="createNewTeamNatively()">+ ADD</button>
+                        </div>
+
                         <input type="text" id="teamSearch" placeholder="🔍 Search database teams..." style="width:100%; padding:8px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:white; margin-bottom: 10px;" onkeyup="renderTeamPanes()">
                         
                         <div class="team-dual-pane">
@@ -242,16 +248,11 @@
                                 <div class="custom-scroll" id="selected-teams-list" style="height: 250px;"></div>
                             </div>
                         </div>
-
-                        <div style="display: flex; gap: 5px; margin-top: 10px;">
-                            <input type="text" id="newTeamName" placeholder="Create new team..." style="flex:1; padding:8px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:white;">
-                            <button type="button" class="btn-success" style="padding: 8px 15px; font-size: 0.85rem;" onclick="createNewTeamNatively()">+ ADD</button>
-                        </div>
                     </div>
                 </div>
 
                 <div style="border-top: 1px solid #334155; margin-top: 30px; padding-top: 20px;">
-                    <button type="button" id="btn-save-proceed" style="background: linear-gradient(90deg, #f59e0b, #ea580c); width: 100%; padding: 18px; font-size: 1.2rem; font-weight: bold; border-radius: 8px; border: none; color: white; cursor:pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4);" onclick="saveTournamentAndProceed()">Save Tournament & Proceed to Fixtures ➡️️</button>
+                    <button type="button" id="btn-save-proceed" style="background: linear-gradient(90deg, #f59e0b, #ea580c); width: 100%; padding: 18px; font-size: 1.2rem; font-weight: bold; border-radius: 8px; border: none; color: white; cursor:pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4);" onclick="saveTournamentAndProceed()">Save Tournament & Proceed to Fixtures ➡</button>
                 </div>
             </div>
         </section>
