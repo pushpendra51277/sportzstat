@@ -221,7 +221,7 @@
         <div class="modal-content" onclick="event.stopPropagation()">
             <button type="button" class="modal-close" onclick="closeAllModals()">&times;</button>
             <h3 style="margin-top: 0; color: #f59e0b;">⚡ Quick Match Setup</h3>
-            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 20px;">Fill out the details below to instantly boot up the Live Scoring Engine.</p>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 20px;">Fill out the details below to instantly boot up the Local Scoring Engine.</p>
             
             <div class="input-group">
                 <label>Format</label>
@@ -332,7 +332,6 @@
 
             document.getElementById('portal-dashboard').style.display = 'block';
 
-            // Reset visibility
             document.getElementById('card-directory').style.display = 'none';
             document.getElementById('card-admin').style.display = 'none';
             document.getElementById('card-rosters').style.display = 'none';
@@ -549,9 +548,6 @@
             });
         }
 
-        // ==========================================
-        // ⚡ NATIVE QUICK MATCH GENERATOR LOGIC
-        // ==========================================
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         
         function closeAllModals(e) {
@@ -568,8 +564,8 @@
             document.getElementById('qm-toss-opt2').value = "Team 2";
         }
 
-        // 🔥 THE DB INJECTOR: Populates the Master DB so setup.js works flawlessly natively
-        async function generateQuickMatch(btn) {
+        // 🔥 LOCAL GENERATOR: Bypasses Supabase and sends data to 20.html
+        function generateQuickMatch(btn) {
             const format = document.getElementById('qm-format').value;
             const t1 = document.getElementById('qm-t1').value.trim() || "Team A";
             const t2 = document.getElementById('qm-t2').value.trim() || "Team B";
@@ -583,100 +579,29 @@
                 return;
             }
 
-            const btnOriginalText = btn.innerText;
-            btn.innerText = "⏳ Building Native Architecture...";
+            btn.innerText = "⏳ Booting Local Engine...";
             btn.disabled = true;
 
-            try {
-                // 1. Create a "Ghost" Tournament so the system thinks this is a full valid event
-                let adminIdToUse = currentUserProfile?.id || currentUser?.id;
-                const { data: tournData, error: tournErr } = await db.from('tournaments')
-                    .insert([{ name: `Quick: ${t1} vs ${t2}`, format: format, admin_id: adminIdToUse }])
-                    .select('tournament_id');
-                if (tournErr) throw tournErr;
-                const qTournId = tournData[0].tournament_id;
+            // Clean the comma-separated names
+            const sq1Names = sq1Raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            const sq2Names = sq2Raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
 
-                // 2. Resolve Teams
-                async function resolveTeam(tName) {
-                    let { data } = await db.from('teams').select('team_id, name').ilike('name', tName).limit(1);
-                    if (data && data.length > 0) return data[0];
-                    let { data: newT } = await db.from('teams').insert([{ name: tName }]).select('team_id, name');
-                    return newT[0];
-                }
-                const teamA = await resolveTeam(t1);
-                const teamB = await resolveTeam(t2);
+            // Package the data for 20.html
+            const payload = {
+                format: format,
+                t1: t1,
+                t2: t2,
+                tossWinner: tossWinnerSelect === 'Team 1' ? t1 : t2,
+                tossDecision: tossDecision,
+                sq1: sq1Names,
+                sq2: sq2Names
+            };
 
-                // 3. Resolve Players & Link to Tournament Squads natively
-                async function buildSquadNative(teamObj, rawNames) {
-                    const names = rawNames.split(',').map(s => s.trim()).filter(s => s.length > 0);
-                    let squadArray = [];
-                    
-                    for (let pName of names) {
-                        let { data: existing } = await db.from('players').select('player_id').ilike('full_name', pName).limit(1);
-                        let pid;
-                        if (existing && existing.length > 0) { 
-                            pid = existing[0].player_id; 
-                        } else {
-                            let { data: newP } = await db.from('players').insert([{ full_name: pName, playing_role: 'Player' }]).select('player_id');
-                            pid = newP[0].player_id;
-                        }
-                        
-                        // Link to Master Roster
-                        await db.from('team_rosters').upsert([{ team_name: teamObj.name, player_id: pid }], {onConflict: 'team_name, player_id'});
-                        
-                        // Link to this specific Quick Tournament
-                        await db.from('tournament_squads').upsert([{ tournament_id: qTournId, team_id: teamObj.team_id, player_id: pid }], {onConflict: 'tournament_id, team_id, player_id'});
-                        
-                        squadArray.push({ name: pName, id: pid });
-                    }
-                    return squadArray;
-                }
+            // Save to browser memory
+            localStorage.setItem('sportzstat_quick_match', JSON.stringify(payload));
 
-                btn.innerText = "⏳ Injecting Squads...";
-                const sqA_objs = await buildSquadNative(teamA, sq1Raw);
-                const sqB_objs = await buildSquadNative(teamB, sq2Raw);
-
-                // 4. Create the Match payload mimicking a standard tournament match
-                const tossWinnerName = tossWinnerSelect === 'Team 1' ? teamA.name : teamB.name;
-                const matchId = `QM-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-                const pin = "1234";
-
-                const matchPayload = {
-                    match_id: matchId,
-                    tournament_id: qTournId, // <--- CRITICAL FIX: The Engine demands a tournament ID!
-                    team_a_id: teamA.team_id,
-                    team_b_id: teamB.team_id,
-                    scorer_pin: pin,
-                    full_state: {
-                        tournament: `Quick: ${t1} vs ${t2}`,
-                        format: format,
-                        host: currentUserProfile?.association || "Independent",
-                        tier: "Local",
-                        team1: teamA.name,
-                        team2: teamB.name,
-                        matchName: `${teamA.name} vs ${teamB.name}`,
-                        match_status: 'upcoming',
-                        toss: { winner: tossWinnerName, decision: tossDecision },
-                        teams: {
-                            A: { name: teamA.name, squad: sqA_objs },
-                            B: { name: teamB.name, squad: sqB_objs }
-                        }
-                    }
-                };
-
-                const { error: matchErr } = await db.from('matches').insert([matchPayload]);
-                if (matchErr) throw matchErr;
-
-                // Everything is securely in the database. Boot up the engine natively.
-                localStorage.setItem('sportzstat_active_match', matchId);
-                localStorage.setItem('sportzstat_active_pin', pin);
-                window.location.href = `scorer/live.html?match=${matchId}&pin=${pin}`;
-
-            } catch (err) {
-                alert("Error generating Native Quick Match: " + err.message);
-                btn.innerText = btnOriginalText;
-                btn.disabled = false;
-            }
+            // Route to your offline engine (Make sure the file name matches your actual file)
+            window.location.href = `20.html`; 
         }
 
         async function signOut(event) {
