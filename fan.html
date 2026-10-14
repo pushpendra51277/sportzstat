@@ -102,7 +102,7 @@
 
         let allFanMatches = [];
         let expandedMatches = new Set();
-        let activeTabs = {}; // Tracks open tabs to prevent resetting during auto-refresh
+        let activeTabs = {};
 
         window.onload = async () => {
             await fetchMatches();
@@ -121,9 +121,8 @@
         }
 
         window.switchFolder = function(matchId, targetIdx, totalInn, event) {
-            event.stopPropagation(); // Stops the card from closing
-            
-            activeTabs[matchId] = targetIdx; // Save user's tab choice to memory
+            event.stopPropagation();
+            activeTabs[matchId] = targetIdx;
             
             for(let i=0; i<totalInn; i++) {
                 let tab = document.getElementById(`tab-${matchId}-${i}`);
@@ -221,7 +220,6 @@
                 let pointsStr = '';
                 let starsStr = '';
 
-                // Extract Key Players
                 if (fps.top_batters && fps.top_batters.length > 0 && fps.top_batters[0].name) {
                     let bestBat = fps.top_batters[0];
                     let bestBowl = fps.top_bowlers && fps.top_bowlers.length > 0 ? fps.top_bowlers[0] : null;
@@ -251,7 +249,7 @@
                 let isExpanded = expandedMatches.has(m.match_id) ? 'style="display: block;"' : '';
                 let detailsHtml = `<div class="match-details" id="details-${m.match_id}" ${isExpanded} onclick="event.stopPropagation()">`;
                 
-                // 🔥 DEDUPLICATED INNINGS ARRAY BUILDER
+                // DEDUPLICATED INNINGS ARRAY BUILDER
                 let innMap = new Map();
                 if (Array.isArray(fs.inningsSummaries)) {
                     fs.inningsSummaries.forEach((inn, idx) => {
@@ -261,24 +259,25 @@
                 }
 
                 let currentInnNum = fs.inningsNum || (innMap.size + 1);
-                if (status === 'live' && fs.current && fs.current.balls > 0 && !innMap.has(currentInnNum)) {
+                if (status === 'live' && fs.current && (fs.current.balls > 0 || fs.current.runs > 0) && !innMap.has(currentInnNum)) {
                     innMap.set(currentInnNum, {
                         innNum: currentInnNum,
                         batTeam: fs.teams[fs.battingKey].name,
                         batters: fs.teams[fs.battingKey].players,
                         bowlers: fs.teams[fs.bowlingKey].players,
+                        extras: fs.current.extras || { w: 0, nb: 0, b: 0, lb: 0 },
+                        penalties: fs.current.penalties || 0,
+                        fow: fs.current.fow || [],
                         isOngoing: true
                     });
                 }
 
                 let displayInnings = Array.from(innMap.values()).sort((a, b) => a.innNum - b.innNum);
 
-                // RENDER THE FILE FOLDER UI
                 if (displayInnings.length > 0) {
                     let tabsHtml = `<div class="folder-tabs">`;
                     let panesHtml = ``;
 
-                    // Retrieve saved tab index or default to latest
                     let savedTabIdx = activeTabs[m.match_id] !== undefined ? activeTabs[m.match_id] : (displayInnings.length - 1);
                     if (savedTabIdx >= displayInnings.length) savedTabIdx = displayInnings.length - 1;
 
@@ -288,14 +287,11 @@
                         let iLabel = `Inn ${inn.innNum || (idx+1)}: ${inn.batTeam}`;
                         if (inn.isOngoing) iLabel += ` (LIVE)`;
 
-                        // The Folder Tab
                         tabsHtml += `<div class="folder-tab ${isAct}" id="tab-${m.match_id}-${idx}" onclick="switchFolder('${m.match_id}', ${idx}, ${displayInnings.length}, event)">${iLabel}</div>`;
-                        
-                        // The Folder Content
                         panesHtml += `<div class="inn-pane ${isAct}" id="pane-${m.match_id}-${idx}" style="display:${dState};">`;
                         
-                        // Batters
-                        panesHtml += `<table class="details-table" style="margin-bottom: 25px;"><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr>`;
+                        // Batters Table
+                        panesHtml += `<table class="details-table" style="margin-bottom: 15px;"><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr>`;
                         (inn.batters || []).filter(b => b.hasBatted).forEach(b => {
                             let sr = b.b > 0 ? ((b.r/b.b)*100).toFixed(1) : '0.0';
                             let outStr = b.out ? (b.dismissalInfo || 'out') : 'not out';
@@ -304,10 +300,14 @@
                                 <td style="font-weight:bold; color:white;">${b.r}</td><td>${b.b}</td><td>${b.f}</td><td>${b.s}</td><td>${sr}</td>
                             </tr>`;
                         });
+
+                        let ex = inn.extras || { w: 0, nb: 0, b: 0, lb: 0 };
+                        let exTotal = (ex.w || 0) + (ex.nb || 0) + (ex.b || 0) + (ex.lb || 0);
+                        panesHtml += `<tr style="background:rgba(255,255,255,0.03);"><td style="color:#f59e0b; font-weight:bold;">Extras</td><td colspan="5" style="color:white; font-weight:bold;">${exTotal} <span style="font-weight:normal; color:#94a3b8; font-size:0.7rem;">(W:${ex.w||0}, NB:${ex.nb||0}, B:${ex.b||0}, LB:${ex.lb||0})</span></td></tr>`;
                         panesHtml += `</table>`;
 
-                        // Bowlers
-                        panesHtml += `<table class="details-table"><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Econ</th></tr>`;
+                        // Bowlers Table
+                        panesHtml += `<table class="details-table" style="margin-bottom: 12px;"><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Econ</th></tr>`;
                         (inn.bowlers || []).filter(bw => bw.o > 0 || bw.rc > 0).forEach(bw => {
                             let oVal = Number(bw.o) || 0;
                             let oversStr = "", absBalls = 0;
@@ -324,7 +324,15 @@
                                 <td>${oversStr}</td><td>${bw.m}</td><td>${bw.rc}</td><td style="font-weight:bold; color:#10b981;">${bw.w}</td><td>${econ}</td>
                             </tr>`;
                         });
-                        panesHtml += `</table></div>`;
+                        panesHtml += `</table>`;
+
+                        // 🔥 FALL OF WICKETS DISPLAY ON FAN PORTAL
+                        if (inn.fow && inn.fow.length > 0) {
+                            let fowItems = inn.fow.map(f => `<b style="color:white;">${f.runs}/${f.wktNum === 'Unbroken' ? '*' : f.wktNum}</b> <span style="color:#94a3b8;">(${f.outBatter}, ${f.overs} ov)</span>`).join(' &bull; ');
+                            panesHtml += `<div style="font-size:0.75rem; background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:6px; border-left:3px solid #f59e0b; line-height:1.5;"><b style="color:#f59e0b;">Fall of Wickets:</b> ${fowItems}</div>`;
+                        }
+
+                        panesHtml += `</div>`;
                     });
 
                     tabsHtml += `</div>`; 
@@ -353,7 +361,6 @@
                 else { upHtml += createCard(upCnt++, 'badge-up', 'UPCOMING'); }
             });
 
-            // SMART UPDATER: Only redraws if the HTML actually changed (Prevents flickering!)
             const safeUpdate = (id, newHtml) => {
                 const el = document.getElementById(id);
                 if (el && el.innerHTML !== newHtml) { el.innerHTML = newHtml; }
