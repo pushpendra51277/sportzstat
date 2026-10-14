@@ -142,7 +142,7 @@
                 <p>Launch the standalone offline engine. Best for casual friendlies and local games.</p>
             </a>
 
-            <div class="portal-card" id="card-directory" style="border-color: #8b5cf6;" onclick="toggleDirectoryView()">
+            <div class="portal-card" id="card-directory" style="border-color: #8b5cf6;" onclick="ectoryView()">
                 <h3 style="color: #8b5cf6;" id="directory-card-title">📁 Match Directory</h3>
                 <p id="directory-card-desc">Review your created tournaments, active fixtures, Match IDs, and Scorer PINs.</p>
             </div>
@@ -442,29 +442,7 @@
             }
         }
 
-        async function toggleDirectoryView() {
-            const section = document.getElementById('directory-section');
-            section.classList.remove('hidden'); section.scrollIntoView({ behavior: 'smooth' });
-            
-            const tbody = document.getElementById('directory-tbody');
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Fetching records...</td></tr>`;
-            
-            document.getElementById('directorySearchInput').value = "";
-
-            const isSuperAdmin = currentUserProfile.role.toLowerCase() === 'superadmin';
-            let query = db.from('matches').select('match_id, scorer_pin, full_state, tournaments(admin_id, name)').order('created_at', { ascending: false });
-            if (!isSuperAdmin) { query = query.eq('tournaments.admin_id', currentUser.id); }
-
-            const { data: matches, error } = await query;
-            if (error || !matches || matches.length === 0) { 
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center;">No active matches found.</td></tr>`; 
-                return; 
-            }
-
-            globalDirectoryMatches = matches;
-            renderDirectoryTable();
-        }
-
+      
         function filterDirectory() {
             const query = document.getElementById('directorySearchInput').value.toLowerCase();
             renderDirectoryTable(query);
