@@ -25,7 +25,7 @@
         .nav-item:hover { background: #1e293b; color: white; }
         .nav-item.active { background: #1e293b; color: #38bdf8; border-left-color: #38bdf8; font-weight: bold; }
         
-        /* MOBILE FIX: Adjusted padding and scrolling for content area */
+        /* 🔥 MOBILE FIX: Adjusted padding and scrolling for content area */
         .content-area { flex: 1; overflow-y: auto; background: #020617; position: relative; }
         .hub-section { display: none; animation: fadeIn 0.3s ease; max-width: 1100px; margin: 0 auto; padding: 40px; }
         .hub-section.active { display: block; }
@@ -95,8 +95,8 @@
         .input-dark:focus { border-color: #38bdf8; }
         .w-100 { width: 100%; }
 
-        /* MOBILE RESPONSIVENESS AND SUPER ADMIN CLASSES */
-        .super-admin-only { display: none !important; } /* Hidden by default until identity is verified */
+        /* 🔥 MOBILE RESPONSIVENESS AND SUPER ADMIN CLASSES */
+        .super-admin-only { display: none !important; }
 
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 15; opacity: 0; transition: opacity 0.3s; }
         .sidebar-overlay.active { display: block; opacity: 1; }
@@ -122,7 +122,7 @@
 </head>
 <body>
 
-    <!-- MOBILE OVERLAY -->
+    <!-- 🔥 MOBILE OVERLAY -->
     <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
     <!-- SIDEBAR NAVIGATION -->
@@ -137,7 +137,7 @@
             <div class="nav-group-title">Configuration</div>
             <div class="nav-item active" onclick="switchTab('sec-settings', this)">⚙️ Setup & Teams</div>
             
-            <!-- SUPER ADMIN ONLY TAB -->
+            <!-- 🔥 SUPER ADMIN ONLY TAB -->
             <div class="nav-item super-admin-only" id="nav-historical" onclick="switchTab('sec-historical', this)">⏳ Historical Data</div>
 
             <div class="nav-group-title">Scheduling</div>
@@ -154,7 +154,7 @@
     <!-- MAIN CONTENT AREA -->
     <main class="content-area">
         
-        <!-- MOBILE HEADER (Only visible on phones) -->
+        <!-- 🔥 MOBILE HEADER (Only visible on phones) -->
         <div class="mobile-header">
             <div style="display: flex; align-items: center;">
                 <button class="menu-btn" onclick="toggleSidebar()">☰</button>
@@ -175,7 +175,7 @@
                         </select>
                     </div>
                     <div id="existing-tournament-wrapper" style="flex: 1; min-width:200px; display: none;">
-                        <label id="existing-tournament-label" style="font-size: 0.8rem; color: #f59e0b; margin-bottom: 5px; font-weight: bold; display:block;">Select Tournament to Edit</label>
+                        <label style="font-size: 0.8rem; color: #f59e0b; margin-bottom: 5px; font-weight: bold; display:block;">Select Tournament to Edit</label>
                         <select id="existing-tournament-select" onchange="loadExistingTournamentData(this.value)" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #f59e0b; color: white; border-radius: 6px; outline:none;">
                             <option value="">Loading tournaments...</option>
                         </select>
@@ -224,4 +224,1476 @@
                     <div class="card" style="margin:0;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                             <label style="color:#94a3b8; font-weight:bold; font-size:0.8rem; text-transform:uppercase;">Select Teams</label>
-                            <span id="teamCountBadge" style="background:#10b981; color:#020617; padding:3px 8px; border-radius:12px; font-size:0.8rem
+                            <span id="teamCountBadge" style="background:#10b981; color:#020617; padding:3px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold;">0 Selected</span>
+                        </div>
+                        
+                        <!-- 🔥 BOLD "CREATE NEW TEAM" RIGHT BELOW SELECT TEAMS HEADING -->
+                        <div style="display: flex; gap: 5px; margin-bottom: 15px;">
+                            <input type="text" id="newTeamName" placeholder="Create new team..." style="flex:1; padding:10px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:white; font-weight: bold; font-size: 0.95rem;">
+                            <button type="button" class="btn-success" style="padding: 10px 20px; font-size: 0.9rem;" onclick="createNewTeamNatively()">+ ADD</button>
+                        </div>
+
+                        <input type="text" id="teamSearch" placeholder="🔍 Search database teams..." style="width:100%; padding:8px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:white; margin-bottom: 10px;" onkeyup="renderTeamPanes()">
+                        
+                        <div class="team-dual-pane">
+                            <div class="team-list-box">
+                                <div class="team-list-header">Available Teams</div>
+                                <div class="custom-scroll" id="available-teams-list" style="height: 250px;">
+                                    <div style="text-align:center; padding:20px; color:#64748b;">Loading DB...</div>
+                                </div>
+                            </div>
+                            
+                            <div class="team-list-box" style="border-color: #10b981;">
+                                <div class="team-list-header" style="background: #047857;">Selected Teams</div>
+                                <div class="custom-scroll" id="selected-teams-list" style="height: 250px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid #334155; margin-top: 30px; padding-top: 20px;">
+                    <button type="button" id="btn-save-proceed" style="background: linear-gradient(90deg, #f59e0b, #ea580c); width: 100%; padding: 18px; font-size: 1.2rem; font-weight: bold; border-radius: 8px; border: none; color: white; cursor:pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4);" onclick="saveTournamentAndProceed()">Save Tournament & Proceed to Fixtures ➡</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 🔥 MODULE: HISTORICAL DATA INJECTOR (SUPER ADMIN ONLY) -->
+        <section id="sec-historical" class="hub-section">
+            <div class="admin-form">
+                <h3 style="margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 10px;">⏳ Historical Match Injector</h3>
+                <p style="color:#94a3b8; font-size:0.85rem; margin-bottom: 25px;">Enter past performances directly. This creates a hidden, completed match in the database that instantly merges into the player's Master Career Stats.</p>
+                
+                <div class="card" style="margin-bottom: 0;">
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label>Match Date *</label>
+                            <input type="date" id="hist-date" style="color-scheme: dark;">
+                        </div>
+                        <div class="input-group">
+                            <label>Player Name (Must match Master DB exactly) *</label>
+                            <input type="text" id="hist-player" placeholder="e.g. Rajat Patidar">
+                        </div>
+                    </div>
+
+                    <h4 style="color: #f59e0b; margin-top: 15px; margin-bottom: 10px; border-bottom: 1px dashed #334155; padding-bottom: 5px;">Batting Stats</h4>
+                    <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));">
+                        <div class="input-group"><label>Runs</label><input type="number" id="hist-runs" value="0"></div>
+                        <div class="input-group"><label>Balls Faced</label><input type="number" id="hist-bf" value="0"></div>
+                        <div class="input-group"><label>Fours</label><input type="number" id="hist-4s" value="0"></div>
+                        <div class="input-group"><label>Sixes</label><input type="number" id="hist-6s" value="0"></div>
+                        <div class="input-group">
+                            <label>Out?</label>
+                            <select id="hist-out">
+                                <option value="true">Yes</option>
+                                <option value="false">Not Out</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <h4 style="color: #10b981; margin-top: 10px; margin-bottom: 10px; border-bottom: 1px dashed #334155; padding-bottom: 5px;">Bowling Stats</h4>
+                    <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));">
+                        <div class="input-group"><label>Overs</label><input type="number" id="hist-o" value="0" step="0.1"></div>
+                        <div class="input-group"><label>Maidens</label><input type="number" id="hist-m" value="0"></div>
+                        <div class="input-group"><label>Runs Conceded</label><input type="number" id="hist-rc" value="0"></div>
+                        <div class="input-group"><label>Wickets</label><input type="number" id="hist-wkts" value="0"></div>
+                    </div>
+
+                    <h4 style="color: #8b5cf6; margin-top: 10px; margin-bottom: 10px; border-bottom: 1px dashed #334155; padding-bottom: 5px;">Fielding Stats</h4>
+                    <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));">
+                        <div class="input-group"><label>Catches</label><input type="number" id="hist-catches" value="0"></div>
+                        <div class="input-group"><label>Stumpings</label><input type="number" id="hist-stumpings" value="0"></div>
+                        <div class="input-group"><label>Run Outs</label><input type="number" id="hist-runouts" value="0"></div>
+                    </div>
+
+                    <button type="button" class="btn-primary" style="background: #10b981; width: 100%; margin-top: 15px; font-size: 1.1rem; padding: 15px;" onclick="injectHistoricalMatch()">💾 Inject Historical Data to Cloud</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODULE 2: FIXTURE ENGINE & MASTER CANVAS -->
+        <section id="sec-fixtures" class="hub-section">
+            <div class="admin-form">
+                <h3 style="margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">2. Multi-Stage Fixture Builder</h3>
+                <p style="color:#94a3b8; font-size:0.85rem; margin-top:0;">Use the Helper Engines to auto-generate matches, then review and edit them in the Master Canvas.</p>
+                
+                <div class="sub-tab-nav" style="background:#1e293b; margin:0 0 20px 0; padding:15px 20px 0 20px; border-radius: 8px;">
+                    <button type="button" class="sub-tab-btn active" onclick="switchSubTab('tab-pools', this)">1. Group Stage Engine</button>
+                    <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-knockouts', this)">2. Knockout Engine</button>
+                    <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-canvas', this)">3. Master Fixture Canvas</button>
+                </div>
+
+                <!-- ENGINE 1: LEAGUES & DYNAMIC POOLS -->
+                <div id="tab-pools" class="sub-tab-pane active">
+                    <div style="background: rgba(56, 189, 248, 0.05); padding: 20px; border-radius: 8px; border: 1px dashed #38bdf8; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                        <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Number of Pools:</label>
+                        <select id="pool-count-select" onchange="handlePoolSelection(this)" class="postings-select" style="width: auto;">
+                            <option value="1">1 Pool (Single League)</option>
+                            <option value="2">2 Pools</option>
+                            <option value="3">3 Pools</option>
+                            <option value="4">4 Pools</option>
+                            <option value="8">8 Pools</option>
+                            <option value="custom" style="color: #38bdf8; font-weight: bold;">⚙️ Custom Number...</option>
+                        </select>
+                        
+                        <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem; margin-left: 20px;">Play Each Other:</label>
+                        <select id="pool-round-select" class="postings-select" style="width: auto;">
+                            <option value="single">Once (Single Header)</option>
+                            <option value="double">Twice (Double Header)</option>
+                        </select>
+                        <button type="button" class="btn-primary" style="margin-left: auto;" onclick="generatePoolMatches()">⚙️ Generate Group Matches</button>
+                    </div>
+
+                    <div class="pools-workspace">
+                        <div class="staging-sidebar">
+                            <h4 style="color: #3b82f6; margin-top: 0; font-size: 0.95rem;">Unassigned Teams</h4>
+                            <div id="staging-teams-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;"></div>
+                        </div>
+                        <div>
+                            <h4 style="color: #10b981; margin: 0 0 10px 0; font-size: 0.95rem;">Active Pools</h4>
+                            <div id="pools-container-grid" class="pools-container-grid"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ENGINE 2: PLAYOFFS & KNOCKOUTS -->
+                <div id="tab-knockouts" class="sub-tab-pane">
+                    <div style="background: rgba(16, 185, 129, 0.05); padding: 20px; border-radius: 8px; border: 1px dashed #10b981; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap:wrap;">
+                            <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Playoff Structure:</label>
+                            <select id="ko-template-select" class="postings-select" style="width: auto; flex:1; min-width:200px;">
+                                <option value="standard">📌 Standard Knockout Bracket (TBD Placeholders)</option>
+                                <option value="direct">🔥 Auto-Fill Bracket (Calculates Byes & Plugs Real Teams)</option>
+                                <option value="rolling">🔄 Rolling Knockout (Passes odd team to next round)</option>
+                                <option value="ipl">🏏 IPL Style (Qualifier 1, Eliminator, Qualifier 2, Final)</option>
+                                <option value="super">🏆 Super League (Super Six / Super Eight)</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap:wrap;">
+                            <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Teams Involved:</label>
+                            <select id="ko-size-select" class="postings-select" style="width: auto;">
+                                <option value="2">Top 2 (Final Only)</option>
+                                <option value="4">Top 4 / Semi-Finals</option>
+                                <option value="8">Top 8 / Quarter-Finals</option>
+                                <option value="16">Top 16 / Round of 16</option>
+                            </select>
+                            <button type="button" class="btn-success" style="margin-left:auto;" onclick="generateKnockoutBracket()">⚙️ Generate Bracket</button>
+                        </div>
+                    </div>
+                    <p style="color:#94a3b8; font-size:0.85rem; font-style:italic;">Note: Generating matches will instantly push them into the Master Canvas where you can edit any TBD placeholders to real teams.</p>
+                </div>
+
+                <!-- THE MASTER CANVAS -->
+                <div id="tab-canvas" class="sub-tab-pane">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+                        <p style="color: #94a3b8; font-size: 0.85rem; margin:0;">The Single Source of Truth. You can manually edit any team, placeholder, or match name below.</p>
+                        <button type="button" class="btn-outline" style="padding: 8px 15px; font-size:0.85rem;" onclick="addManualMatch()">+ Add Custom Match Row</button>
+                    </div>
+                    
+                    <div id="canvas-container">
+                        <div style="text-align: center; padding: 40px; color: #64748b;">
+                            <p style="font-size: 1.2rem; margin-bottom: 10px;">No Matches Generated Yet</p>
+                            <p style="font-size: 0.9rem;">Use the engines above to auto-generate matches, or add rows manually.</p>
+                        </div>
+                    </div>
+                    
+                    <button type="button" style="background: #f59e0b; width:100%; padding:15px; border:none; border-radius:6px; color:black; font-size: 1.1rem; font-weight:bold; margin-top:20px; cursor:pointer;" onclick="lockCanvasAndProceed()">Save Fixtures & Proceed to Squads ➡️</button>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- MODULE 3: SQUAD VERIFICATION -->
+        <section id="sec-squads" class="hub-section">
+            <div class="admin-form">
+                <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px;">3. Verify & Select Squads</h3>
+                <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 0; margin-bottom: 15px;">Select the specific players from the Master DB who are allowed to play in this tournament.</p>
+                
+                <div style="margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    <div class="input-group" style="flex:1; margin:0; min-width: 250px;">
+                        <label>Select Team to Review</label>
+                        <select id="squad-team-select" onchange="loadWizardSquad(this.value)" style="border-color: #3b82f6;">
+                            <option value="">Select a team...</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn-success" style="margin-top:20px;" onclick="openPlayerModal()">➕ Quick-Add New Player</button>
+                    <button type="button" class="btn-action" style="margin-top:20px; background:#f59e0b; color:black;" onclick="toggleBulkForm()">⚡ Bulk / Excel Upload</button>
+                </div>
+
+                <!-- BULK REGISTRATION GRID IN TOURNAMENT HUB -->
+                <div id="bulk-registration-panel" class="hidden" style="background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #f59e0b; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h3 style="color: #f59e0b; margin: 0 0 5px 0;">⚡ Bulk Squad Registration</h3>
+                            <p style="color: #94a3b8; font-size: 0.85rem; margin: 0;">Fill manually OR upload an Excel file.<br>
+                            <b>Excel Columns:</b> A: Name | B: Father | C: DOB | D: Role | E: Bat Style | F: Bowl Arm | G: Bowl Type | H: Reg No</p>
+                        </div>
+                        <div>
+                            <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
+                            <button type="button" class="btn-action" style="background: #10b981; border: none; padding: 10px 15px; color: white;" onclick="document.getElementById('excel-upload').click()">
+                                📁 Upload Excel (.xlsx)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="custom-scroll" style="max-height: 450px; overflow-y: auto; overflow-x: auto; background: #0f172a; border-radius: 6px; padding: 10px;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; min-width: 1200px;">
+                            <thead style="background: #0f172a; position: sticky; top: -10px; z-index: 10;">
+                                <tr>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">#</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Full Name *</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Father's Name</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">DOB</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Playing Role</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Batting Style</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Bowling Arm</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Bowling Type</th>
+                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Reg No.</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bulk-player-grid">
+                                <!-- JavaScript will inject rows here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                        <button type="button" class="btn-action" style="background: #475569;" onclick="addBulkRows(5, true)">+ Add 5 Empty Rows</button>
+                        <button type="button" class="btn-action" style="background: #10b981; font-size: 1rem; padding: 12px 20px;" onclick="submitBulkSquad()">💾 Save & Add to Squad</button>
+                    </div>
+                </div>
+
+                <div id="wizard-player-slots-container">
+                    <div style="text-align: center; color: #475569; padding: 40px; font-style: italic;">Select a team above to view and assign players.</div>
+                </div>
+                
+                <div style="margin-top:25px; border-top: 1px solid #334155; padding-top:20px;">
+                    <button type="button" style="background: #3b82f6; width: 100%; padding: 15px; font-size: 1.1rem; font-weight: bold; border-radius: 6px; border: none; color: white; cursor:pointer;" onclick="finishSquadsAndProceed()">All Squads Verified - Proceed to Deploy ➡️</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODULE 4: DEPLOYMENT -->
+        <section id="sec-deploy" class="hub-section">
+            <div class="admin-form" style="overflow-x: auto;">
+                <h3 style="margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 10px;">4. Official Postings & Deployment</h3>
+                <p style="color:#94a3b8; font-size:0.8rem; margin-bottom: 15px;">Review your finalized fixtures and PINs. Once confirmed, inject them into the live cloud database.</p>
+                
+                <table class="postings-grid">
+                    <thead>
+                        <tr><th style="width: 60%; border-right: 1px solid #1e293b;">Fixture Details</th><th style="width: 40%; text-align: center;">Cloud Status & PIN</th></tr>
+                    </thead>
+                    <tbody id="postings-body">
+                        <tr><td colspan="2" style="text-align: center; padding: 40px; color: #64748b; font-style: italic;">Build your fixtures in the Match Canvas to view postings.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="deploy-action-card" class="card" style="border-color: #f59e0b; background: rgba(245, 158, 11, 0.05); text-align: center; padding: 40px;">
+                <h3 style="color: #f59e0b; font-size: 1.5rem; margin-top: 0;">Ready to go live?</h3>
+                <p style="color: #cbd5e1; max-width: 600px; margin: 0 auto 25px auto;">Review the PINs generated above. Publishing will secure the database and make these matches visible on the Fan Portal.</p>
+                <button type="button" id="btnDeploy" class="btn-primary" style="background: #f59e0b; font-size: 1.2rem; padding: 15px 30px;" onclick="saveMatchesToCloud()">🚀 CONFIRM & DEPLOY TO CLOUD</button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- QUICK-ADD PLAYER MODAL -->
+    <div class="modal-overlay" id="quick-player-modal" onclick="closeAllModals(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button type="button" class="modal-close" onclick="closeAllModals()">&times;</button>
+            <h3 style="margin-top: 0; color: #10b981;">➕ Quick-Add Player</h3>
+            <p style="font-size: 0.8rem; color: #94a3b8;">Target Team: <strong id="quick-player-target-team" style="color:white;"></strong></p>
+            
+            <div class="input-group"><label>Full Name *</label><input type="text" id="quick-p-name" class="input-dark w-100"></div>
+            <div class="input-group"><label>Father's Name</label><input type="text" id="quick-p-father" class="input-dark w-100"></div>
+            <div class="input-group"><label>Date of Birth</label><input type="date" id="quick-p-dob" class="input-dark w-100" style="color-scheme: dark;"></div>
+            <div class="input-group"><label>Primary Role</label>
+                <select id="quick-p-role" class="input-dark w-100">
+                    <option>Batter</option><option>Bowler</option><option>All-Rounder</option><option>Wicketkeeper</option>
+                </select>
+            </div>
+            
+            <div class="grid-2">
+                <div class="input-group"><label>Batting Style</label>
+                    <select id="quick-p-bat" class="input-dark w-100">
+                        <option value="Right-hand bat">Right-hand bat</option><option value="Left-hand bat">Left-hand bat</option>
+                    </select>
+                </div>
+                <div class="input-group"><label>Bowling Arm</label>
+                    <select id="quick-p-barm" class="input-dark w-100">
+                        <option value="Right-arm">Right-arm</option><option value="Left-arm">Left-arm</option><option value="None">None</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="input-group"><label>Bowling Type</label>
+                    <select id="quick-p-btype" class="input-dark w-100">
+                        <option value="Fast">Fast</option><option value="Medium">Medium</option><option value="Off-spin">Off-spin</option><option value="Leg-spin">Leg-spin</option><option value="None">None</option>
+                    </select>
+                </div>
+                <div class="input-group"><label>Reg No.</label><input type="text" id="quick-p-reg" class="input-dark w-100" style="text-transform:uppercase;"></div>
+            </div>
+            
+            <button type="button" class="btn-success" style="width: 100%;" onclick="quickSavePlayer(this)">Save to Master & Add to Squad</button>
+        </div>
+    </div>
+
+    <!-- MAIN LOGIC ENGINE -->
+    <script>
+        const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
+        const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ==========================================
+        // 👑 SUPER ADMIN MASTER SWITCH
+        // ==========================================
+        const ENFORCE_STRICT_REGISTRATION = false; 
+
+        let currentAdminId = null;
+        let currentAdminAssociation = 'Independent';
+        let isSuperAdmin = false; // 🔥 Tracks Super Admin Status
+        let loadedTournamentHost = null; // 🔥 Preserves original admin's host when Super Admin edits
+
+        let currentTournamentId = null;
+        let allDbTeams = [];        
+        let selectedTourneyTeams = [];      
+        let poolCount = 1;          
+        let poolsData = {}; 
+        let masterFixtures = []; 
+        let tournamentSquadsCache = {};
+
+        const standardPlaceholders = [
+            "TBD", "Winner QF 1", "Winner QF 2", "Winner QF 3", "Winner QF 4", 
+            "Winner SF 1", "Winner SF 2", "Winner Qualifier 1", "Winner Eliminator", "Winner Qualifier 2",
+            "Rank 1", "Rank 2", "Rank 3", "Rank 4"
+        ];
+
+        function generateUniqueMatchID(prefix) { return `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`; }
+        function generateUniquePin() { return Math.floor(1000 + Math.random() * 9000).toString(); }
+
+        document.addEventListener('DOMContentLoaded', async () => { 
+            await checkAdminSession();
+            await fetchAllMasterTeams();
+            await loadExistingTournamentsList();
+            initPoolsWorkspace("1"); 
+            renderCanvas();
+            addBulkRows(15); 
+        });
+
+        // 🔥 MOBILE SIDEBAR TOGGLE
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.querySelector('.sidebar-overlay').classList.toggle('active');
+        }
+
+        async function checkAdminSession() {
+            const { data: { session }, error: sessionError } = await db.auth.getSession();
+            
+            if (sessionError || !session) {
+                console.warn("No active session found. Running in offline/testing mode.");
+                return;
+            }
+
+            currentAdminId = session.user.id;
+
+            const { data: profileData, error: profileError } = await db
+                .from('profiles')
+                .select('association, role')
+                .eq('id', currentAdminId)
+                .single();
+
+            if (!profileError && profileData && profileData.association) {
+                currentAdminAssociation = profileData.association;
+                document.querySelector('.app-title').innerText = `${currentAdminAssociation} TOURNAMENT HUB`;
+                document.getElementById('mobile-app-title').innerText = `${currentAdminAssociation} HUB`;
+            }
+
+            // 🔥 SUPER ADMIN VERIFICATION (Using your email or db role)
+            if (session.user.email === 'pushpendra51277@gmail.com' || (profileData && (profileData.role || '').toLowerCase() === 'superadmin')) {
+                isSuperAdmin = true;
+                document.querySelectorAll('.super-admin-only').forEach(el => el.classList.remove('super-admin-only'));
+            }
+        }
+
+        // 🔥 MOBILE FRIENDLY SWITCH TAB
+        function switchTab(targetId, navElement) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            navElement.classList.add('active');
+            document.querySelectorAll('.hub-section').forEach(sec => sec.classList.remove('active'));
+            document.getElementById(targetId).classList.add('active');
+            
+            if (window.innerWidth <= 768) {
+                document.querySelector('.sidebar').classList.remove('open');
+                document.querySelector('.sidebar-overlay').classList.remove('active');
+            }
+        }
+
+        function switchSubTab(tabId, btn) {
+            document.querySelectorAll('.sub-tab-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active'); btn.classList.add('active');
+        }
+
+        function openModal(modalId) { document.getElementById(modalId).classList.add('active'); }
+        function closeAllModals(event) {
+            if (event && event.target && event.target.classList && !event.target.classList.contains('modal-overlay') && !event.target.classList.contains('modal-close')) return;
+            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+        }
+
+        function syncActiveTeams() {
+            let activeNames = selectedTourneyTeams.map(t => t.name);
+            Object.keys(poolsData).forEach(p => { poolsData[p] = poolsData[p].filter(t => activeNames.includes(t)); });
+            
+            const select = document.getElementById('squad-team-select');
+            select.innerHTML = '<option value="">Select a team to verify squad...</option>' + activeNames.map(team => `<option value="${team}">${team}</option>`).join('');
+
+            renderPoolsWorkspace();
+            renderCanvas(); 
+        }
+
+        async function fetchAllMasterTeams() {
+            const { data, error } = await db.from('teams').select('*').order('name', { ascending: true });
+            if (!error && data) {
+                allDbTeams = data;
+                renderTeamPanes();
+            }
+        }
+
+        function renderTeamPanes() {
+            let searchStr = document.getElementById('teamSearch').value.toLowerCase();
+            let availableHtml = allDbTeams
+                .filter(t => !selectedTourneyTeams.some(sel => sel.team_id === t.team_id))
+                .filter(t => t.name.toLowerCase().includes(searchStr))
+                .map(t => `<div class="team-list-item" onclick="selectTeam('${t.team_id}')"><span>${t.name}</span><button type="button" class="btn-success" style="padding:2px 8px;">+</button></div>`).join('');
+            
+            document.getElementById('available-teams-list').innerHTML = availableHtml || '<div style="text-align:center; padding:10px; color:#64748b; font-size:0.8rem;">No teams found.</div>';
+
+            let selectedHtml = selectedTourneyTeams.map(t => `<div class="team-list-item" style="border-left: 3px solid #10b981;"><span>${t.name}</span><button type="button" class="btn-danger" onclick="removeTeam('${t.team_id}', event)">✕</button></div>`).join('');
+            document.getElementById('selected-teams-list').innerHTML = selectedHtml || '<div style="text-align:center; padding:10px; color:#64748b; font-size:0.8rem; font-style:italic;">No teams selected.</div>';
+            document.getElementById('teamCountBadge').innerText = selectedTourneyTeams.length + " Selected";
+        }
+
+        function selectTeam(teamId) {
+            let team = allDbTeams.find(t => t.team_id === teamId);
+            if (team) { 
+                selectedTourneyTeams.push(team); 
+                if (poolCount === 1) {
+                    if(!poolsData["Single Pool / League"]) poolsData["Single Pool / League"] = [];
+                    if(!poolsData["Single Pool / League"].includes(team.name)) poolsData["Single Pool / League"].push(team.name);
+                }
+                renderTeamPanes(); 
+                syncActiveTeams(); 
+            }
+        }
+
+        function removeTeam(teamId, event) {
+            event.stopPropagation();
+            selectedTourneyTeams = selectedTourneyTeams.filter(t => t.team_id !== teamId);
+            renderTeamPanes();
+            syncActiveTeams(); 
+        }
+
+        async function createNewTeamNatively() {
+            let tName = document.getElementById('newTeamName').value.trim();
+            if (!tName) { alert("Please enter a team name."); return; }
+            if (allDbTeams.some(t => t.name.toLowerCase() === tName.toLowerCase())) { alert("Team already exists in database!"); return; }
+
+            document.getElementById('newTeamName').value = "Saving...";
+            try {
+                const { data, error } = await db.from('teams').insert([{ name: tName }]).select();
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    allDbTeams.push(data[0]); 
+                    selectedTourneyTeams.push(data[0]); 
+                    if (poolCount === 1) {
+                        if(!poolsData["Single Pool / League"]) poolsData["Single Pool / League"] = [];
+                        poolsData["Single Pool / League"].push(data[0].name);
+                    }
+                    document.getElementById('newTeamName').value = "";
+                    renderTeamPanes();
+                    syncActiveTeams(); 
+                }
+            } catch(e) { alert("Error saving team to cloud."); document.getElementById('newTeamName').value = tName; }
+        }
+
+        // 🔥 ROLE-BASED TOURNAMENT EDIT LIST: Super Admin sees all; Standard Admin sees only their own
+        async function loadExistingTournamentsList() {
+            const select = document.getElementById('existing-tournament-select');
+            
+            if (!currentAdminId && !isSuperAdmin) {
+                select.innerHTML = '<option value="">Please log in to view your tournaments</option>';
+                return;
+            }
+
+            let query = db.from('tournaments').select('tournament_id, name, format, admin_id, host').order('created_at', { ascending: false });
+            
+            if (!isSuperAdmin) {
+                query = query.eq('admin_id', currentAdminId);
+            }
+
+            const { data, error } = await query;
+            if (error || !data || data.length === 0) { 
+                select.innerHTML = '<option value="">No tournaments found under your account</option>'; 
+                return; 
+            }
+
+            select.innerHTML = '<option value="">-- Choose tournament to edit --</option>' + data.map(t => {
+                let hostTag = (isSuperAdmin && t.host) ? ` [${t.host}]` : '';
+                return `<option value="${t.tournament_id}">${t.name} (${t.format})${hostTag}</option>`;
+            }).join('');
+        }
+
+        function toggleTournamentMode(mode) {
+            const wrapper = document.getElementById('existing-tournament-wrapper');
+            let badge = document.getElementById('tourney-status-badge');
+            
+            if (mode === 'edit') {
+                wrapper.style.display = 'block'; 
+                currentTournamentId = null; 
+                loadedTournamentHost = null;
+            } else {
+                wrapper.style.display = 'none'; 
+                currentTournamentId = null; 
+                loadedTournamentHost = null;
+                selectedTourneyTeams = [];
+                masterFixtures = []; 
+                document.getElementById('t-name').value = '';
+                document.getElementById('t-date').value = '';
+                document.getElementById('t-tier').value = 'Local';
+                renderTeamPanes();
+                initPoolsWorkspace("1");
+                renderCanvas();
+                if(badge) {
+                    badge.innerText = "Unsaved";
+                    badge.style = "background: rgba(148, 163, 184, 0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid #94a3b8; color: #94a3b8; font-size: 0.85rem; font-weight: bold;";
+                }
+            }
+        }
+
+        async function loadExistingTournamentData(tournId) {
+            if (!tournId) return;
+            const { data: tData, error: tErr } = await db.from('tournaments').select('*').eq('tournament_id', tournId).single();
+            if (tErr || !tData) { alert("Error loading tournament details."); return; }
+
+            // 🔥 SECURITY CHECK: Block standard admins from loading someone else's tournament
+            if (!isSuperAdmin && tData.admin_id !== currentAdminId) {
+                alert("❌ Access Denied: You can only edit tournaments created under your Admin account.");
+                document.getElementById('existing-tournament-select').value = "";
+                return;
+            }
+
+            currentTournamentId = tournId;
+            loadedTournamentHost = tData.host || null;
+
+            document.getElementById('t-name').value = tData.name || '';
+            document.getElementById('t-format').value = tData.format || 'T20';
+            document.getElementById('t-date').value = tData.start_date ? tData.start_date.split('T')[0] : '';
+            
+            if(tData.config) {
+                if(tData.config.winPoints) document.getElementById('tWinPoints').value = tData.config.winPoints; 
+                if(tData.config.tier) document.getElementById('t-tier').value = tData.config.tier; 
+            }
+
+            const { data: mData } = await db.from('matches').select('*').eq('tournament_id', tournId);
+            let linkedTeamNames = new Set();
+            masterFixtures = []; 
+            
+            if (mData && mData.length > 0) {
+                mData.forEach(m => {
+                    let fs = m.full_state || {};
+                    if(fs.team1 && fs.team1 !== "TBD" && !fs.team1.includes("Winner") && !fs.team1.includes("Rank")) linkedTeamNames.add(fs.team1);
+                    if(fs.team2 && fs.team2 !== "TBD" && !fs.team2.includes("Winner") && !fs.team2.includes("Rank")) linkedTeamNames.add(fs.team2);
+                    masterFixtures.push({ id: m.match_id, name: fs.matchName || m.match_id, t1: fs.team1 || '', t2: fs.team2 || '', pin: m.scorer_pin, isLive: true });
+                });
+            }
+
+            const { data: squadData } = await db.from('tournament_squads').select('team_id, player_id').eq('tournament_id', tournId);
+            if (squadData) {
+                tournamentSquadsCache = {};
+                squadData.forEach(s => {
+                    let tName = allDbTeams.find(x => x.team_id === s.team_id)?.name;
+                    if (tName) {
+                        linkedTeamNames.add(tName);
+                        if(!tournamentSquadsCache[tName]) tournamentSquadsCache[tName] = [];
+                        tournamentSquadsCache[tName].push(s.player_id);
+                    }
+                });
+            }
+
+            selectedTourneyTeams = allDbTeams.filter(t => linkedTeamNames.has(t.name));
+            renderTeamPanes();
+            initPoolsWorkspace("1");
+            syncActiveTeams();
+            alert(`✅ Loaded tournament "${tData.name}". \n\n${selectedTourneyTeams.length} Teams and ${masterFixtures.length} Matches were pulled from the cloud!`);
+        }
+
+        async function saveTournamentAndProceed() {
+            let btn = document.getElementById('btn-save-proceed');
+            let originalText = btn.innerText;
+            btn.innerText = "⏳ Saving Tournament...";
+            
+            let tName = document.getElementById('t-name').value.trim();
+            let tFormat = document.getElementById('t-format').value;
+            let tDate = document.getElementById('t-date').value;
+            let tTier = document.getElementById('t-tier').value; 
+            
+            const mode = document.getElementById('tournament-mode-select').value;
+            // Preserve original admin's host association when Super Admin edits an existing tournament
+            let tHost = (mode === 'edit' && loadedTournamentHost) ? loadedTournamentHost : currentAdminAssociation; 
+            
+            let configPayload = { winPoints: document.getElementById('tWinPoints').value, tier: tTier }; 
+
+            if (!tName || !tDate) { 
+                alert("Name and Starting Date are required."); 
+                btn.innerText = originalText;
+                return; 
+            }
+            if (selectedTourneyTeams.length < 2) { 
+                alert("Select at least 2 teams."); 
+                btn.innerText = originalText;
+                return; 
+            }
+
+            let tError = null;
+            
+            try {
+                if (mode === 'edit' && currentTournamentId) {
+                    const { error } = await db.from('tournaments').update({ name: tName, format: tFormat, start_date: tDate, host: tHost, config: configPayload }).eq('tournament_id', currentTournamentId);
+                    tError = error;
+                } else {
+                    const { data: tData, error } = await db.from('tournaments').insert([{ name: tName, format: tFormat, start_date: tDate, host: tHost, admin_id: currentAdminId, config: configPayload }]).select();
+                    tError = error; if (tData && tData.length > 0) currentTournamentId = tData[0].tournament_id;
+                    await loadExistingTournamentsList();
+                }
+
+                if (tError) throw tError;
+
+                let badge = document.getElementById('tourney-status-badge');
+                if (badge) {
+                    badge.innerText = "Saved: Draft Mode";
+                    badge.style.background = "rgba(16, 185, 129, 0.1)"; 
+                    badge.style.borderColor = "#10b981"; 
+                    badge.style.color = "#10b981";
+                }
+                
+                btn.innerText = originalText;
+                let navItem = document.getElementById('nav-fixtures');
+                switchTab('sec-fixtures', navItem);
+                
+            } catch (err) {
+                alert("Error saving tournament: " + err.message);
+                btn.innerText = originalText;
+            }
+        }
+
+        // --- POOL WORKSPACE ---
+        function handlePoolSelection(selectEl) {
+            if (selectEl.value === 'custom') {
+                let customCount = prompt("How many pools do you need? (Enter a number)");
+                let parsed = parseInt(customCount);
+                if (parsed && parsed > 0) {
+                    let exists = Array.from(selectEl.options).some(opt => opt.value == parsed);
+                    if (!exists) {
+                        let newOpt = document.createElement('option');
+                        newOpt.value = parsed; newOpt.text = parsed + " Pools (Custom)";
+                        selectEl.insertBefore(newOpt, selectEl.lastElementChild);
+                    }
+                    selectEl.value = parsed; initPoolsWorkspace(parsed);
+                } else { selectEl.value = "1"; initPoolsWorkspace(1); }
+            } else { initPoolsWorkspace(selectEl.value); }
+        }
+
+        function initPoolsWorkspace(countVal) { 
+            poolCount = parseInt(countVal) || 1;
+            if(poolCount < 1) poolCount = 1;
+            
+            let previouslyAssigned = [];
+            Object.keys(poolsData).forEach(pKey => { 
+                previouslyAssigned = previouslyAssigned.concat(poolsData[pKey]); 
+            });
+
+            poolsData = {};
+            let allActiveNames = selectedTourneyTeams.map(t => t.name);
+
+            if(poolCount === 1) { 
+                poolsData["Single Pool / League"] = [...allActiveNames]; 
+            } else { 
+                poolsData["Unassigned"] = [...allActiveNames];
+                for(let i=0; i<poolCount; i++) { 
+                    let pName = i < 26 ? String.fromCharCode(65 + i) : (i + 1);
+                    poolsData["Pool " + pName] = []; 
+                }
+            }
+            renderPoolsWorkspace(); 
+        }
+        
+        function renderPoolsWorkspace() {
+            let assigned = [].concat(...Object.values(poolsData)); 
+            let activeNames = selectedTourneyTeams.map(t => t.name);
+            
+            let unassigned = activeNames.filter(t => !assigned.includes(t));
+            if (poolsData["Unassigned"]) {
+                unassigned.forEach(t => { if (!poolsData["Unassigned"].includes(t)) poolsData["Unassigned"].push(t); });
+            }
+            
+            let unassignedHtml = "";
+            if (poolCount > 1 && poolsData["Unassigned"]) {
+                 unassignedHtml = poolsData["Unassigned"].length > 0 
+                    ? poolsData["Unassigned"].map(t => `
+                        <div style="background:#0f172a; padding:8px; border-radius:4px; margin-bottom:5px; font-weight:bold; display:flex; justify-content:space-between; align-items:center;">
+                            ${t} 
+                            <select style="background:#1e293b; color:white; border-radius:4px; padding:2px; outline:none;" onchange="assignTeam('${t.replace(/'/g, "\\'")}', this.value)">
+                                <option value="">Move...</option>
+                                ${Object.keys(poolsData).filter(p => p !== "Unassigned").map(p => `<option value="${p}">${p}</option>`).join('')}
+                            </select>
+                        </div>
+                      `).join('') 
+                    : '<div style="color:#64748b; font-size:0.8rem; font-style:italic;">All teams assigned to pools.</div>';
+                 
+                 document.getElementById('staging-teams-list').innerHTML = unassignedHtml;
+            } else {
+                 document.getElementById('staging-teams-list').innerHTML = '<div style="color:#64748b; font-size:0.8rem; font-style:italic;">All teams auto-assigned to Single Pool.</div>';
+            }
+            
+            let poolsHtml = Object.keys(poolsData).filter(pName => pName !== "Unassigned").map(pName => `
+                <div class="pool-card">
+                    <b style="color:#f59e0b;">${pName}</b> <span style="float:right; color:#64748b; font-size:0.8rem;">${poolsData[pName].length} Teams</span>
+                    <div class="pool-teams-box">
+                        ${poolsData[pName].length > 0 
+                            ? poolsData[pName].map(t => `
+                                <div class="team-pill">
+                                    ${t} <span style="cursor:pointer; margin-left:5px;" onclick="removeTeamFromPool('${pName}', '${t.replace(/'/g, "\\'")}')">×</span>
+                                </div>
+                              `).join('')
+                            : '<div style="color:#64748b; font-size:0.8rem; font-style:italic;">Empty Pool</div>'
+                        }
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('pools-container-grid').innerHTML = poolsHtml;
+        }
+        
+        function assignTeam(t, p) { 
+            if(p) { 
+                poolsData["Unassigned"] = poolsData["Unassigned"].filter(x => x !== t);
+                poolsData[p].push(t); 
+                renderPoolsWorkspace(); 
+            } 
+        }
+        
+        function removeTeamFromPool(p, t) { 
+            poolsData[p] = poolsData[p].filter(x => x !== t); 
+            if(poolCount > 1) {
+                if(!poolsData["Unassigned"]) poolsData["Unassigned"] = [];
+                poolsData["Unassigned"].push(t);
+            } else {
+                poolsData["Single Pool / League"].push(t); 
+            }
+            renderPoolsWorkspace(); 
+        }
+        
+        // --- FIXTURE GENERATORS ---
+        function generatePoolMatches() {
+            let mode = document.getElementById('pool-round-select').value;
+            let count = 0;
+            Object.keys(poolsData).forEach(poolName => { 
+                if(poolName === "Unassigned") return;
+                let teams = poolsData[poolName]; 
+                for(let i=0; i<teams.length; i++) { 
+                    for(let j=i+1; j<teams.length; j++) { 
+                        let mName = (poolName === "Single Pool / League") ? `League Match` : `${poolName} Match`;
+                        masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: teams[i], t2: teams[j], pin: generateUniquePin(), isLive: false }); 
+                        count++;
+                        if(mode === 'double') {
+                            masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName + ` (Reverse)`, t1: teams[j], t2: teams[i], pin: generateUniquePin(), isLive: false }); 
+                            count++;
+                        }
+                    } 
+                } 
+            });
+            
+            if(count === 0) { alert("No teams in active pools to generate matches."); return; }
+            alert(`Generated ${count} Group Matches! Moved to Master Canvas.`);
+            document.querySelectorAll('.sub-tab-btn')[2].click(); 
+            renderCanvas();
+        }
+
+        function generateKnockoutBracket() {
+            let template = document.getElementById('ko-template-select').value;
+            let size = parseInt(document.getElementById('ko-size-select').value); 
+            let count = 0;
+            let activeNames = selectedTourneyTeams.map(t => t.name);
+
+            if (template === 'standard') {
+                if (size >= 16) { for(let i=1; i<=8; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Round of 16 - Match ${i}`, t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); }
+                if (size >= 8) { for(let i=1; i<=4; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Quarter-Final ${i}`, t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); }
+                if (size >= 4) { masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 1", t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 2", t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); }
+                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); 
+                alert(`Generated Standard Placeholder Matches! Moved to Master Canvas.`);
+            
+            } else if (template === 'direct') {
+                let totalTeams = activeNames.length;
+                if(totalTeams < 2) { alert("Not enough teams for a direct knockout."); return; }
+                
+                let nextPow2 = Math.pow(2, Math.ceil(Math.log2(totalTeams)));
+                if (nextPow2 === 1) nextPow2 = 2; 
+                
+                let numByes = nextPow2 - totalTeams;
+                let numR1Matches = (totalTeams - numByes) / 2;
+                
+                let matchIdx = 0;
+                let roundTeams = []; 
+                let teamsGettingByes = [];
+
+                let r1RoundName = (nextPow2 === 16) ? "Round of 16" : (nextPow2 === 8) ? "Quarter-Final" : (nextPow2 === 4) ? "Semi-Final" : (nextPow2 === 2) ? "Final" : `Round of ${nextPow2}`;
+                
+                for(let i=0; i<numByes; i++) {
+                    roundTeams.push(activeNames[matchIdx]); 
+                    teamsGettingByes.push(activeNames[matchIdx]);
+                    matchIdx++;
+                }
+                
+                for(let i=0; i<numR1Matches; i++) {
+                    let mName = (r1RoundName === "Final") ? "Final" : `${r1RoundName} - Match ${i+1}`;
+                    masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: activeNames[matchIdx++], t2: activeNames[matchIdx++], pin: generateUniquePin(), isLive: false });
+                    count++;
+                    roundTeams.push(`Winner of ${mName}`);
+                }
+                
+                let teamsInRound = roundTeams.length;
+                while (teamsInRound >= 2) {
+                    let nextRoundTeams = [];
+                    let matchesThisRound = teamsInRound / 2;
+                    let rName = (matchesThisRound === 4) ? "Quarter-Final" : (matchesThisRound === 2) ? "Semi-Final" : (matchesThisRound === 1) ? "Final" : `Round of ${teamsInRound*2}`;
+                    
+                    for(let i=0; i<matchesThisRound; i++) {
+                        let mName = (matchesThisRound === 1) ? "Final" : `${rName} - Match ${i+1}`;
+                        masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: roundTeams[i*2], t2: roundTeams[i*2+1], pin: generateUniquePin(), isLive: false });
+                        count++;
+                        nextRoundTeams.push(`Winner of ${mName}`);
+                    }
+                    roundTeams = nextRoundTeams;
+                    teamsInRound = roundTeams.length;
+                }
+
+                let msg = `Generated ${count} Standard Bracket Matches!`;
+                if(numByes > 0) msg += `\n\n🚨 NOTE: To mathematically balance the bracket, ${numByes} team(s) received a BYE into the second round:\n${teamsGettingByes.join(', ')}`;
+                alert(msg + "\n\nMoved to Master Canvas.");
+            
+            } else if (template === 'rolling') {
+                let totalTeams = activeNames.length;
+                if(totalTeams < 2) { alert("Not enough teams for a rolling knockout."); return; }
+
+                let roundNum = 1;
+                let currentRoundTeams = [...activeNames];
+                let nextRoundPlaceholders = [];
+                
+                while(currentRoundTeams.length > 1) {
+                    let rName = "Round " + roundNum;
+                    if(currentRoundTeams.length === 2) rName = "Final";
+                    else if(currentRoundTeams.length <= 4 && currentRoundTeams.length > 2) rName = "Semi-Final";
+                    else if(currentRoundTeams.length <= 8 && currentRoundTeams.length > 4) rName = "Quarter-Final";
+
+                    let matchesThisRound = Math.floor(currentRoundTeams.length / 2);
+                    let hasBye = currentRoundTeams.length % 2 !== 0;
+
+                    for(let i=0; i<matchesThisRound; i++) {
+                        let t1 = currentRoundTeams[i*2];
+                        let t2 = currentRoundTeams[i*2 + 1];
+                        let mName = (rName === "Final") ? "Final" : `${rName} - Match ${i+1}`;
+                        masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: t1, t2: t2, pin: generateUniquePin(), isLive: false });
+                        count++;
+                        nextRoundPlaceholders.push(`Winner of ${mName}`);
+                    }
+
+                    if(hasBye) {
+                        let byeTeam = currentRoundTeams[currentRoundTeams.length - 1];
+                        nextRoundPlaceholders.unshift(byeTeam);
+                    }
+
+                    currentRoundTeams = [...nextRoundPlaceholders];
+                    nextRoundPlaceholders = [];
+                    roundNum++;
+                }
+                alert(`Generated ${count} Rolling Knockout Matches!\n\nOdd teams automatically received byes and were carried forward.\nMoved to Master Canvas.`);
+            
+            } else if (template === 'ipl') {
+                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Qualifier 1", t1: "Rank 1", t2: "Rank 2", pin: generateUniquePin(), isLive: false });
+                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Eliminator", t1: "Rank 3", t2: "Rank 4", pin: generateUniquePin(), isLive: false });
+                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Qualifier 2", t1: "Loser of Qualifier 1", t2: "Winner of Eliminator", pin: generateUniquePin(), isLive: false });
+                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "Winner of Qualifier 1", t2: "Winner of Qualifier 2", pin: generateUniquePin(), isLive: false });
+                alert(`Generated 4 IPL Playoff Matches! Moved to Master Canvas.`);
+            
+            } else if (template === 'super') {
+                for(let i=1; i<=size; i++) { masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Super League Match`, t1: `Super Rank ${i}`, t2: "TBD", pin: generateUniquePin(), isLive: false }); }
+                alert(`Generated Super League Matches! Moved to Master Canvas.`);
+            }
+
+            document.querySelectorAll('.sub-tab-btn')[2].click(); 
+            renderCanvas();
+        }
+
+        // --- MASTER CANVAS ---
+        function addManualMatch() { masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Custom Match`, t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); renderCanvas(); }
+        
+        function handleTeamSelect(index, side, value) {
+            let match = masterFixtures[index];
+            if (side === 't1') { match.t1 = value; } else { match.t2 = value; }
+        }
+
+        function renderCanvas() {
+            let container = document.getElementById('canvas-container');
+            if (masterFixtures.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;"><p style="font-size: 1.2rem; margin-bottom: 10px;">No Matches Generated Yet</p><p style="font-size: 0.9rem;">Use the engines above to auto-generate matches, or add rows manually.</p></div>';
+                updateFinalLockedMatches(); return;
+            }
+
+            let poolRanks = [];
+            Object.keys(poolsData).forEach(p => { 
+                if(p !== "Single Pool / League" && p !== "Unassigned") { poolRanks.push(`${p} - Rank 1`); poolRanks.push(`${p} - Rank 2`); poolRanks.push(`${p} - Rank 3`); }
+            });
+            
+            let dependencyPlaceholders = [];
+            masterFixtures.forEach(m => {
+                dependencyPlaceholders.push(`Winner of ${m.name}`);
+                dependencyPlaceholders.push(`Loser of ${m.name}`);
+            });
+
+            let activeNames = selectedTourneyTeams.map(t => t.name);
+            let allOptsArray = [
+                `<optgroup label="Real Teams">`, ...activeNames.map(t => `<option value="${t}">${t}</option>`), `</optgroup>`,
+                `<optgroup label="Calculated Placeholders">`, ...dependencyPlaceholders.map(t => `<option value="${t}">${t}</option>`), `</optgroup>`,
+                `<optgroup label="Generic Placeholders">`, ...standardPlaceholders.map(t => `<option value="${t}">${t}</option>`), ...poolRanks.map(t => `<option value="${t}">${t}</option>`), `</optgroup>`
+            ];
+            let opts = allOptsArray.join('');
+
+            container.innerHTML = masterFixtures.map((m, i) => {
+                let safeOpt1 = opts; if (m.t1 && !opts.includes(`value="${m.t1}"`)) safeOpt1 += `<option value="${m.t1}">${m.t1}</option>`;
+                let safeOpt2 = opts; if (m.t2 && !opts.includes(`value="${m.t2}"`)) safeOpt2 += `<option value="${m.t2}">${m.t2}</option>`;
+
+                return `
+                <div class="canvas-row">
+                    <div style="flex:1; min-width:250px; text-align:left;">
+                        <b style="color:#f59e0b">${i + 1}. ${m.id}</b><br>
+                        ${m.isLive ? `<span style="background:#10b981; color:#020617; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:bold;">LIVE</span>` : `<span style="background:#f59e0b; color:#020617; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:bold;">DRAFT</span>`}
+                        <input class="canvas-name-input" value="${m.name}" oninput="masterFixtures[${i}].name=this.value" style="margin-top:5px; width:100%;">
+                    </div>
+                    <div class="canvas-teams">
+                        <select class="postings-select" onchange="handleTeamSelect(${i}, 't1', this.value)">${safeOpt1.replace(`value="${m.t1}"`, `value="${m.t1}" selected`)}</select> 
+                        <span style="color:#94a3b8; font-weight:bold;">VS</span> 
+                        <select class="postings-select" onchange="handleTeamSelect(${i}, 't2', this.value)">${safeOpt2.replace(`value="${m.t2}"`, `value="${m.t2}" selected`)}</select>
+                        <button type="button" class="btn-danger" style="padding:8px 12px; cursor:pointer;" onclick="deleteCanvasMatch(${i})">X</button>
+                    </div>
+                </div>`
+            }).join('');
+            
+            updateFinalLockedMatches();
+        }
+
+        function deleteCanvasMatch(index) { masterFixtures.splice(index, 1); renderCanvas(); }
+        
+        function lockCanvasAndProceed() { 
+            updateFinalLockedMatches(); 
+            let navItem = document.getElementById('nav-squads');
+            switchTab('sec-squads', navItem); 
+        }
+
+        // ==========================================
+        // 🔥 SQUADS & BULK REGISTRATION LOGIC
+        // ==========================================
+        
+        function updateSquadSelectCount(safeTeamClass) {
+            let count = document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).length;
+            document.getElementById('squad-select-count').innerText = `${count} Selected`;
+        }
+
+        function openPlayerModal() {
+            const targetTeam = document.getElementById('squad-team-select').value;
+            if(!targetTeam) { alert("Please select a Team to Review from the dropdown first!"); return; }
+            document.getElementById('quick-player-target-team').innerText = targetTeam;
+            openModal('quick-player-modal');
+        }
+
+        async function quickSavePlayer(btn) {
+            const teamName = document.getElementById('squad-team-select').value;
+            const name = document.getElementById('quick-p-name').value.trim();
+            const father = document.getElementById('quick-p-father').value.trim();
+            const dob = document.getElementById('quick-p-dob').value;
+            const role = document.getElementById('quick-p-role').value;
+            const bStyle = document.getElementById('quick-p-bat').value;
+            const bArm = document.getElementById('quick-p-barm').value;
+            const bType = document.getElementById('quick-p-btype').value;
+            const regNo = document.getElementById('quick-p-reg').value.trim();
+
+            const isStrict = ENFORCE_STRICT_REGISTRATION;
+
+            if(!name) { alert("Full Name is strictly required."); return; }
+            if(isStrict && (!father || !dob)) { alert("Strict Mode is ON: Father's Name and DOB are required."); return; }
+            
+            btn.innerText = "Saving to Cloud..."; btn.disabled = true;
+
+            let query = db.from('players').select('player_id').ilike('full_name', name);
+            if(father) query = query.eq('father_name', father);
+            if(dob) query = query.eq('dob', dob);
+            
+            const { data: existing } = await query;
+            let playerIdToUse;
+
+            if (existing && existing.length > 0) {
+                playerIdToUse = existing[0].player_id;
+            } else {
+                const { data: newP, error } = await db.from('players').insert([{ 
+                    full_name: name, father_name: father, dob: dob, 
+                    playing_role: role, batting_style: bStyle, bowling_arm: bArm, bowling_type: bType, reg_no: regNo || null 
+                }]).select();
+                
+                if (error) { alert("Player Insert Error: " + error.message); btn.innerText = "Save to Master & Add to Squad"; btn.disabled = false; return; }
+                playerIdToUse = newP[0].player_id;
+            }
+
+            let tObj = selectedTourneyTeams.find(t => t.name === teamName);
+            
+            await db.from('team_rosters').upsert([{ team_name: teamName, player_id: playerIdToUse }], {onConflict: 'team_name, player_id'});
+            
+            if(currentTournamentId) {
+                await db.from('tournament_squads').upsert([{ tournament_id: currentTournamentId, team_id: tObj.team_id, player_id: playerIdToUse }], {onConflict: 'tournament_id, team_id, player_id'});
+            }
+
+            let safeTeamClass = teamName.replace(/\s+/g, '_');
+            let previouslyCheckedIds = [];
+            document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).forEach(chk => previouslyCheckedIds.push(chk.value));
+            
+            previouslyCheckedIds.push(playerIdToUse);
+            tournamentSquadsCache[teamName] = previouslyCheckedIds;
+            await loadWizardSquad(teamName);
+
+            closeAllModals(); 
+            document.getElementById('quick-p-name').value = ''; 
+            document.getElementById('quick-p-father').value = ''; 
+            document.getElementById('quick-p-dob').value = '';
+            document.getElementById('quick-p-reg').value = '';
+            
+            btn.innerText = "Save to Master & Add to Squad"; btn.disabled = false;
+        }
+
+        async function loadWizardSquad(teamName) {
+            const container = document.getElementById('wizard-player-slots-container');
+            if(!teamName) { container.innerHTML = '<div style="text-align: center; color: #475569; padding: 40px; font-style: italic;">Select a team above to view and assign players.</div>'; return; }
+            container.innerHTML = `<div style="text-align: center; color: #94a3b8; padding: 20px;">Fetching Master Roster for ${teamName}...</div>`;
+            
+            const { data, error } = await db.from('team_rosters').select('player_id, players(full_name, playing_role)').eq('team_name', teamName);
+            if (error || !data || data.length === 0) {
+                container.innerHTML = `<div style="color: #fca5a5; padding: 15px; border: 1px dashed #ef4444; border-radius: 6px;">No players found for "${teamName}". Please use the <strong style="color:white;">+ Quick-Add New Player</strong> button above to start building this team's roster!</div>`;
+                return;
+            }
+
+            let safeTeamClass = teamName.replace(/\s+/g, '_');
+            let html = `<h4 style="color:#10b981; margin-bottom:5px;">Select Tournament Squad <span id="squad-select-count" style="background:#0f172a; color:#38bdf8; border:1px solid #38bdf8; padding:3px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold; float:right;">0 Selected</span></h4><p style="font-size:0.8rem; color:#94a3b8; margin-bottom:15px; margin-top:0;">Uncheck players from the Master DB who are NOT participating in this specific tournament.</p><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:left;">`;
+            
+            let count = 1;
+            data.forEach(row => {
+                if(row.players) {
+                    let isChecked = "checked";
+                    if(tournamentSquadsCache[teamName] && !tournamentSquadsCache[teamName].includes(row.player_id)) isChecked = "";
+                    html += `<label class="team-checkbox-item" style="margin-bottom:0;"><input type="checkbox" class="squad-chk-${safeTeamClass}" value="${row.player_id}" ${isChecked} onchange="updateSquadSelectCount('${safeTeamClass}')" style="width: 18px; height: 18px; margin-right: 15px; cursor: pointer;"><span style="color: white; font-weight: bold; font-size: 0.95rem;">${count}. ${row.players.full_name} <span style="font-size:0.75rem; color:#f59e0b; font-weight:normal;">(${row.players.playing_role || 'Player'})</span></span></label>`;
+                    count++;
+                }
+            });
+            html += `</div>`;
+            html += `<button type="button" style="background:#10b981; width:100%; padding:12px; margin-top:20px; border:none; border-radius:6px; color:white; font-weight:bold; cursor:pointer;" onclick="syncSquadToTournament(event, '${teamName.replace(/'/g, "\\'")}', '${safeTeamClass}')">🔄 Sync & Save Squad to Live Tournament</button>`;
+            container.innerHTML = html; updateSquadSelectCount(safeTeamClass); 
+        }
+
+        async function syncSquadToTournament(event, teamName, safeTeamClass) {
+            if(!currentTournamentId) { alert("Tournament not saved yet."); return; }
+            let tObj = selectedTourneyTeams.find(t => t.name === teamName);
+            if(!tObj) return;
+            
+            let selectedIds = []; document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).forEach(chk => selectedIds.push(chk.value));
+            tournamentSquadsCache[teamName] = selectedIds;
+            if(selectedIds.length === 0) { alert("Please select at least one player to sync."); return; }
+            
+            const btn = event.target; const originalText = btn.innerText; btn.innerText = "⏳ Syncing...";
+            
+            await db.from('tournament_squads').delete().eq('tournament_id', currentTournamentId).eq('team_id', tObj.team_id);
+            
+            let payload = selectedIds.map(pid => ({ tournament_id: currentTournamentId, team_id: tObj.team_id, player_id: pid }));
+            const { error } = await db.from('tournament_squads').insert(payload);
+            
+            if(error) { alert("Error syncing squad: " + error.message); btn.innerText = originalText; } 
+            else { alert(`✅ Successfully synced ${selectedIds.length} players to the live tournament!`); btn.innerText = "✅ Synced Successfully!"; setTimeout(() => btn.innerText = originalText, 3000); }
+        }
+
+        // --- BULK EXCEL LOGIC ---
+        function toggleBulkForm() { document.getElementById('bulk-registration-panel').classList.toggle('hidden'); }
+
+        function addBulkRows(count, append = false, dataArray = []) {
+            const tbody = document.getElementById('bulk-player-grid');
+            if (!append) tbody.innerHTML = ''; 
+            
+            const currentRows = tbody.children.length;
+            const rowsToGenerate = Math.max(count, dataArray.length);
+            
+            for (let i = 0; i < rowsToGenerate; i++) {
+                let rowNum = currentRows + i + 1;
+                let d = dataArray[i] || [];
+                
+                let nameVal = d[0] || '';
+                let fnameVal = d[1] || '';
+                let dobVal = formatExcelDate(d[2]);
+                let roleVal = d[3] || 'Batter';
+                let batStyleVal = d[4] || 'Right-hand bat';
+                let bowlArmVal = d[5] || 'None';
+                let bowlTypeVal = d[6] || 'None';
+                let regVal = d[7] || '';
+
+                let tr = document.createElement('tr');
+                tr.style.borderBottom = "1px solid #334155";
+                
+                tr.innerHTML = `
+                    <td style="padding: 6px; color: #64748b;">${rowNum}</td>
+                    <td style="padding: 6px;"><input type="text" class="bp-name input-dark w-100" value="${nameVal}" placeholder="Name" style="margin:bottom:0; font-size:0.8rem;"></td>
+                    <td style="padding: 6px;"><input type="text" class="bp-fname input-dark w-100" value="${fnameVal}" placeholder="Father" style="margin:bottom:0; font-size:0.8rem;"></td>
+                    <td style="padding: 6px;"><input type="date" class="bp-dob input-dark w-100" value="${dobVal}" style="margin:bottom:0; font-size:0.8rem; color-scheme: dark;"></td>
+                    <td style="padding: 6px;">
+                        <select class="bp-role input-dark w-100" style="margin:bottom:0; font-size:0.8rem;">
+                            <option value="Batter" ${roleVal.toLowerCase().includes('bat') ? 'selected' : ''}>Batter</option>
+                            <option value="Bowler" ${roleVal.toLowerCase().includes('bowl') ? 'selected' : ''}>Bowler</option>
+                            <option value="All-Rounder" ${roleVal.toLowerCase().includes('all') ? 'selected' : ''}>All-Rounder</option>
+                            <option value="Wicket-Keeper" ${roleVal.toLowerCase().includes('wk') || roleVal.toLowerCase().includes('keep') ? 'selected' : ''}>Wicket-Keeper</option>
+                        </select>
+                    </td>
+                    <td style="padding: 6px;">
+                        <select class="bp-bat input-dark w-100" style="margin:bottom:0; font-size:0.8rem;">
+                            <option value="Right-hand bat" ${batStyleVal.toLowerCase().includes('right') ? 'selected' : ''}>Right-hand bat</option>
+                            <option value="Left-hand bat" ${batStyleVal.toLowerCase().includes('left') ? 'selected' : ''}>Left-hand bat</option>
+                        </select>
+                    </td>
+                    <td style="padding: 6px;">
+                        <select class="bp-barm input-dark w-100" style="margin:bottom:0; font-size:0.8rem;">
+                            <option value="Right-arm" ${bowlArmVal.toLowerCase().includes('right') ? 'selected' : ''}>Right-arm</option>
+                            <option value="Left-arm" ${bowlArmVal.toLowerCase().includes('left') ? 'selected' : ''}>Left-arm</option>
+                            <option value="None" ${bowlArmVal.toLowerCase().includes('none') ? 'selected' : ''}>None</option>
+                        </select>
+                    </td>
+                    <td style="padding: 6px;">
+                        <select class="bp-btype input-dark w-100" style="margin:bottom:0; font-size:0.8rem;">
+                            <option value="Fast" ${bowlTypeVal.toLowerCase() === 'fast' ? 'selected' : ''}>Fast</option>
+                            <option value="Fast-Medium" ${bowlTypeVal.toLowerCase().includes('fast-med') ? 'selected' : ''}>Fast-Medium</option>
+                            <option value="Medium" ${bowlTypeVal.toLowerCase() === 'medium' ? 'selected' : ''}>Medium</option>
+                            <option value="Off-spin" ${bowlTypeVal.toLowerCase().includes('off') ? 'selected' : ''}>Off-spin</option>
+                            <option value="Leg-spin" ${bowlTypeVal.toLowerCase().includes('leg') ? 'selected' : ''}>Leg-spin</option>
+                            <option value="Orthodox" ${bowlTypeVal.toLowerCase().includes('ortho') ? 'selected' : ''}>Orthodox</option>
+                            <option value="Wrist-spin" ${bowlTypeVal.toLowerCase().includes('wrist') ? 'selected' : ''}>Wrist-spin</option>
+                            <option value="None" ${bowlTypeVal.toLowerCase().includes('none') ? 'selected' : ''}>None</option>
+                        </select>
+                    </td>
+                    <td style="padding: 6px;"><input type="text" class="bp-reg input-dark w-100" value="${regVal}" placeholder="Opt. ID" style="margin:bottom:0; font-size:0.8rem; text-transform:uppercase;"></td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        function formatExcelDate(val) {
+            if (!val) return '';
+            if (typeof val === 'number') {
+                let dateObj = new Date(Math.round((val - 25569) * 86400 * 1000));
+                return dateObj.toISOString().split('T')[0];
+            }
+            if (typeof val === 'string') {
+                let d = new Date(val);
+                if (!isNaN(d)) return d.toISOString().split('T')[0];
+            }
+            return val;
+        }
+
+        function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                const jsonArr = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                let cleanData = jsonArr.filter(row => row.length > 0);
+                
+                let firstRowStr = cleanData[0].join(' ').toLowerCase();
+                if (firstRowStr.includes('name') || firstRowStr.includes('dob')) {
+                    cleanData.shift(); 
+                }
+
+                addBulkRows(Math.max(15, cleanData.length), false, cleanData);
+                document.getElementById('excel-upload').value = ""; 
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function submitBulkSquad() {
+            const teamName = document.getElementById('squad-team-select').value;
+            if (!teamName) { alert("Please select a team from the dropdown to review first."); return; }
+            
+            if(!currentTournamentId) { alert("Please make sure you have saved the tournament settings in Tab 1 first."); return; }
+            
+            let tObj = selectedTourneyTeams.find(t => t.name === teamName);
+            if (!tObj) { alert("Team not found in tournament selection."); return; }
+
+            const rows = document.querySelectorAll('#bulk-player-grid tr');
+            const isStrict = ENFORCE_STRICT_REGISTRATION; 
+            
+            let payload = [];
+            let hasErrors = false;
+
+            rows.forEach((row, index) => {
+                let name = row.querySelector('.bp-name').value.trim();
+                let fname = row.querySelector('.bp-fname').value.trim();
+                let dob = row.querySelector('.bp-dob').value;
+                let role = row.querySelector('.bp-role').value;
+                let bStyle = row.querySelector('.bp-bat').value;
+                let bArm = row.querySelector('.bp-barm').value;
+                let bType = row.querySelector('.bp-btype').value;
+                let regNo = row.querySelector('.bp-reg').value.trim();
+
+                if (name !== "" || fname !== "" || dob !== "") {
+                    
+                    if (!name) {
+                        alert(`Row ${index + 1} Error: Full Name is always required.`);
+                        row.style.backgroundColor = "rgba(239, 68, 68, 0.2)"; 
+                        hasErrors = true;
+                        return;
+                    }
+
+                    if (isStrict && (!fname || !dob)) {
+                        alert(`Row ${index + 1} Error: Strict Mode is ON. Father's Name and DOB are mandatory.`);
+                        row.style.backgroundColor = "rgba(239, 68, 68, 0.2)"; 
+                        hasErrors = true;
+                        return;
+                    }
+                    
+                    row.style.backgroundColor = "transparent"; 
+
+                    payload.push({
+                        full_name: name,
+                        father_name: fname,
+                        dob: dob,
+                        playing_role: role,
+                        batting_style: bStyle,
+                        bowling_arm: bArm,
+                        bowling_type: bType,
+                        reg_no: regNo || null
+                    });
+                } else {
+                    row.style.backgroundColor = "transparent"; 
+                }
+            });
+
+            if (hasErrors) return; 
+            if (payload.length === 0) { alert("Please completely fill out at least one player row."); return; }
+
+            // 1. Upload to Master Database
+            const { data: newPlayers, error } = await db.from('players').insert(payload).select('player_id');
+            if (error) { alert("Error saving squad: " + error.message); return; }
+
+            // 2. Link them directly to the active team roster
+            const rosterLinks = newPlayers.map(p => ({
+                team_name: teamName,
+                player_id: p.player_id
+            }));
+            
+            const { error: linkError } = await db.from('team_rosters').upsert(rosterLinks, {onConflict: 'team_name, player_id'});
+            
+            if (linkError) { 
+                alert("Players saved globally, but failed to link to master team roster: " + linkError.message); 
+            }
+
+            // 3. Link directly to this Tournament Squad automatically
+            const tournamentLinks = newPlayers.map(p => ({
+                tournament_id: currentTournamentId,
+                team_id: tObj.team_id,
+                player_id: p.player_id
+            }));
+            await db.from('tournament_squads').upsert(tournamentLinks, {onConflict: 'tournament_id, team_id, player_id'});
+
+            let safeTeamClass = teamName.replace(/\s+/g, '_');
+            let previouslyCheckedIds = [];
+            if(tournamentSquadsCache[teamName]) previouslyCheckedIds = tournamentSquadsCache[teamName];
+            
+            newPlayers.forEach(p => previouslyCheckedIds.push(p.player_id));
+            tournamentSquadsCache[teamName] = previouslyCheckedIds;
+
+            alert(`✅ Successfully registered ${payload.length} players to the cloud and linked them to ${teamName} in this tournament!`);
+            addBulkRows(15, false);
+            toggleBulkForm();
+            loadWizardSquad(teamName);
+        }
+
+        function finishSquadsAndProceed() { 
+            updateFinalLockedMatches(); 
+            let navItem = document.getElementById('nav-deploy');
+            switchTab('sec-deploy', navItem); 
+        }
+
+        function updateFinalLockedMatches() {
+            let tName = document.getElementById('t-name').value || "Unnamed Tournament"; 
+            let container = document.getElementById('postings-body');
+            
+            if(masterFixtures.length === 0) {
+                 container.innerHTML = `<tr><td colspan="2" style="text-align: center; padding: 30px; color: #94a3b8;">Build your fixtures in the Match Canvas to view postings.</td></tr>`;
+                 return;
+            }
+            
+            container.innerHTML = masterFixtures.map((m, i) => `
+                <tr>
+                    <td style="font-weight: bold; color: #38bdf8; font-size: 1.1rem; border-right: 1px solid #1e293b;">
+                        <div style="font-size: 0.7rem; color: #eab308; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">🏆 ${tName}</div>
+                        ${i + 1}. ${m.name}
+                        <div style="font-size: 0.85rem; color: #cbd5e1; margin-top: 5px;">${m.t1 || 'TBD'} <span style="color:#64748b; font-weight:normal; margin:0 5px;">vs</span> ${m.t2 || 'TBD'}</div>
+                    </td>
+                    <td style="text-align: center;">
+                        <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 5px;">Scorer PIN</div>
+                        <div style="font-size: 1.5rem; font-weight: bold; color: #f59e0b; letter-spacing: 3px;">${m.pin}</div>
+                        <div style="margin-top: 8px;">
+                            ${m.isLive ? '<span style="background:#10b981; color:#020617; padding:3px 8px; border-radius:12px; font-size:0.7rem; font-weight:bold;">✅ LIVE ON CLOUD</span>' : '<span style="background:#475569; color:white; padding:3px 8px; border-radius:12px; font-size:0.7rem; font-weight:bold;">⏳ PENDING DEPLOY</span>'}
+                        </div>
+                    </td>
+                </tr>`).join('');
+        }
+
+        async function saveMatchesToCloud() {
+            if(!currentTournamentId) { alert("Tournament ID missing. Ensure Basic Settings are saved first."); return; }
+            if(masterFixtures.length === 0) { alert("No matches found to deploy."); return; }
+
+            const btn = document.getElementById('btnDeploy');
+            btn.innerText = "⏳ Injecting Fixtures to Supabase...";
+
+            let tName = document.getElementById('t-name').value;
+            let tFormat = document.getElementById('t-format').value;
+            let tHost = loadedTournamentHost ? loadedTournamentHost : currentAdminAssociation; 
+            let tTier = document.getElementById('t-tier').value; 
+
+            for (let m of masterFixtures) {
+                let t1Obj = selectedTourneyTeams.find(t => t.name === m.t1);
+                let t2Obj = selectedTourneyTeams.find(t => t.name === m.t2);
+                let team1UUID = t1Obj ? t1Obj.team_id : null; 
+                let team2UUID = t2Obj ? t2Obj.team_id : null;
+
+                let matchPayload = {
+                    match_id: m.id,
+                    tournament_id: currentTournamentId,
+                    team_a_id: team1UUID,
+                    team_b_id: team2UUID,
+                    scorer_pin: m.pin,
+                    full_state: { tournament: tName, format: tFormat, host: tHost, tier: tTier, team1: m.t1, team2: m.t2, matchName: m.name, match_status: 'upcoming' }
+                };
+
+                await db.from('matches').upsert([matchPayload]);
+                m.isLive = true; 
+            }
+            
+            updateFinalLockedMatches();
+            renderCanvas(); 
+            
+            document.getElementById('deploy-action-card').innerHTML = `
+                <h3 style="color: #10b981; font-size: 1.5rem; margin-top: 0;">✅ Successfully Deployed!</h3>
+                <p style="color: #cbd5e1; max-width: 600px; margin: 0 auto;">Your tournament is now live. Scorers can log in using the exact Match IDs and PINs listed above.</p>
+            `;
+        }
+
+        // ==========================================
+        // ⏳ HISTORICAL DATA INJECTOR (SUPER ADMIN ONLY)
+        // ==========================================
+        async function injectHistoricalMatch() {
+            if (!isSuperAdmin) {
+                alert("Access Denied: You must be a Super Admin to inject historical legacy records.");
+                return;
+            }
+
+            const pName = document.getElementById('hist-player').value.trim();
+            const dateStr = document.getElementById('hist-date').value;
+            
+            if (!pName || !dateStr) { 
+                alert("Player Name and Match Date are strictly required."); 
+                return; 
+            }
+
+            // Parse Batting
+            const r = parseInt(document.getElementById('hist-runs').value) || 0;
+            const b = parseInt(document.getElementById('hist-bf').value) || 0;
+            const f = parseInt(document.getElementById('hist-4s').value) || 0;
+            const s = parseInt(document.getElementById('hist-6s').value) || 0;
+            const isOut = document.getElementById('hist-out').value === "true";
+
+            // Parse Bowling
+            const o = parseFloat(document.getElementById('hist-o').value) || 0;
+            const m = parseInt(document.getElementById('hist-m').value) || 0;
+            const rc = parseInt(document.getElementById('hist-rc').value) || 0;
+            const w = parseInt(document.getElementById('hist-wkts').value) || 0;
+
+            // Parse Fielding
+            const catches = parseInt(document.getElementById('hist-catches').value) || 0;
+            const stumpings = parseInt(document.getElementById('hist-stumpings').value) || 0;
+            const runouts = parseInt(document.getElementById('hist-runouts').value) || 0;
+
+            if (r === 0 && b === 0 && o === 0 && catches === 0 && stumpings === 0 && runouts === 0) {
+                if(!confirm("All stats are currently zero. Are you sure you want to upload a blank match?")) return;
+            }
+
+            const historicalPayload = {
+                matchName: "Historical Entry",
+                match_status: "completed",
+                format: "Historical",
+                tournament: "Legacy Database",
+                host: currentAdminAssociation || "Independent",
+                tier: "Local",
+                inningsSummaries: [
+                    {
+                        batTeam: "Legacy Team",
+                        bowlTeam: "Opponent",
+                        batters: [
+                            {
+                                name: pName,
+                                r: r, b: b, f: f, s: s,
+                                out: isOut,
+                                hasBatted: true
+                            }
+                        ],
+                        bowlers: [
+                            {
+                                name: pName,
+                                o: o, m: m, rc: rc, w: w,
+                                catches: catches, stumpings: stumpings, runouts: runouts
+                            }
+                        ]
+                    }
+                ]
+            };
+
+            const fakeMatchId = `HIST-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+
+            const { error } = await db.from('matches').insert([{
+                match_id: fakeMatchId,
+                scorer_pin: "HIST",
+                full_state: historicalPayload,
+                created_at: new Date(dateStr).toISOString()
+            }]);
+
+            if (error) {
+                alert("Error injecting historical data: " + error.message);
+            } else {
+                alert(`✅ Historical stats for ${pName} injected successfully! They will now automatically appear in the Analytics Hub.`);
+                
+                ['hist-runs', 'hist-bf', 'hist-4s', 'hist-6s', 'hist-o', 'hist-m', 'hist-rc', 'hist-wkts', 'hist-catches', 'hist-stumpings', 'hist-runouts'].forEach(id => {
+                    document.getElementById(id).value = "0";
+                });
+                document.getElementById('hist-out').value = "true";
+                document.getElementById('hist-player').value = "";
+                document.getElementById('hist-player').focus(); 
+            }
+        }
+    </script>
+</body>
+</html>
