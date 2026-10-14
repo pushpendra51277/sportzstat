@@ -2,6 +2,18 @@
 // SCORING ENGINE & UI REFRESH (scorer.js)
 // ==========================================
 
+// 🔥 AUTO-HEAL HELPER: Ensures only one summary ever exists per Innings Number
+function deduplicateInningsSummaries() {
+    if (!state || !Array.isArray(state.inningsSummaries)) return;
+    const map = new Map();
+    state.inningsSummaries.forEach(inn => {
+        if (inn && inn.innNum) {
+            map.set(inn.innNum, inn); // Keeps the latest updated version of each innings
+        }
+    });
+    state.inningsSummaries = Array.from(map.values()).sort((a, b) => a.innNum - b.innNum);
+}
+
 function getEffectiveBalls(cur) {
     let effective = 0; let prevActual = 0;
     for (let i = 0; i < cur.overHistory.length; i++) {
@@ -24,6 +36,7 @@ function saveState() {
 function undoLastAction() { 
     if (stateHistory.length > 0) { 
         let prevState = JSON.parse(stateHistory.pop()); prevState.current.lastOverBowlers = new Set(prevState.current.lastOverBowlers); prevState.current.bowlersInCurrentOver = new Set(prevState.current.bowlersInCurrentOver); state = prevState; 
+        deduplicateInningsSummaries();
         localStorage.setItem('cricStat_stateHistory', JSON.stringify(stateHistory)); updateUI(); 
     } else { alert("Nothing to undo!"); } 
 }
@@ -57,14 +70,11 @@ function openRemarkModal() {
     let cur = state.current, s = cur.sIdx !== null ? getBatTeam().players[cur.sIdx].name : "N/A", ns = cur.nsIdx !== null ? getBatTeam().players[cur.nsIdx].name : "N/A", b = cur.bIdx !== null ? getBowlTeam().players[cur.bIdx].name : "N/A";
     let fOpts = `<option value="">-- No Fielder / N/A --</option>`; getBowlTeam().players.forEach(p => { if(p.name) fOpts += `<option value="${p.name}">${p.name}</option>`; }); 
     let remarkHtml = `<div class="mb-10 text-muted" style="font-size:0.8rem;">Over: <b class="text-accent">${formatOver(cur.balls)}</b> | Local Time: <b class="text-accent">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</b></div><div class="mb-10" style="font-size:0.85rem; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px;"><span class="text-primary font-bold">Striker:</span> ${s}<br><span class="text-primary font-bold">Non-Striker:</span> ${ns}<br><span class="text-primary font-bold">Bowler:</span> ${b}</div><label class="text-primary mt-10">Fielder Involved (Optional)</label><select id="remFielder" class="modal-input w-100">${fOpts}</select><label class="text-primary mt-10">Remark / Incident</label><input type="text" id="remText" class="modal-input w-100" placeholder="e.g., Warning...">`;
-    showModal("📝 Match Remark", remarkHtml, () => { let txt = el('remText').value.trim(); if(!txt) return; remarkLog.push({ over: formatOver(cur.balls), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), batters: `${s} / ${ns}`, bowler: b, fielder: el('remFielder').value || "-", remark: txt }); closeModal(); }); 
+    showModal("📝 Match Remark", remarkHtml, () => { let txt = el('remText').value.trim(); if(!txt) return; remarkLog.push({ over: formatOver(cur.balls), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), batters: `${s} /${ns}`, bowler: b, fielder: el('remFielder').value || "-", remark: txt }); closeModal(); }); 
 }
 
 function openEditTarget() {
-    if (state.inningsNum === 1) { alert("Target can only be edited in the 2nd innings!"); return; }
-    let curT = state.matchSettings.customTarget || (state.inningsSummaries[state.inningsNum - 2].runs + 1), curO = state.matchSettings.customTargetOvers || state.matchSettings.originalMaxOvers, curM = state.matchSettings.targetMethod || "";
-    let html = `<label class="text-primary">Revised Target Runs</label><input type="number" id="modTargetRuns" class="modal-input w-100" value="${curT}"><label class="text-primary mt-10">Revised Max Overs</label><input type="number" id="modTargetOvers" class="modal-input w-100" value="${curO}" step="0.1"><label class="text-primary mt-10">Method (e.g. VJD, DLS, or leave blank)</label><input type="text" id="modTargetMethod" class="modal-input w-100" value="${curM}" placeholder="VJD"><button type="button" class="btn-action w-100 mt-15" style="background:#475569;" onclick="clearCustomTarget()">Reset to Original Target</button>`;
-    showModal("🎯 Edit Match Target", html, () => { saveState(); state.matchSettings.customTarget = parseInt(el('modTargetRuns').value) || null; state.matchSettings.customTargetOvers = parseFloat(el('modTargetOvers').value) || null; state.matchSettings.targetMethod = el('modTargetMethod').value.trim().toUpperCase(); if (state.matchSettings.customTargetOvers) { state.matchSettings.maxOvers = state.matchSettings.customTargetOvers; } closeModal(); updateUI(); });
+    openEditMatchConditions();
 }
 
 function clearCustomTarget() { saveState(); state.matchSettings.customTarget = null; state.matchSettings.customTargetOvers = null; state.matchSettings.targetMethod = ""; state.matchSettings.maxOvers = state.matchSettings.originalMaxOvers; closeModal(); updateUI(); }
@@ -84,7 +94,7 @@ function endInterruption() {
     let eT = parseTimeDropdowns('intEnd'), sT = state.current.activeBreakStartTime, dur = calculateDurationMins(sT, eT);
     if(state.current.sIdx !== null) getBatTeam().players[state.current.sIdx].breakMins += dur; if(state.current.nsIdx !== null) getBatTeam().players[state.current.nsIdx].breakMins += dur;
     state.matchBreaks.push({ inn: state.inningsNum, type: state.current.activeBreak, start: sT, end: eT, dur: dur });
-    let remarkStr = `${state.current.activeBreak}: ${sT} to ${eT} (Lost: ${dur}m)`; if(state.current.activeBreakInsp) remarkStr += ` [Insp: ${state.current.activeBreakInsp}]`;
+    let remarkStr = `${state.current.activeBreak}:${sT} to ${eT} (Lost:${dur}m)`; if(state.current.activeBreakInsp) remarkStr += ` [Insp: ${state.current.activeBreakInsp}]`;
     remarkLog.push({ over: formatOver(state.current.balls), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), batters: "-", bowler: "-", fielder: "-", remark: remarkStr });
     state.current.activeBreak = null; state.current.activeBreakStartTime = null; state.current.activeBreakInsp = null; closeModal(); updateUI();
 }
@@ -94,7 +104,7 @@ function markOpenerTimes() { if (state.current.sIdx !== null && state.current.ns
 function checkTargetReached() { 
     if (state.matchSettings.customTarget && state.current.runs >= state.matchSettings.customTarget) return true;
     if (state.matchSettings.matchType === 'multiday') { let bowlTeamInns = state.inningsSummaries.filter(i => i.batTeam === getBowlTeam().name).length; if(bowlTeamInns === 2) { let batTotal = state.current.runs + state.inningsSummaries.filter(i=>i.batTeam===getBatTeam().name).reduce((a,b)=>a+b.runs,0); let bowlTotal = state.inningsSummaries.filter(i=>i.batTeam===getBowlTeam().name).reduce((a,b)=>a+b.runs,0); if(batTotal > bowlTotal) return true; } return false; } 
-    else { if (state.inningsNum % 2 === 0) { let targetToWin = state.matchSettings.customTarget || (state.inningsSummaries[state.inningsNum - 2].runs + 1); if (state.current.runs >= targetToWin) return true; } return false; }
+    else { if (state.inningsNum % 2 === 0 && state.inningsSummaries.length >= state.inningsNum - 1) { let prevInn = state.inningsSummaries.find(i => i.innNum === state.inningsNum - 1) || state.inningsSummaries[0]; let targetToWin = state.matchSettings.customTarget || (prevInn ? prevInn.runs + 1 : 9999); if (state.current.runs >= targetToWin) return true; } return false; }
 }
 
 function finalizeOver(isPartialTerminal = false) { 
@@ -109,8 +119,10 @@ function finalizeOver(isPartialTerminal = false) {
 // ==========================================
 
 function buildFanPortalSummary() {
+    deduplicateInningsSummaries();
     let allInn = [...state.inningsSummaries];
-    if ((state.current.balls > 0 || state.current.runs > 0) && state.inningsNum > state.inningsSummaries.length) {
+    let hasCurrentInSummaries = allInn.some(i => i.innNum === state.inningsNum);
+    if ((state.current.balls > 0 || state.current.runs > 0) && !hasCurrentInSummaries) {
         allInn.push({ innNum: state.inningsNum, batTeam: getBatTeam().name, runs: state.current.runs, wkts: state.current.wkts, overs: getTeamOversDisplay() });
     }
     let perfs = (typeof getTopPerformers === 'function') ? getTopPerformers() : { batters: [], bowlers: [] };
@@ -137,6 +149,7 @@ function buildFanPortalSummary() {
 async function triggerCloudSync() {
     if (!supabaseClient || !state.matchId) return;
     
+    deduplicateInningsSummaries();
     let fps = buildFanPortalSummary();
     
     let fullStatePayload = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
@@ -166,6 +179,7 @@ async function triggerCloudSync() {
 async function logCareerStats() {
     if (!supabaseClient || !state.matchId) return;
     
+    deduplicateInningsSummaries();
     let fps = buildFanPortalSummary(); 
     
     let finalState = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
@@ -229,27 +243,32 @@ function resetMatch() {
 }
 
 function calculateResultText() { 
+    deduplicateInningsSummaries();
     let allInn = [...state.inningsSummaries]; 
-    if ((state.current.balls > 0 || state.current.runs > 0) && state.inningsNum > state.inningsSummaries.length) { allInn.push({ innNum: state.inningsNum, batTeam: getBatTeam().name, bowlTeam: getBowlTeam().name, runs: state.current.runs, wkts: state.current.wkts }); }
+    let hasCurrent = allInn.some(i => i.innNum === state.inningsNum);
+    if ((state.current.balls > 0 || state.current.runs > 0) && !hasCurrent) { allInn.push({ innNum: state.inningsNum, batTeam: getBatTeam().name, bowlTeam: getBowlTeam().name, runs: state.current.runs, wkts: state.current.wkts }); }
     if (allInn.length < 2) return ""; 
     if (state.matchSettings.matchType !== 'multiday') { 
         let t1 = allInn[0], t2 = allInn[1];
-        if (allInn.length === 2 && (state.current.balls >= getTargetBalls() || state.current.wkts >= 10 || state.current.runs > t1.runs)) { let currentTeamScore = state.current.runs; if (currentTeamScore > t1.runs) return `${t2.batTeam} won by ${10 - state.current.wkts} wickets`; if (t1.runs > currentTeamScore) return `${t1.batTeam} won by ${t1.runs - currentTeamScore} runs`; return "MATCH TIED"; }
+        let targetRuns = state.matchSettings.customTarget ? (state.matchSettings.customTarget - 1) : t1.runs;
+        if (allInn.length === 2 && (state.current.balls >= getTargetBalls() || state.current.wkts >= 10 || state.current.runs > targetRuns)) { let currentTeamScore = state.current.runs; if (currentTeamScore > targetRuns) return `${t2.batTeam} won by${10 - state.current.wkts} wickets`; if (targetRuns > currentTeamScore) return `${t1.batTeam} won by${targetRuns - currentTeamScore} runs`; return "MATCH TIED"; }
         return ""; 
     }
     let t1Name = allInn[0].batTeam, t2Name = allInn[0].bowlTeam; let s = {}, fI = {}; s[t1Name] = 0; s[t2Name] = 0; fI[t1Name] = null; fI[t2Name] = null; allInn.forEach(i => { s[i.batTeam] += i.runs; if(fI[i.batTeam] === null) fI[i.batTeam] = i.runs; });
     let lInn = allInn[allInn.length - 1], batL = lInn.batTeam, bowlL = lInn.bowlTeam; let t1C = allInn.filter(i => i.batTeam === t1Name).length, t2C = allInn.filter(i => i.batTeam === t2Name).length;
     if (t1C + t2C < 3) return "";
-    if (lInn.wkts >= 10 || state.inningsNum > state.matchSettings.maxInnings) { if (s[batL] > s[bowlL]) return `${batL} won by ${s[batL] - s[bowlL]} runs`; if (s[bowlL] > s[batL] && t1C+t2C===4) return `${bowlL} won by ${10 - lInn.wkts} wickets`; }
+    if (lInn.wkts >= 10 || state.inningsNum > state.matchSettings.maxInnings) { if (s[batL] > s[bowlL]) return `${batL} won by${s[batL] - s[bowlL]} runs`; if (s[bowlL] > s[batL] && t1C+t2C===4) return `${bowlL} won by${10 - lInn.wkts} wickets`; }
     return ""; 
 }
 
 function enableSummaryConfirm() { let cBtn = el('modalConfirmBtn'); if (cBtn.disabled) { cBtn.disabled = false; cBtn.style.opacity = '1'; cBtn.style.cursor = 'pointer'; cBtn.innerText = cBtn.dataset.origText || "Confirm"; } }
 
 function showMatchSummary() {
+    deduplicateInningsSummaries();
     let autoRes = calculateResultText();
     let isGameOver = (state.inningsNum >= state.matchSettings.maxInnings || state.matchResult !== "" || autoRes !== "");
-    let isTransition = (!isGameOver && state.inningsSummaries.length === state.inningsNum);
+    // 🔥 FIXED: Checks if the current inningsNum is saved, rather than strict array length
+    let isTransition = (!isGameOver && state.inningsSummaries.some(i => i.innNum === state.inningsNum));
     
     let confirmBtnText = "Confirm"; let hideCancel = false; let requiresDownload = false;
     if (isGameOver) { confirmBtnText = "🏁 End Match & Reset"; requiresDownload = true; } else if (isTransition) { confirmBtnText = "▶️ Start Next Innings"; requiresDownload = true; } else { confirmBtnText = "🔙 Continue Scoring"; hideCancel = true; }
@@ -266,7 +285,7 @@ function showMatchSummary() {
         }
 
         displayInnings.reverse().forEach(inn => {
-            html += `<div style="background:rgba(0,0,0,0.3); padding:15px; margin-bottom:15px; border-top:4px solid ${inn.isOngoing ? 'var(--danger)' : 'var(--primary)'}; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3);"><div class="flex-row" style="justify-content:space-between; margin-bottom:12px;"><div><div class="${inn.isOngoing ? 'text-danger' : 'text-primary'} font-bold" style="font-size:0.75rem; letter-spacing:1px;">INNINGS ${inn.innNum} ${inn.isOngoing ? '(ONGOING)' : ''}</div><div class="font-bold" style="font-size:1.3rem; color:white;">${inn.batTeam}</div></div><div class="text-right"><div class="text-success font-bold" style="font-size:1.6rem;">${inn.runs}<span style="color:#94a3b8; font-size:1.2rem;">/${inn.wkts}</span></div><div class="text-muted" style="font-size:0.85rem;">(${inn.overs} Overs)</div></div></div>`;
+            html += `<div style="background:rgba(0,0,0,0.3); padding:15px; margin-bottom:15px; border-top:4px solid ${inn.isOngoing ? 'var(--danger)' : 'var(--primary)'}; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3);"><div class="flex-row" style="justify-content:space-between; margin-bottom:12px;"><div><div class="${inn.isOngoing ? 'text-danger' : 'text-primary'} font-bold" style="font-size:0.75rem; letter-spacing:1px;">INNINGS ${inn.innNum}${inn.isOngoing ? '(ONGOING)' : ''}</div><div class="font-bold" style="font-size:1.3rem; color:white;">${inn.batTeam}</div></div><div class="text-right"><div class="text-success font-bold" style="font-size:1.6rem;">${inn.runs}<span style="color:#94a3b8; font-size:1.2rem;">/${inn.wkts}</span></div><div class="text-muted" style="font-size:0.85rem;">(${inn.overs} Overs)</div></div></div>`;
             
             html += `<table class="scorecard-table"><thead class="bat-hdr" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border-bottom: 1px solid #64748b;"><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>`;
             inn.batters.forEach(b => { if(b.hasBatted) { let isOut = b.out ? `<span style="color:#ef4444; font-size:0.65rem; display:block; margin-top:2px;">${b.dismissalInfo}</span>` : `<span style="color:#10b981; font-size:0.65rem; display:block; margin-top:2px;">Not Out</span>`; let sr = b.b > 0 ? ((b.r/b.b)*100).toFixed(2) : "0.00"; let nameStr = `<div style="max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${b.name}"><b style="font-size:0.85rem; color:white;">${b.name}</b>` + (b.desig==='C' || b.desig==='C/WK' || b.desig.includes('C') ? ' <span style="color:var(--accent);">(C)</span>' : '') + (b.skill && b.skill.includes('WK') ? ' 🧤' : '') + `</div>`; html += `<tr><td>${nameStr}${isOut}</td><td style="font-weight:bold; font-size:1rem; color:white;">${b.r}</td><td style="color:white;">${b.b}</td><td style="color:white;">${b.f}</td><td style="color:white;">${b.s}</td><td style="color:var(--accent);">${sr}</td></tr>`; } });
@@ -277,14 +296,16 @@ function showMatchSummary() {
             
             html += `<thead class="bwl-hdr" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border-bottom: 1px solid #64748b;"><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Econ</th><th>Extras</th><th>NB</th><th>WD</th></tr></thead><tbody>`;
             
-            inn.bowlers.forEach(b => { if(b.o > 0 || b.rc > 0) { let totalRuns = b.rc || 0; let econ = b.o > 0 ? ((totalRuns/b.o)*6).toFixed(2) : "0.00"; let nameStr = `<div style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${b.name}"><b style="color:white;">${b.name}</b></div>`; let exStr = `${b.byes||0}b, ${b.legbyes||0}lb`; let nb = b.nb || 0; let wd = b.wd || 0; html += `<tr><td>${nameStr}</td><td style="color:white;">${formatOver(b.o)}</td><td style="color:white;">${b.m}</td><td style="color:white;">${totalRuns}</td><td style="font-weight:bold; font-size:1rem; color:var(--danger);">${b.w}</td><td style="color:var(--accent);">${econ}</td><td style="font-size:0.75rem; color:white;">${exStr}</td><td style="color:white;">${nb}</td><td style="color:white;">${wd}</td></tr>`; } });
+            inn.bowlers.forEach(b => { if(b.o > 0 || b.rc > 0) { let totalRuns = b.rc || 0; let econ = b.o > 0 ? ((totalRuns/b.o)*6).toFixed(2) : "0.00"; let nameStr = `<div style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${b.name}"><b style="color:white;">${b.name}</b></div>`; let exStr = `${b.byes\vert{}\vert{}0}b,${b.legbyes||0}lb`; let nb = b.nb || 0; let wd = b.wd || 0; html += `<tr><td>${nameStr}</td><td style="color:white;">${formatOver(b.o)}</td><td style="color:white;">${b.m}</td><td style="color:white;">${totalRuns}</td><td style="font-weight:bold; font-size:1rem; color:var(--danger);">${b.w}</td><td style="color:var(--accent);">${econ}</td><td style="font-size:0.75rem; color:white;">${exStr}</td><td style="color:white;">${nb}</td><td style="color:white;">${wd}</td></tr>`; } });
             html += `</tbody></table>`;
-            if(inn.fow && inn.fow.length > 0) { let fowStr = inn.fow.map(f => `<b style="color:white;">${f.runs}/${f.wktNum==='Unbroken'?'*':f.wktNum}</b> <span style="font-size:0.65rem; color:white;">(${f.outBatter}, ${f.overs} ov)</span>`).join(', '); html += `<div style="font-size:0.75rem; color:#94a3b8; background:rgba(0,0,0,0.3); padding:8px; border-radius:6px; border-left:3px solid var(--accent);"><b style="color:white;">Fall of Wickets:</b><br><div style="margin-top:4px; line-height:1.4;">${fowStr}</div></div>`; }
+            if(inn.fow && inn.fow.length > 0) { let fowStr = inn.fow.map(f => `<b style="color:white;">${f.runs}/${f.wktNum==='Unbroken'?'*':f.wktNum}</b> <span style="font-size:0.65rem; color:white;">(${f.outBatter},${f.overs} ov)</span>`).join(', '); html += `<div style="font-size:0.75rem; color:#94a3b8; background:rgba(0,0,0,0.3); padding:8px; border-radius:6px; border-left:3px solid var(--accent);"><b style="color:white;">Fall of Wickets:</b><br><div style="margin-top:4px; line-height:1.4;">${fowStr}</div></div>`; }
             html += `</div>`;
         });
     }
     
-    let currentAllowances = state.current.allowances || 0; if (state.inningsSummaries.length > 0 && state.inningsNum === state.inningsSummaries.length) { currentAllowances = state.inningsSummaries[state.inningsSummaries.length - 1].allowances || 0; }
+    let currentAllowances = state.current.allowances || 0;
+    let savedCurrInn = state.inningsSummaries.find(i => i.innNum === state.inningsNum);
+    if (savedCurrInn) { currentAllowances = savedCurrInn.allowances || 0; }
     html += `</div><div style="border-top:1px solid var(--border); padding-top:10px;"><label class="text-accent">Official Match Result / Status</label><input type="text" id="finalMatchResult" class="modal-input w-100" value="${state.matchResult || autoRes}" placeholder="e.g., Match Awarded, Follow-on, etc."><label class="text-accent mt-5">Allowances for Inning (Mins)</label><input type="number" id="inningAllowancesInput" class="modal-input w-100" placeholder="e.g. 15" value="${currentAllowances}">`;
     
     let pointsHtml = "";
@@ -298,7 +319,12 @@ function showMatchSummary() {
              
     showModal(isGameOver ? "🏁 MATCH COMPLETE" : (isTransition ? `🛑 END OF INNINGS ${state.inningsNum}` : "📋 DETAILED MATCH SCORECARD"), html, () => { 
         state.matchResult = el('finalMatchResult') ? el('finalMatchResult').value : autoRes; 
-        if(el('inningAllowancesInput')) { let val = parseInt(el('inningAllowancesInput').value) || 0; state.current.allowances = val; if (state.inningsSummaries.length > 0 && state.inningsNum === state.inningsSummaries.length) { state.inningsSummaries[state.inningsSummaries.length - 1].allowances = val; } }
+        if(el('inningAllowancesInput')) {
+            let val = parseInt(el('inningAllowancesInput').value) || 0;
+            state.current.allowances = val;
+            let currSummary = state.inningsSummaries.find(i => i.innNum === state.inningsNum);
+            if (currSummary) currSummary.allowances = val;
+        }
         
         if(isGameOver && el('teamAPoints') && el('teamBPoints')) { 
             state.teams.A.points = parseFloat(el('teamAPoints').value) || 0; 
@@ -308,11 +334,20 @@ function showMatchSummary() {
         closeModal(); 
         setTimeout(() => { if (isGameOver) { logCareerStats(); setTimeout(() => { resetMatch(); }, 1000); } else if (isTransition) { openTransitionManager(); } }, 300);
     }, hideCancel, "700px", confirmBtnText, requiresDownload);
+
+    // 🔥 FIXED: Clicking "Go Back & Edit" cleanly reverts the premature innings-end state
     el('modalCancelBtn').innerText = "🔙 Go Back & Edit";
+    el('modalCancelBtn').onclick = () => {
+        closeModal();
+        if (isTransition || isGameOver) {
+            undoLastAction();
+        }
+    };
 }
 
 function endInnings() { 
     try {
+        deduplicateInningsSummaries();
         saveState(); 
         if (state.current.bIdx !== null) finalizeOver(true); 
         state.current.inningsEndTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); 
@@ -322,7 +357,23 @@ function endInnings() {
             let sBName = getBatTeam().players[state.current.sIdx] ? getBatTeam().players[state.current.sIdx].name : "Unknown"; let nsBName = getBatTeam().players[state.current.nsIdx] ? getBatTeam().players[state.current.nsIdx].name : "Unknown"; let pRuns = state.current.currPartnership ? state.current.currPartnership.runs : 0; let pBalls = state.current.currPartnership ? state.current.currPartnership.balls : 0; fF.push({ wktNum: "Unbroken", runs: state.current.runs, overs: formatOver(state.current.balls), outBatter: "-", partner: sBName + " & " + nsBName, pRuns: pRuns, pBalls: pBalls }); 
         }
         
-        state.inningsSummaries.push({ innNum: state.inningsNum, batTeam: getBatTeam().name, bowlTeam: getBowlTeam().name, runs: state.current.runs, wkts: state.current.wkts, overs: formatOver(state.current.balls), penalties: state.current.penalties || 0, overHistory: JSON.parse(JSON.stringify(state.current.overHistory || [])), batters: JSON.parse(JSON.stringify(getBatTeam().players || [])), bowlers: JSON.parse(JSON.stringify(getBowlTeam().players || [])), fow: fF, extras: JSON.parse(JSON.stringify(state.current.extras)), startTime: state.current.inningsStartTime || "-", endTime: state.current.inningsEndTime, allowances: state.current.allowances || 0 }); 
+        const summaryPayload = { 
+            innNum: state.inningsNum, batTeam: getBatTeam().name, bowlTeam: getBowlTeam().name, 
+            runs: state.current.runs, wkts: state.current.wkts, overs: formatOver(state.current.balls), 
+            penalties: state.current.penalties || 0, overHistory: JSON.parse(JSON.stringify(state.current.overHistory || [])), 
+            batters: JSON.parse(JSON.stringify(getBatTeam().players || [])), bowlers: JSON.parse(JSON.stringify(getBowlTeam().players || [])), 
+            fow: fF, extras: JSON.parse(JSON.stringify(state.current.extras)), startTime: state.current.inningsStartTime || "-", endTime: state.current.inningsEndTime, allowances: state.current.allowances || 0 
+        };
+
+        // 🔥 FIXED: Overwrites existing inningsNum instead of creating duplicate tabs
+        const existingIdx = state.inningsSummaries.findIndex(inn => inn.innNum === state.inningsNum);
+        if (existingIdx !== -1) {
+            state.inningsSummaries[existingIdx] = summaryPayload;
+        } else {
+            state.inningsSummaries.push(summaryPayload);
+        }
+
+        updateUI();
         showMatchSummary(); 
     } catch(e) { console.error("End Innings Error:", e); alert("Error saving Innings Summary. Check console."); }
 }
@@ -334,8 +385,9 @@ function openTransitionManager() {
 }
 
 function executeTransition(nBat, nBowl, action) { 
+    deduplicateInningsSummaries();
     state.inningsNum++; state.battingKey = nBat; state.bowlingKey = nBowl; 
-    if (action === 'forfeit') { state.inningsSummaries.push({ innNum: state.inningsNum, batTeam: state.teams[nBat].name, bowlTeam: state.teams[nBowl].name, runs: 0, wkts: 0, overs: "0.0", penalties: 0, overHistory: [], batters: JSON.parse(JSON.stringify(state.teams[nBat].players)), bowlers: JSON.parse(JSON.stringify(state.teams[nBowl].players)), fow: [], extras: {w:0, nb:0, b:0, lb:0}, startTime: "-", endTime: "-", allowances: 0 }); remarkLog.push({ over: "0.0", time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), batters: "-", bowler: "-", fielder: "-", remark: `Innings ${state.inningsNum} Forfeited by ${state.teams[nBat].name}` }); showMatchSummary(); return; }
+    if (action === 'forfeit') { state.inningsSummaries.push({ innNum: state.inningsNum, batTeam: state.teams[nBat].name, bowlTeam: state.teams[nBowl].name, runs: 0, wkts: 0, overs: "0.0", penalties: 0, overHistory: [], batters: JSON.parse(JSON.stringify(state.teams[nBat].players)), bowlers: JSON.parse(JSON.stringify(state.teams[nBowl].players)), fow: [], extras: {w:0, nb:0, b:0, lb:0}, startTime: "-", endTime: "-", allowances: 0 }); remarkLog.push({ over: "0.0", time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), batters: "-", bowler: "-", fielder: "-", remark: `Innings ${state.inningsNum} Forfeited by${state.teams[nBat].name}` }); showMatchSummary(); return; }
     
     state.current = { runs: state.teams[state.battingKey].pendingPenalties || 0, wkts:0, balls:0, sIdx:null, nsIdx:null, bIdx:null, isFreeHit: false, penalties: state.teams[state.battingKey].pendingPenalties || 0, lastOverBowlers: new Set(), extras: {w:0, nb:0, b:0, lb:0}, recentBalls: [], currentOverLog: [], runsInThisOver: 0, bowlersInCurrentOver: new Set(), overHistory: [], currPartnership: { runs: 0, balls: 0 }, fow: [], activeBreak: null, activeBreakStartTime: null, activeBreakInsp: null, pendingBreakMins: 0, inningsStartTime: null, inningsEndTime: null, allowances: 0 }; 
     state.teams[state.battingKey].pendingPenalties = 0; 
@@ -438,7 +490,7 @@ function processWicketSubmit() {
         
         let logLabel = (runsScored > 0 ? runsScored : '') + 'W'; if (extraType === 'wide') logLabel = (runsScored + 1) + 'wd+W'; else if (extraType === 'noball') logLabel = (runsScored + 1) + 'nb+W';
         cur.currentOverLog.push({label: logLabel, type: 'wicket'}); oB.outOnDuck = (oB.r === 0) ? 1 : 0;
-        let dT = ""; if (wType === 'Bowled') dT = `b ${b.name}`; else if (wType === 'Caught') dT = `c ${wFldr || 'Sub'} b ${b.name}`; else if (wType === 'LBW') dT = `lbw b ${b.name}`; else if (wType === 'Stumped') dT = `st ${wFldr} b ${b.name}`; else if (wType === 'RunOut') dT = `run out (${wFldr || 'Sub'})`; else if (wType === 'HitWicket') dT = `hit wicket b ${b.name}`; else if (wType === 'ObstructingField') dT = `obstructing the field`; else if (wType === 'HitBallTwice') dT = `hit the ball twice`; else if (wType === 'TimedOut') dT = `timed out`;
+        let dT = ""; if (wType === 'Bowled') dT = `b ${b.name}`; else if (wType === 'Caught') dT = `c ${wFldr \vert{}\vert{} 'Sub'} b${b.name}`; else if (wType === 'LBW') dT = `lbw b ${b.name}`; else if (wType === 'Stumped') dT = `st ${wFldr} b${b.name}`; else if (wType === 'RunOut') dT = `run out (${wFldr || 'Sub'})`; else if (wType === 'HitWicket') dT = `hit wicket b ${b.name}`; else if (wType === 'ObstructingField') dT = `obstructing the field`; else if (wType === 'HitBallTwice') dT = `hit the ball twice`; else if (wType === 'TimedOut') dT = `timed out`;
         if (extraType === 'wide') dT += ' (wd)'; else if (extraType === 'noball') dT += ' (nb)'; oB.dismissalInfo = dT; logBallEvent(s, b, runsBat, runsExt, exLabel, true, wType, oB); 
     }
 
@@ -519,7 +571,7 @@ function openSelector(typ, title) {
             let selectedBowler = getBowlTeam().players[val];
             
             if (selectedBowler.quotaOvers >= state.matchSettings.bowlerQuota) {
-                if(!confirm(`⚠️ WARNING: ${selectedBowler.name} has already bowled their quota of ${state.matchSettings.bowlerQuota} overs!\n\nAre you absolutely sure the umpire is allowing them to bowl an extra over?`)) return;
+                if(!confirm(`⚠️ WARNING: ${selectedBowler.name} has already bowled their quota of${state.matchSettings.bowlerQuota} overs!\n\nAre you absolutely sure the umpire is allowing them to bowl an extra over?`)) return;
             }
             
             if (cur.lastOverBowlers.has(val)) {
@@ -539,6 +591,7 @@ function openSelector(typ, title) {
 }
 
 function updateUI() {
+    deduplicateInningsSummaries();
     let cur = state.current, bT = getBatTeam().players, bwT = getBowlTeam().players;
     setTimeout(() => { localStorage.setItem('cricStat_activeMatch', JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value)); triggerCloudSync(); }, 0);
 
@@ -548,7 +601,7 @@ function updateUI() {
     }
 
     el('inningsBadge').innerText = `INNINGS ${state.inningsNum}`; el('dispBatTeamName').innerText = state.teams[state.battingKey].name; el('dispBowlTeamName').innerText = state.teams[state.bowlingKey].name; el('dispBatTeamNameTop').innerText = state.teams[state.battingKey].name;
-    let histHtml = ''; state.inningsSummaries.forEach(inn => { histHtml += `<div class="text-success mb-5" style="font-size:0.85rem;">Inn ${inn.innNum}: ${inn.batTeam} scored ${inn.runs}/${inn.wkts}</div>`; }); el('inningsHistoryText').innerHTML = histHtml;
+    let histHtml = ''; state.inningsSummaries.forEach(inn => { histHtml += `<div class="text-success mb-5" style="font-size:0.85rem;">Inn ${inn.innNum}:${inn.batTeam} scored ${inn.runs}/${inn.wkts}</div>`; }); el('inningsHistoryText').innerHTML = histHtml;
 
     let effBalls = getEffectiveBalls(cur); let crrVal = effBalls > 0 ? ((cur.runs / effBalls) * 6).toFixed(2) : "0.00"; if(el('liveCrr')) el('liveCrr').innerText = crrVal;
     
@@ -560,7 +613,10 @@ function updateUI() {
         if(el('rrrBox')) el('rrrBox').classList.add('hidden'); 
     } else {
         if (state.inningsNum > 1 && state.inningsSummaries.length > 0) { 
-            let tRuns = state.matchSettings.customTarget || (state.inningsSummaries[state.inningsNum - 2].runs + 1); let tOvers = state.matchSettings.customTargetOvers || state.matchSettings.originalMaxOvers; let tMethod = state.matchSettings.targetMethod || ""; curTargetString = `${tRuns} (${tOvers}) ${tMethod}`.trim(); 
+            let prevInn = state.inningsSummaries.find(i => i.innNum === state.inningsNum - 1) || state.inningsSummaries[0];
+            let tRuns = state.matchSettings.customTarget || (prevInn ? prevInn.runs + 1 : 1);
+            let tOvers = state.matchSettings.customTargetOvers || state.matchSettings.maxOvers || state.matchSettings.originalMaxOvers;
+            let tMethod = state.matchSettings.targetMethod || ""; curTargetString = `${tRuns} (${tOvers})${tMethod}`.trim(); 
             el('dispTargetText').innerText = curTargetString; el('targetDisplayBox').classList.remove('hidden'); 
             let runsNeeded = tRuns - cur.runs; if(runsNeeded < 0) runsNeeded = 0;
             let targetFullOvers = Math.floor(tOvers); let targetExtraBalls = Math.round((tOvers - targetFullOvers) * 10); let totalTargetBalls = (targetFullOvers * 6) + targetExtraBalls;
@@ -573,7 +629,7 @@ function updateUI() {
     }
 
     let leadBoxHtml = "";
-    if (state.matchSettings.matchType === 'multiday' && state.inningsNum > 1) { let tBat = getBatTeam().name, tBowl = getBowlTeam().name; let sBat = state.current.runs + state.inningsSummaries.filter(i=>i.batTeam===tBat).reduce((a,b)=>a+b.runs,0); let sBowl = state.inningsSummaries.filter(i=>i.batTeam===tBowl).reduce((a,b)=>a+b.runs,0); let diff = sBat - sBowl; let txt = diff > 0 ? `lead by ${diff}` : (diff < 0 ? `trail by ${Math.abs(diff)}` : `scores level`); leadBoxHtml = `<p class="text-accent font-bold mt-5 mb-0" style="font-size:0.85rem; text-transform:uppercase;">📊 ${tBat} ${txt}</p>`; }
+    if (state.matchSettings.matchType === 'multiday' && state.inningsNum > 1) { let tBat = getBatTeam().name, tBowl = getBowlTeam().name; let sBat = state.current.runs + state.inningsSummaries.filter(i=>i.batTeam===tBat).reduce((a,b)=>a+b.runs,0); let sBowl = state.inningsSummaries.filter(i=>i.batTeam===tBowl).reduce((a,b)=>a+b.runs,0); let diff = sBat - sBowl; let txt = diff > 0 ? `lead by ${diff}` : (diff < 0 ? `trail by ${Math.abs(diff)}` : `scores level`); leadBoxHtml = `<p class="text-accent font-bold mt-5 mb-0" style="font-size:0.85rem; text-transform:uppercase;">📊 ${tBat}${txt}</p>`; }
     el('leadTrailBox').innerHTML = leadBoxHtml;
 
     el('livePartnership').innerText = `${cur.currPartnership.runs} (${cur.currPartnership.balls})`; 
@@ -594,239 +650,4 @@ function updateUI() {
         let dName = p.name; if(p.desig === 'C' || p.desig === 'C/WK' || p.desig.includes('C')) dName += ' (C)'; if(p.skill && p.skill.includes('WK')) dName += ' *'; if(isStriker) dName += ' <span style="font-size:0.8rem;" title="Striker">🏏</span>';
         let rowStyle = isActive ? (isStriker ? 'background: rgba(16, 185, 129, 0.15); border-left: 3px solid var(--success);' : 'background: rgba(255,255,255,0.05); border-left: 3px solid transparent;') : 'opacity: 0.6; border-left: 3px solid transparent;';
         let statusInfo = p.out ? `<div style="font-size:0.65rem; color:var(--danger); font-style:italic; margin-top:2px;">${p.dismissalInfo}</div>` : (isActive ? `<div style="font-size:0.65rem; color:var(--success); font-style:italic; margin-top:2px;">Not Out</div>` : '');
-        return `<tr style="${rowStyle}"><td style="padding:8px; max-width: 140px;"><div style="font-weight:bold; color:${isActive ? 'white' : 'var(--text-muted)'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.name}">${dName}</div>${statusInfo}</td><td style="font-weight:bold; font-size:1.1rem; color:var(--primary); padding:8px;">${p.r}</td><td style="padding:8px;">${p.b}</td><td style="color:var(--b4); padding:8px;">${p.f}</td><td style="color:var(--b6); padding:8px;">${p.s}</td><td style="color:var(--accent); font-weight:bold; padding:8px;">${sr}</td></tr>`; 
-    }).join('');
-    battersHtml += `</tbody></table>`; el('battersContainer').innerHTML = battersHtml;
-    
-    let miniBatHtml = "";
-    if (cur.sIdx !== null) { let p = bT[cur.sIdx]; miniBatHtml += `<div style="display: flex; align-items: center; width: 100%; margin-bottom: 2px;"><div style="color: white; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; text-align: left;" title="${p.name}">${p.name}</div><div style="flex: 0 0 auto; margin-left: 4px; white-space: nowrap;"><span style="font-size:0.6rem; margin-right: 2px;">🏏</span><span class="text-primary" style="font-weight:bold;">${p.r}</span><span style="color:var(--text-muted); font-weight:normal; font-size:0.7rem; margin-left:2px;">(${p.b})</span></div></div>`; }
-    if (cur.nsIdx !== null) { let p = bT[cur.nsIdx]; miniBatHtml += `<div style="display: flex; align-items: center; width: 100%;"><div style="color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; text-align: left;" title="${p.name}">${p.name}</div><div style="flex: 0 0 auto; margin-left: 4px; white-space: nowrap;"><span class="text-primary" style="font-weight:bold;">${p.r}</span><span style="color:var(--text-muted); font-weight:normal; font-size:0.7rem; margin-left:2px;">(${p.b})</span></div></div>`; }
-    el('miniLiveBatters').innerHTML = miniBatHtml;
-    
-    if(cur.bIdx !== null) { 
-        let actB = bwT[cur.bIdx]; 
-        let bName = actB.name; 
-        if(actB.desig === 'C' || actB.desig === 'C/WK' || actB.desig.includes('C')) bName += ' (C)'; 
-        if(actB.skill && actB.skill.includes('WK')) bName += ' *'; 
-        
-        if(actB.quotaOvers > state.matchSettings.bowlerQuota) bName += ' <span style="color:#f59e0b;" title="Exceeded Quota">⚠️</span>';
-        
-        el('activeBowlerNameRight').innerHTML = bName; 
-        el('activeBowlerNameRight').title = actB.name; 
-        el('activeBowlerProgress').innerHTML = cur.currentOverLog.map(getBadgeHtml).join(''); 
-        let totalRuns = (actB.rc || 0); 
-        let miniBowlHtml = `<div style="display:flex; justify-content:flex-end; align-items:center; width:100%; margin-bottom:2px;"><div style="flex: 0 0 auto; margin-right:4px;">⚾</div><div style="color:white; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex: 0 1 auto; text-align:right;">${actB.name}</div></div>`; miniBowlHtml += `<div style="color:var(--text-muted); font-size:0.75rem; text-align:right; white-space:nowrap;">${formatOver(actB.o)}-${actB.m}-${totalRuns}-<span class="text-danger" style="font-weight:bold;">${actB.w}</span></div>`; el('miniLiveBowler').innerHTML = miniBowlHtml;
-    } else {
-        el('activeBowlerNameRight').innerText = "Select..."; el('activeBowlerNameRight').title = ""; el('activeBowlerProgress').innerHTML = ""; el('miniLiveBowler').innerHTML = `<div style="color: var(--text-muted); font-style:italic;">Select Bowler...</div>`;
-    }
-    
-    el('recentBallsData').innerHTML = cur.recentBalls.map(getBadgeHtml).join(''); 
-    el('bowlStatsBody').innerHTML = bwT.filter(p => p.o > 0 || p.rc > 0).map(p => { 
-        let bName = p.name; 
-        if(p.desig === 'C' || p.desig === 'C/WK' || p.desig.includes('C')) bName += ' (C)'; 
-        if(p.skill && p.skill.includes('WK')) bName += ' *'; 
-        
-        if(p.quotaOvers > state.matchSettings.bowlerQuota) bName += ' <span style="color:#f59e0b;" title="Exceeded Quota">⚠️</span>';
-        
-        let totalRuns = p.rc || 0; 
-        let exStr = `${p.byes||0}b, ${p.legbyes||0}lb`; let noBalls = p.nb || 0; let wides = p.wd || 0;
-        return `<tr><td style="max-width: 85px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.name}">${bName}</td><td>${formatOver(p.o)}</td><td>${p.m}</td><td>${totalRuns}</td><td style="color:var(--danger); font-weight:bold;">${p.w}</td><td style="font-size:0.7rem; color:var(--text-muted);">${exStr}</td><td>${noBalls}</td><td>${wides}</td></tr>`; 
-    }).join('');
-}
-
-function manualRotateUI() { saveState(); manualRotate(); }
-function manualRotate() { [state.current.sIdx, state.current.nsIdx] = [state.current.nsIdx, state.current.sIdx]; updateUI(); }
-
-function executeEndOver() {
-    saveState(); 
-    
-    if (state.current.isFreeHit) {
-        state.current.isFreeHit = false;
-    }
-
-    finalizeOver(false); 
-    manualRotate(); 
-    state.current.bIdx = null; 
-    updateUI();
-    
-    if (state.current.overHistory.length >= state.matchSettings.maxOvers) { 
-        setTimeout(endInnings, 100); 
-    } else { 
-        setTimeout(() => openSelector('bowler', "Select Next Bowler"), 50); 
-    }
-}
-
-function toggleFreeHit() {
-    saveState();
-    state.current.isFreeHit = !state.current.isFreeHit;
-    updateUI();
-}
-
-function manualEndOver() {
-    if (state.current.bIdx === null) { alert("No bowler is currently active!"); return; }
-    
-    let cur = state.current; 
-    let completedOvers = cur.overHistory.length; 
-    let ballsInPreviousOvers = completedOvers > 0 ? (cur.overHistory[completedOvers - 1].totalBallsAtEnd || (completedOvers * 6)) : 0; 
-    let currentOverBalls = Math.max(0, cur.balls - ballsInPreviousOvers);
-    
-    if (currentOverBalls === 0) { alert("No legal deliveries bowled in this over yet!"); return; }
-
-    const confirmAndEndOver = () => {
-        if (state.current.isFreeHit) {
-            state.current.isFreeHit = false;
-            const fhBadge = document.getElementById('freeHitBadge');
-            if (fhBadge) fhBadge.classList.add('hidden');
-        }
-
-        if (currentOverBalls > 6) {
-            let excess = currentOverBalls - 6;
-            state.current.balls -= excess;
-            let b = getBowlTeam().players[state.current.bIdx];
-            if (b) b.o -= excess;
-            console.log(`Umpire miscount handled: Trimmed ${excess} excess balls. Runs & wickets kept.`);
-        }
-
-        executeEndOver();
-    };
-
-    if (currentOverBalls < 6) { 
-        showModal(
-            "⚠️ Early Over Call", 
-            `<div class="text-center mb-10 text-accent" style="font-size:1.1rem;">Only <b>${currentOverBalls}</b> legal deliveries bowled!</div>
-             <div class="text-center text-muted" style="font-size:0.85rem;">Do you really want to end this over early?</div>`, 
-            () => { 
-                closeModal(); 
-                confirmAndEndOver(); 
-            }, 
-            false, 
-            "360px", 
-            "Yes, Call Over"
-        ); 
-        return; 
-    }
-    
-    confirmAndEndOver(); 
-}  
-
-function checkAutoOverPrompt() {
-    let cur = state.current;
-    if (cur.wkts >= 10 || checkTargetReached()) return;
-
-    let completedOvers = cur.overHistory.length;
-    let ballsInPreviousOvers = completedOvers > 0 ? (cur.overHistory[completedOvers - 1].totalBallsAtEnd || (completedOvers * 6)) : 0;
-    let currentOverBalls = Math.max(0, cur.balls - ballsInPreviousOvers);
-
-    if (currentOverBalls === 6) {
-        let strikerOut = cur.sIdx !== null && getBatTeam().players[cur.sIdx].out;
-        let nonStrikerOut = cur.nsIdx !== null && getBatTeam().players[cur.nsIdx].out;
-        if (strikerOut || nonStrikerOut) return; 
-
-        let scoringBox = el('scoringEventsBox');
-        if(scoringBox) { scoringBox.style.pointerEvents = 'none'; scoringBox.style.opacity = '0.6'; }
-
-        setTimeout(() => {
-            if (state.current.bIdx === null) {
-                if(scoringBox) { scoringBox.style.pointerEvents = 'auto'; scoringBox.style.opacity = '1'; }
-                return; 
-            } 
-            showModal("🔄 Over Completed", `<div class="text-center mb-10 text-accent font-bold" style="font-size:1.1rem;">6 legal deliveries bowled!</div><div class="text-center text-muted" style="font-size:0.85rem;">Click <b>Call Over</b> to select the next bowler, or click <b>Cancel</b> if the umpire allows play to continue (7th ball).</div>`, () => { closeModal(); executeEndOver(); }, false, "360px", "Call Over");
-        }, 600); 
-    }
-    // ==========================================
-// 📉 MATCH REVISOR ENGINE (DLS / VJD / RAIN DELAYS)
-// ==========================================
-
-function openEditMatchConditions() {
-    // Ensure matchSettings exist
-    if (!window.matchData.full_state.matchSettings) {
-        window.matchData.full_state.matchSettings = { maxOvers: 20, originalMaxOvers: 20 };
-    }
-    
-    let curOvers = window.matchData.full_state.matchSettings.maxOvers;
-    let curTarget = window.matchData.full_state.matchSettings.customTarget || "";
-    let curMethod = window.matchData.full_state.matchSettings.targetMethod || "";
-    
-    let html = `
-        <div style="background:rgba(239,68,68,0.1); border:1px solid #ef4444; padding:15px; border-radius:8px; margin-bottom:15px;">
-            <label style="color:#ef4444; font-weight:bold;">Revised Max Overs</label>
-            <input type="number" id="modOvers" class="input-dark w-100" value="${curOvers}" step="0.1" style="font-size:1.1rem;">
-            <p style="font-size:0.75rem; color:#94a3b8; margin-top:5px; margin-bottom:0;">Automatically adjusts bowler quotas and the Required Run Rate.</p>
-        </div>
-    `;
-
-    // Only show target adjustments if we are in the 2nd Innings
-    if (window.matchData.full_state.inningsNum > 1) {
-        html += `
-            <div style="background:rgba(16,185,129,0.1); border:1px solid #10b981; padding:15px; border-radius:8px; margin-bottom:15px;">
-                <label style="color:#10b981; font-weight:bold;">Revised Target Runs</label>
-                <input type="number" id="modTarget" class="input-dark w-100" value="${curTarget}" style="font-size:1.1rem;">
-                
-                <label style="color:#10b981; font-weight:bold; margin-top:10px;">Calculation Method</label>
-                <input type="text" id="modMethod" class="input-dark w-100" value="${curMethod}" placeholder="e.g., DLS, VJD, Curtailed">
-            </div>
-        `;
-    }
-
-    html += `<button type="button" class="btn-action w-100" style="background:#475569;" onclick="clearMatchConditions()">🔄 Reset to Original Rules</button>`;
-
-    // Uses your existing custom modal function
-    showModal("📉 Revise Overs & Target", html, saveMatchConditions);
-}
-
-async function saveMatchConditions() {
-    let newOvers = parseFloat(document.getElementById('modOvers').value);
-    let newTarget = document.getElementById('modTarget') ? parseInt(document.getElementById('modTarget').value) : null;
-    let newMethod = document.getElementById('modMethod') ? document.getElementById('modMethod').value.trim() : "";
-
-    if (!newOvers) { alert("Please enter valid overs."); return; }
-
-    // 1. Update Overs
-    window.matchData.full_state.matchSettings.maxOvers = newOvers;
-    
-    // 2. Dynamically recalculate Bowler Quota (20% of total overs)
-    let newQuota = Math.ceil(newOvers / 5); 
-    window.matchData.full_state.matchSettings.bowlerQuota = newQuota;
-
-    // 3. Update Target if in 2nd Innings
-    if (window.matchData.full_state.inningsNum > 1) {
-        window.matchData.full_state.matchSettings.customTarget = newTarget || null;
-        window.matchData.full_state.matchSettings.targetMethod = newMethod || "";
-    }
-
-    document.getElementById('modalConfirmBtn').innerText = "⏳ Pushing to Cloud...";
-
-    // 4. Push directly to Supabase
-    const { error } = await window.supabase
-        .from('matches')
-        .update({ full_state: window.matchData.full_state })
-        .eq('match_id', window.matchData.match_id);
-    
-    if (error) {
-        alert("Cloud Error: " + error.message);
-    } else {
-        closeModal();
-        updateUI(); // Forces the UI to recalculate RRR and Target Display
-    }
-}
-
-async function clearMatchConditions() {
-    // Reverts to the original format rules
-    window.matchData.full_state.matchSettings.customTarget = null;
-    window.matchData.full_state.matchSettings.targetMethod = "";
-    window.matchData.full_state.matchSettings.maxOvers = window.matchData.full_state.matchSettings.originalMaxOvers || 20;
-    window.matchData.full_state.matchSettings.bowlerQuota = Math.ceil(window.matchData.full_state.matchSettings.maxOvers / 5);
-    
-    document.getElementById('modalConfirmBtn').innerText = "⏳ Reverting...";
-
-    const { error } = await window.supabase
-        .from('matches')
-        .update({ full_state: window.matchData.full_state })
-        .eq('match_id', window.matchData.match_id);
-        
-    if (!error) {
-        closeModal();
-        updateUI();
-    }
-}
-}
+        return `<tr style="${rowStyle}"><td style="padding:8px; max-width: 140px;"><div style="font-weight:bold; color:${isActive ? 'white' : 'var(--text-muted)'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.name}">${dName}</div>${statusInfo}</td><td style="font-weight:bold; font-size:1.1rem; color:var(--primary); padding:8px;">${p.r}</td><td style="padding:8px;">${p
