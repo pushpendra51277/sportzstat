@@ -141,7 +141,7 @@
             const { data, error } = await db.from('matches').select('match_id, full_state, tournaments(name)').order('created_at', { ascending: false });
             if (error) { console.error("Cloud Error:", error); return; }
             
-            allFanMatches = data || [];
+            allFanMatches = (data || []).filter(m => !m.match_id || !m.match_id.startsWith('HIST-'));
             let filterSets = { teams: new Set(), tourneys: new Set(), formats: new Set() };
             
             allFanMatches.forEach(m => {
@@ -251,17 +251,27 @@
                 let isExpanded = expandedMatches.has(m.match_id) ? 'style="display: block;"' : '';
                 let detailsHtml = `<div class="match-details" id="details-${m.match_id}" ${isExpanded} onclick="event.stopPropagation()">`;
                 
-                // BUILD THE INNINGS ARRAY
-                let displayInnings = [];
-                if (fs.inningsSummaries) { displayInnings = [...fs.inningsSummaries]; }
-                if (status === 'live' && fs.current && fs.current.balls > 0) {
-                    displayInnings.push({
+                // 🔥 DEDUPLICATED INNINGS ARRAY BUILDER
+                let innMap = new Map();
+                if (Array.isArray(fs.inningsSummaries)) {
+                    fs.inningsSummaries.forEach((inn, idx) => {
+                        let key = inn.innNum || (idx + 1);
+                        innMap.set(key, { ...inn, innNum: key });
+                    });
+                }
+
+                let currentInnNum = fs.inningsNum || (innMap.size + 1);
+                if (status === 'live' && fs.current && fs.current.balls > 0 && !innMap.has(currentInnNum)) {
+                    innMap.set(currentInnNum, {
+                        innNum: currentInnNum,
                         batTeam: fs.teams[fs.battingKey].name,
                         batters: fs.teams[fs.battingKey].players,
                         bowlers: fs.teams[fs.bowlingKey].players,
                         isOngoing: true
                     });
                 }
+
+                let displayInnings = Array.from(innMap.values()).sort((a, b) => a.innNum - b.innNum);
 
                 // RENDER THE FILE FOLDER UI
                 if (displayInnings.length > 0) {
@@ -275,7 +285,7 @@
                     displayInnings.forEach((inn, idx) => {
                         let isAct = (idx === savedTabIdx) ? 'active' : ''; 
                         let dState = (idx === savedTabIdx) ? 'block' : 'none';
-                        let iLabel = `Inn ${idx+1}: ${inn.batTeam}`;
+                        let iLabel = `Inn ${inn.innNum || (idx+1)}: ${inn.batTeam}`;
                         if (inn.isOngoing) iLabel += ` (LIVE)`;
 
                         // The Folder Tab
