@@ -96,7 +96,7 @@
         .w-100 { width: 100%; }
 
         /* 🔥 MOBILE RESPONSIVENESS AND SUPER ADMIN CLASSES */
-        .super-admin-only { display: none !important; } /* Hidden by default until identity is verified */
+        .super-admin-only { display: none !important; }
 
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 15; opacity: 0; transition: opacity 0.3s; }
         .sidebar-overlay.active { display: block; opacity: 1; }
@@ -227,7 +227,7 @@
                             <span id="teamCountBadge" style="background:#10b981; color:#020617; padding:3px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold;">0 Selected</span>
                         </div>
                         
-                        <!-- 🔥 BOLD "CREATE NEW TEAM" MOVED HERE -->
+                        <!-- 🔥 BOLD "CREATE NEW TEAM" RIGHT BELOW SELECT TEAMS HEADING -->
                         <div style="display: flex; gap: 5px; margin-bottom: 15px;">
                             <input type="text" id="newTeamName" placeholder="Create new team..." style="flex:1; padding:10px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:white; font-weight: bold; font-size: 0.95rem;">
                             <button type="button" class="btn-success" style="padding: 10px 20px; font-size: 0.9rem;" onclick="createNewTeamNatively()">+ ADD</button>
@@ -552,6 +552,7 @@
         let currentAdminId = null;
         let currentAdminAssociation = 'Independent';
         let isSuperAdmin = false; // 🔥 Tracks Super Admin Status
+        let loadedTournamentHost = null; // 🔥 Preserves original admin's host when Super Admin edits
 
         let currentTournamentId = null;
         let allDbTeams = [];        
@@ -597,20 +598,19 @@
 
             const { data: profileData, error: profileError } = await db
                 .from('profiles')
-                .select('association, role') // 🔥 Fetches the role to verify identity
+                .select('association, role')
                 .eq('id', currentAdminId)
                 .single();
 
             if (!profileError && profileData && profileData.association) {
                 currentAdminAssociation = profileData.association;
                 document.querySelector('.app-title').innerText = `${currentAdminAssociation} TOURNAMENT HUB`;
-                document.getElementById('mobile-app-title').innerText = `${currentAdminAssociation} HUB`; // Sync Mobile header
+                document.getElementById('mobile-app-title').innerText = `${currentAdminAssociation} HUB`;
             }
 
             // 🔥 SUPER ADMIN VERIFICATION (Using your email or db role)
-            if (session.user.email === 'pushpendra51277@gmail.com' || (profileData && profileData.role === 'superadmin')) {
+            if (session.user.email === 'pushpendra51277@gmail.com' || (profileData && (profileData.role || '').toLowerCase() === 'superadmin')) {
                 isSuperAdmin = true;
-                // Unhide the Historical Data menu item
                 document.querySelectorAll('.super-admin-only').forEach(el => el.classList.remove('super-admin-only'));
             }
         }
@@ -622,7 +622,6 @@
             document.querySelectorAll('.hub-section').forEach(sec => sec.classList.remove('active'));
             document.getElementById(targetId).classList.add('active');
             
-            // Auto-close sidebar on mobile after tapping a link
             if (window.innerWidth <= 768) {
                 document.querySelector('.sidebar').classList.remove('open');
                 document.querySelector('.sidebar-overlay').classList.remove('active');
@@ -717,11 +716,31 @@
             } catch(e) { alert("Error saving team to cloud."); document.getElementById('newTeamName').value = tName; }
         }
 
+        // 🔥 ROLE-BASED TOURNAMENT EDIT LIST: Super Admin sees all; Standard Admin sees only their own
         async function loadExistingTournamentsList() {
-            const { data, error } = await db.from('tournaments').select('tournament_id, name, format');
             const select = document.getElementById('existing-tournament-select');
-            if (error || !data || data.length === 0) { select.innerHTML = '<option value="">No existing tournaments found</option>'; return; }
-            select.innerHTML = '<option value="">-- Choose tournament to edit --</option>' + data.map(t => `<option value="${t.tournament_id}">${t.name} (${t.format})</option>`).join('');
+            
+            if (!currentAdminId && !isSuperAdmin) {
+                select.innerHTML = '<option value="">Please log in to view your tournaments</option>';
+                return;
+            }
+
+            let query = db.from('tournaments').select('tournament_id, name, format, admin_id, host').order('created_at', { ascending: false });
+            
+            if (!isSuperAdmin) {
+                query = query.eq('admin_id', currentAdminId);
+            }
+
+            const { data, error } = await query;
+            if (error || !data || data.length === 0) { 
+                select.innerHTML = '<option value="">No tournaments found under your account</option>'; 
+                return; 
+            }
+
+            select.innerHTML = '<option value="">-- Choose tournament to edit --</option>' + data.map(t => {
+                let hostTag = (isSuperAdmin && t.host) ? ` [${t.host}]` : '';
+                return `<option value="${t.tournament_id}">${t.name} (${t.format})${hostTag}</option>`;
+            }).join('');
         }
 
         function toggleTournamentMode(mode) {
@@ -731,9 +750,11 @@
             if (mode === 'edit') {
                 wrapper.style.display = 'block'; 
                 currentTournamentId = null; 
+                loadedTournamentHost = null;
             } else {
                 wrapper.style.display = 'none'; 
                 currentTournamentId = null; 
+                loadedTournamentHost = null;
                 selectedTourneyTeams = [];
                 masterFixtures = []; 
                 document.getElementById('t-name').value = '';
@@ -751,9 +772,18 @@
 
         async function loadExistingTournamentData(tournId) {
             if (!tournId) return;
-            currentTournamentId = tournId;
             const { data: tData, error: tErr } = await db.from('tournaments').select('*').eq('tournament_id', tournId).single();
             if (tErr || !tData) { alert("Error loading tournament details."); return; }
+
+            // 🔥 SECURITY CHECK: Block standard admins from loading someone else's tournament
+            if (!isSuperAdmin && tData.admin_id !== currentAdminId) {
+                alert("❌ Access Denied: You can only edit tournaments created under your Admin account.");
+                document.getElementById('existing-tournament-select').value = "";
+                return;
+            }
+
+            currentTournamentId = tournId;
+            loadedTournamentHost = tData.host || null;
 
             document.getElementById('t-name').value = tData.name || '';
             document.getElementById('t-format').value = tData.format || 'T20';
@@ -806,7 +836,10 @@
             let tFormat = document.getElementById('t-format').value;
             let tDate = document.getElementById('t-date').value;
             let tTier = document.getElementById('t-tier').value; 
-            let tHost = currentAdminAssociation; 
+            
+            const mode = document.getElementById('tournament-mode-select').value;
+            // Preserve original admin's host association when Super Admin edits an existing tournament
+            let tHost = (mode === 'edit' && loadedTournamentHost) ? loadedTournamentHost : currentAdminAssociation; 
             
             let configPayload = { winPoints: document.getElementById('tWinPoints').value, tier: tTier }; 
 
@@ -821,7 +854,6 @@
                 return; 
             }
 
-            const mode = document.getElementById('tournament-mode-select').value;
             let tError = null;
             
             try {
@@ -831,6 +863,7 @@
                 } else {
                     const { data: tData, error } = await db.from('tournaments').insert([{ name: tName, format: tFormat, start_date: tDate, host: tHost, admin_id: currentAdminId, config: configPayload }]).select();
                     tError = error; if (tData && tData.length > 0) currentTournamentId = tData[0].tournament_id;
+                    await loadExistingTournamentsList();
                 }
 
                 if (tError) throw tError;
@@ -1493,9 +1526,9 @@
             tournamentSquadsCache[teamName] = previouslyCheckedIds;
 
             alert(`✅ Successfully registered ${payload.length} players to the cloud and linked them to ${teamName} in this tournament!`);
-            addBulkRows(15, false); // Wipes grid clean
-            toggleBulkForm(); // Hides the bulk panel
-            loadWizardSquad(teamName); // Refreshes the squad list
+            addBulkRows(15, false);
+            toggleBulkForm();
+            loadWizardSquad(teamName);
         }
 
         function finishSquadsAndProceed() { 
@@ -1539,7 +1572,7 @@
 
             let tName = document.getElementById('t-name').value;
             let tFormat = document.getElementById('t-format').value;
-            let tHost = currentAdminAssociation; 
+            let tHost = loadedTournamentHost ? loadedTournamentHost : currentAdminAssociation; 
             let tTier = document.getElementById('t-tier').value; 
 
             for (let m of masterFixtures) {
@@ -1609,7 +1642,6 @@
                 if(!confirm("All stats are currently zero. Are you sure you want to upload a blank match?")) return;
             }
 
-            // Construct the "Ghost Match" JSON exactly as career.html expects it
             const historicalPayload = {
                 matchName: "Historical Entry",
                 match_status: "completed",
@@ -1654,7 +1686,6 @@
             } else {
                 alert(`✅ Historical stats for ${pName} injected successfully! They will now automatically appear in the Analytics Hub.`);
                 
-                // Reset inputs
                 ['hist-runs', 'hist-bf', 'hist-4s', 'hist-6s', 'hist-o', 'hist-m', 'hist-rc', 'hist-wkts', 'hist-catches', 'hist-stumpings', 'hist-runouts'].forEach(id => {
                     document.getElementById(id).value = "0";
                 });
