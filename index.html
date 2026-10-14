@@ -121,7 +121,7 @@
             <button onclick="signOut(event)" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">Sign Out</button>
         </div>
 
-        <!-- MATCH HUB WIDGET (Carousel) -->
+        <!-- MATCH HUB WIDGET (Carousel - Shows Global Live/Upcoming/Completed) -->
         <div class="match-hub-container" id="match-hub-widget">
             <div class="hub-tabs">
                 <button class="hub-tab active" id="tab-live" onclick="switchHubTab('live')">🔴 LIVE (0)</button>
@@ -136,13 +136,13 @@
         <!-- PORTAL GRID (App Navigation) -->
         <div class="portal-grid">
             
-            <!-- 🔥 QUICK MATCH CARD (Now routes directly to 20.html) -->
+            <!-- QUICK MATCH CARD (Routes directly to 20.html) -->
             <a href="20.html" class="portal-card" id="card-quickmatch" style="border-color: #f59e0b; display: none;">
                 <h3 style="color: #f59e0b;">⚡ Quick Match Engine</h3>
                 <p>Launch the standalone offline engine. Best for casual friendlies and local games.</p>
             </a>
 
-            <div class="portal-card" id="card-directory" style="border-color: #8b5cf6;" onclick="ectoryView()">
+            <div class="portal-card" id="card-directory" style="border-color: #8b5cf6;" onclick="toggleDirectoryView()">
                 <h3 style="color: #8b5cf6;" id="directory-card-title">📁 Match Directory</h3>
                 <p id="directory-card-desc">Review your created tournaments, active fixtures, Match IDs, and Scorer PINs.</p>
             </div>
@@ -151,10 +151,13 @@
                 <h3 style="color: #3b82f6;">🛠️ Tournament Creator</h3>
                 <p>Build fixtures, map pools, and assign officials.</p>
             </a>
+
+            <!-- MASTER ROSTER MANAGER (STRICTLY SUPER ADMIN ONLY) -->
             <a href="admin/rosters.html" class="portal-card" id="card-rosters" style="border-color: #f43f5e; display: none;">
-                <h3 style="color: #f43f5e;">🛡 Master Roster Manager</h3>
+                <h3 style="color: #f43f5e;">🛡️ Master Roster Manager</h3>
                 <p>Register franchises and manage global master player lineups.</p>
             </a>
+
             <a href="scorer/live.html" class="portal-card" id="card-scorer" style="border-color: #10b981;">
                 <h3 style="color: #10b981;">📊 Live Scoring Engine</h3>
                 <p>Access match postings and score live games ball-by-ball.</p>
@@ -185,7 +188,7 @@
                 <button onclick="document.getElementById('directory-section').classList.add('hidden')" style="background: transparent; border: 1px solid #475569; color: #cbd5e1; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Close</button>
             </div>
             
-            <input type="text" id="directorySearchInput" class="directory-search" placeholder="🔍 Search by Team, Tournament, ID, or Status..." onkeyup="filterDirectory()">
+            <input type="text" id="directorySearchInput" class="directory-search" placeholder="🔍 Search matches by Team, Tournament, ID, or Status..." onkeyup="filterDirectory()">
 
             <div class="table-responsive">
                 <table class="directory-table">
@@ -254,10 +257,16 @@
             document.getElementById('auth-section').style.display = 'none';
             const { data: profile } = await db.from('profiles').select('*').eq('id', userId).single();
             currentUserProfile = profile || { role: 'fan', full_name: 'Sports Fan', association: 'Independent' };
-            const userRole = (currentUserProfile.role || 'fan').toLowerCase();
+            
+            let rawRole = (currentUserProfile.role || 'fan').toLowerCase().replace(/[\s_]+/g, '');
+            if (currentUser && currentUser.email && currentUser.email.toLowerCase() === 'pushpendra51277@gmail.com') {
+                rawRole = 'superadmin';
+            }
+            currentUserProfile.role = rawRole;
+
             const userAssoc = currentUserProfile.association || 'Independent';
             
-            document.getElementById('user-role-display').innerText = userRole;
+            document.getElementById('user-role-display').innerText = rawRole;
             document.getElementById('user-name-display').innerText = currentUserProfile.full_name || 'Sports Fan';
             document.getElementById('user-workspace-display').innerText = userAssoc;
 
@@ -273,32 +282,30 @@
             document.getElementById('card-selector').style.display = 'none';
             document.getElementById('card-quickmatch').style.display = 'none';
 
-            if (userRole === 'superadmin') {
+            if (rawRole === 'superadmin') {
                 document.getElementById('card-directory').style.display = 'block'; 
                 document.getElementById('card-admin').style.display = 'block'; 
-                document.getElementById('card-rosters').style.display = 'block'; 
+                document.getElementById('card-rosters').style.display = 'block';
                 document.getElementById('card-scorer').style.display = 'block'; 
                 document.getElementById('card-selector').style.display = 'block'; 
                 document.getElementById('card-quickmatch').style.display = 'block';
-            } else if (userRole === 'admin') {
+            } else if (rawRole === 'admin') {
                 document.getElementById('card-directory').style.display = 'block'; 
                 document.getElementById('card-admin').style.display = 'block'; 
-                document.getElementById('card-rosters').style.display = 'block'; 
                 document.getElementById('card-scorer').style.display = 'block'; 
                 document.getElementById('card-quickmatch').style.display = 'block';
-            } else if (userRole === 'scorer') {
+            } else if (rawRole === 'scorer') {
                 document.getElementById('card-scorer').style.display = 'block'; 
-            } else if (userRole === 'selector') {
+            } else if (rawRole === 'selector') {
                 document.getElementById('card-selector').style.display = 'block'; 
             }
             
-            await fetchMatchHubData(userAssoc, userRole);
+            await fetchMatchHubData();
         }
 
-       async function fetchMatchHubData(assoc, role) {
-            let query = db.from('matches')
-                .select('match_id, scorer_pin, full_state, tournaments(admin_id, name)')
-                .order('created_at', { ascending: false });
+        // DASHBOARD CAROUSEL: Shows all Live, Upcoming, and Completed matches globally
+        async function fetchMatchHubData() {
+            let query = db.from('matches').select('match_id, scorer_pin, full_state, tournaments(admin_id, name)').order('created_at', { ascending: false });
             
             const { data: matches, error } = await query;
             if (error || !matches) return;
@@ -307,16 +314,7 @@
 
             matches.forEach(m => {
                 let p = m.full_state || {};
-                let matchAdminId = m.tournaments ? m.tournaments.admin_id : null;
-
-                // 🔒 STRICT ADMIN ISOLATION: Admins ONLY see matches from tournaments they created
-                if (role === 'admin') {
-                    if (matchAdminId !== currentUser.id) return;
-                } 
-                // Scorers and Selectors filter by their assigned association
-                else if (role !== 'superadmin' && role !== 'fan') {
-                    if (p.host && p.host !== assoc) return; 
-                }
+                if (m.match_id && m.match_id.startsWith('HIST-')) return;
 
                 const state = (p.match_status || 'upcoming').toLowerCase();
                 
@@ -347,7 +345,6 @@
 
             let badgeClass = tabName === 'live' ? 'badge-live' : (tabName === 'completed' ? 'badge-comp' : 'badge-sched');
             let badgeText = tabName === 'live' ? 'LIVE' : (tabName === 'completed' ? 'RESULT' : 'FIXTURE');
-            const role = (currentUserProfile.role || 'fan').toLowerCase();
 
             carousel.innerHTML = matches.map(m => {
                 let p = m.full_state || {};
@@ -357,12 +354,8 @@
                 let tourney = (m.tournaments && m.tournaments.name) ? m.tournaments.name : ((p.tournament && p.tournament !== 'undefined') ? p.tournament : 'Independent Match');
                 let adminId = m.tournaments ? m.tournaments.admin_id : 'none';
                 
-                // 🔒 Only pass the PIN to the card if user is SuperAdmin, Scorer, or the owning Admin
-                let canAccessPin = (role === 'superadmin' || role === 'scorer' || (role === 'admin' && adminId === currentUser.id));
-                let safePin = canAccessPin ? m.scorer_pin : '';
-
                 return `
-                    <div class="hub-card" onclick="handleSmartClick('${m.match_id}', '${tabName}', '${safePin}', '${adminId}')">
+                    <div class="hub-card" onclick="handleSmartClick('${m.match_id}', '${tabName}', '${m.scorer_pin}', '${adminId}')">
                         <div class="hub-badge ${badgeClass}">${badgeText}</div>
                         <div class="hub-tourney">${tourney}</div>
                         <div class="hub-teams">${t1} <span style="color:#94a3b8; font-size:0.75rem;">vs</span> ${t2}</div>
@@ -370,54 +363,6 @@
                     </div>
                 `;
             }).join('');
-        }
-
-        async function toggleDirectoryView() {
-            const section = document.getElementById('directory-section');
-            section.classList.remove('hidden'); 
-            section.scrollIntoView({ behavior: 'smooth' });
-            
-            const tbody = document.getElementById('directory-tbody');
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Fetching records...</td></tr>`;
-            document.getElementById('directorySearchInput').value = "";
-
-            const role = (currentUserProfile.role || 'fan').toLowerCase();
-            const isSuperAdmin = (role === 'superadmin' || currentUser.email === 'pushpendra51277@gmail.com');
-
-            // 🔒 SECURITY GUARD: Block anyone who isn't an Admin or SuperAdmin
-            if (!isSuperAdmin && role !== 'admin') {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #ef4444;">Access Denied.</td></tr>`;
-                return;
-            }
-
-            // 🔒 Use !inner join for non-superadmins so Supabase strictly drops unowned matches
-            let query;
-            if (isSuperAdmin) {
-                query = db.from('matches')
-                    .select('match_id, scorer_pin, full_state, tournaments(admin_id, name)')
-                    .order('created_at', { ascending: false });
-            } else {
-                query = db.from('matches')
-                    .select('match_id, scorer_pin, full_state, tournaments!inner(admin_id, name)')
-                    .eq('tournaments.admin_id', currentUser.id)
-                    .order('created_at', { ascending: false });
-            }
-
-            const { data: matches, error } = await query;
-            
-            // Double-layer JS verification to ensure zero leaks
-            let verifiedMatches = (matches || []).filter(m => {
-                if (isSuperAdmin) return true;
-                return m.tournaments && m.tournaments.admin_id === currentUser.id;
-            });
-
-            if (error || verifiedMatches.length === 0) { 
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">No matches found created by your account.</td></tr>`; 
-                return; 
-            }
-
-            globalDirectoryMatches = verifiedMatches;
-            renderDirectoryTable();
         }
 
         function handleSmartClick(matchId, tabCategory, pin, matchAdminId) {
@@ -432,7 +377,7 @@
                 }
             } 
             else if (role === 'superadmin' || (role === 'admin' && matchAdminId === currentUser.id)) {
-                alert(`ADMIN ACTIONS FOR: ${matchId}\n\nStatus: ${tabCategory.toUpperCase()}\nScorer PIN: ${pin}\n\n(Edit functionality routing here in Phase 4)`);
+                alert(`ADMIN ACTIONS FOR: ${matchId}\n\nStatus: ${tabCategory.toUpperCase()}\nScorer PIN: ${pin}`);
             } 
             else if (role === 'selector' && tabCategory === 'completed') {
                 window.location.href = `selector.html`;
@@ -442,7 +387,61 @@
             }
         }
 
-      
+        // 🔥 FIXED MATCH DIRECTORY: Uses safe Left Join so Super Admin sees ALL matches, and Standard Admin sees only their own
+        async function toggleDirectoryView() {
+            const section = document.getElementById('directory-section');
+            section.classList.remove('hidden'); 
+            section.scrollIntoView({ behavior: 'smooth' });
+            
+            const tbody = document.getElementById('directory-tbody');
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Fetching records...</td></tr>`;
+            
+            document.getElementById('directorySearchInput').value = "";
+
+            const role = (currentUserProfile.role || '').toLowerCase();
+            const isSuperAdmin = (role === 'superadmin') || (currentUser && currentUser.email && currentUser.email.toLowerCase() === 'pushpendra51277@gmail.com');
+            const userAssoc = currentUserProfile.association || 'Independent';
+
+            // Uses the exact same Left Join query that powers the top carousel
+            const { data: matches, error } = await db.from('matches')
+                .select('match_id, scorer_pin, full_state, tournaments(admin_id, name)')
+                .order('created_at', { ascending: false });
+
+            if (error || !matches) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #ef4444; padding: 20px;">Error loading matches.</td></tr>`;
+                return;
+            }
+
+            let verifiedMatches = matches.filter(m => {
+                if (m.match_id && m.match_id.startsWith('HIST-')) return false;
+
+                // Super Admin sees all matches
+                if (isSuperAdmin) return true;
+
+                // Standard Admin only sees matches from their own tournaments or their own association workspace
+                let tAdminId = m.tournaments ? m.tournaments.admin_id : null;
+                let fs = m.full_state || {};
+
+                if (tAdminId && tAdminId === currentUser.id) return true;
+                if (fs.admin_id && fs.admin_id === currentUser.id) return true;
+                if (userAssoc !== 'Independent' && fs.host && fs.host === userAssoc) return true;
+
+                return false;
+            });
+
+            document.getElementById('dir-heading').innerText = isSuperAdmin
+                ? "Global Match Master List (Super Admin)"
+                : "My Created Matches & Tournaments";
+
+            if (verifiedMatches.length === 0) { 
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">No matches found created under your Admin account.</td></tr>`; 
+                return; 
+            }
+
+            globalDirectoryMatches = verifiedMatches;
+            renderDirectoryTable();
+        }
+
         function filterDirectory() {
             const query = document.getElementById('directorySearchInput').value.toLowerCase();
             renderDirectoryTable(query);
