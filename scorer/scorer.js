@@ -733,4 +733,100 @@ function checkAutoOverPrompt() {
             showModal("🔄 Over Completed", `<div class="text-center mb-10 text-accent font-bold" style="font-size:1.1rem;">6 legal deliveries bowled!</div><div class="text-center text-muted" style="font-size:0.85rem;">Click <b>Call Over</b> to select the next bowler, or click <b>Cancel</b> if the umpire allows play to continue (7th ball).</div>`, () => { closeModal(); executeEndOver(); }, false, "360px", "Call Over");
         }, 600); 
     }
+    // ==========================================
+// 📉 MATCH REVISOR ENGINE (DLS / VJD / RAIN DELAYS)
+// ==========================================
+
+function openEditMatchConditions() {
+    // Ensure matchSettings exist
+    if (!window.matchData.full_state.matchSettings) {
+        window.matchData.full_state.matchSettings = { maxOvers: 20, originalMaxOvers: 20 };
+    }
+    
+    let curOvers = window.matchData.full_state.matchSettings.maxOvers;
+    let curTarget = window.matchData.full_state.matchSettings.customTarget || "";
+    let curMethod = window.matchData.full_state.matchSettings.targetMethod || "";
+    
+    let html = `
+        <div style="background:rgba(239,68,68,0.1); border:1px solid #ef4444; padding:15px; border-radius:8px; margin-bottom:15px;">
+            <label style="color:#ef4444; font-weight:bold;">Revised Max Overs</label>
+            <input type="number" id="modOvers" class="input-dark w-100" value="${curOvers}" step="0.1" style="font-size:1.1rem;">
+            <p style="font-size:0.75rem; color:#94a3b8; margin-top:5px; margin-bottom:0;">Automatically adjusts bowler quotas and the Required Run Rate.</p>
+        </div>
+    `;
+
+    // Only show target adjustments if we are in the 2nd Innings
+    if (window.matchData.full_state.inningsNum > 1) {
+        html += `
+            <div style="background:rgba(16,185,129,0.1); border:1px solid #10b981; padding:15px; border-radius:8px; margin-bottom:15px;">
+                <label style="color:#10b981; font-weight:bold;">Revised Target Runs</label>
+                <input type="number" id="modTarget" class="input-dark w-100" value="${curTarget}" style="font-size:1.1rem;">
+                
+                <label style="color:#10b981; font-weight:bold; margin-top:10px;">Calculation Method</label>
+                <input type="text" id="modMethod" class="input-dark w-100" value="${curMethod}" placeholder="e.g., DLS, VJD, Curtailed">
+            </div>
+        `;
+    }
+
+    html += `<button type="button" class="btn-action w-100" style="background:#475569;" onclick="clearMatchConditions()">🔄 Reset to Original Rules</button>`;
+
+    // Uses your existing custom modal function
+    showModal("📉 Revise Overs & Target", html, saveMatchConditions);
+}
+
+async function saveMatchConditions() {
+    let newOvers = parseFloat(document.getElementById('modOvers').value);
+    let newTarget = document.getElementById('modTarget') ? parseInt(document.getElementById('modTarget').value) : null;
+    let newMethod = document.getElementById('modMethod') ? document.getElementById('modMethod').value.trim() : "";
+
+    if (!newOvers) { alert("Please enter valid overs."); return; }
+
+    // 1. Update Overs
+    window.matchData.full_state.matchSettings.maxOvers = newOvers;
+    
+    // 2. Dynamically recalculate Bowler Quota (20% of total overs)
+    let newQuota = Math.ceil(newOvers / 5); 
+    window.matchData.full_state.matchSettings.bowlerQuota = newQuota;
+
+    // 3. Update Target if in 2nd Innings
+    if (window.matchData.full_state.inningsNum > 1) {
+        window.matchData.full_state.matchSettings.customTarget = newTarget || null;
+        window.matchData.full_state.matchSettings.targetMethod = newMethod || "";
+    }
+
+    document.getElementById('modalConfirmBtn').innerText = "⏳ Pushing to Cloud...";
+
+    // 4. Push directly to Supabase
+    const { error } = await window.supabase
+        .from('matches')
+        .update({ full_state: window.matchData.full_state })
+        .eq('match_id', window.matchData.match_id);
+    
+    if (error) {
+        alert("Cloud Error: " + error.message);
+    } else {
+        closeModal();
+        updateUI(); // Forces the UI to recalculate RRR and Target Display
+    }
+}
+
+async function clearMatchConditions() {
+    // Reverts to the original format rules
+    window.matchData.full_state.matchSettings.customTarget = null;
+    window.matchData.full_state.matchSettings.targetMethod = "";
+    window.matchData.full_state.matchSettings.maxOvers = window.matchData.full_state.matchSettings.originalMaxOvers || 20;
+    window.matchData.full_state.matchSettings.bowlerQuota = Math.ceil(window.matchData.full_state.matchSettings.maxOvers / 5);
+    
+    document.getElementById('modalConfirmBtn').innerText = "⏳ Reverting...";
+
+    const { error } = await window.supabase
+        .from('matches')
+        .update({ full_state: window.matchData.full_state })
+        .eq('match_id', window.matchData.match_id);
+        
+    if (!error) {
+        closeModal();
+        updateUI();
+    }
+}
 }
