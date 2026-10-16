@@ -102,7 +102,7 @@ function getTimeDropdownsHtml(prefix, allowNA = false) {
     for(let i=1; i<=12; i++) { let val = i.toString().padStart(2,'0'); let sel = (!allowNA && i === curH) ? 'selected' : ''; h += `<option value="${val}" ${sel}>${val}</option>`; }
     for(let i=0; i<60; i++) { let val = i.toString().padStart(2,'0'); let sel = (!allowNA && i === curM) ? 'selected' : ''; m += `<option value="${val}" ${sel}>${val}</option>`; }
     let amSel = (!allowNA && ampm === 'AM') ? 'selected' : ''; let pmSel = (!allowNA && ampm === 'PM') ? 'selected' : '';
-    return `<div class="flex-row gap-5"><select id="${prefix}Hr" class="modal-input" style="width:33\%; margin-bottom:0;">${h}</select><select id="${prefix}Min" class="modal-input" style="width:33\%; margin-bottom:0;">${m}</select><select id="${prefix}AmPm" class="modal-input" style="width:33\%; margin-bottom:0;">${allowNA ? '<option value="">--</option>' : ''}<option value="AM" ${amSel}>AM</option><option value="PM" ${pmSel}>PM</option></select></div>`;
+    return `<div class="flex-row gap-5"><select id="${prefix}Hr" class="modal-input" style="width:33%; margin-bottom:0;">${h}</select><select id="${prefix}Min" class="modal-input" style="width:33%; margin-bottom:0;">${m}</select><select id="${prefix}AmPm" class="modal-input" style="width:33%; margin-bottom:0;">${allowNA ? '<option value="">--</option>' : ''}<option value="AM" ${amSel}>AM</option><option value="PM" ${pmSel}>PM</option></select></div>`;
 }
 
 function parseTimeDropdowns(prefix) {
@@ -278,16 +278,16 @@ async function loadTournamentSquads(teamId, teamKey, fallbackTeamName) {
         renderTapAndFly(teamKey); return;
     }
     if (!activeMatch.tournament_id || !teamId) {
-        for(let i=1; i<=18; i++) setupSquads[teamKey].bench.push({ id: `dummy_${teamKey}_${i}`, name: `${fallbackTeamName} Player${i}` });
+        for(let i=1; i<=18; i++) setupSquads[teamKey].bench.push({ id: `dummy_${teamKey}_${i}`, name: `${fallbackTeamName} Player ${i}` });
         renderTapAndFly(teamKey); return; 
     }
     const { data, error } = await supabaseClient.from('tournament_squads').select('player_id, players(full_name)').eq('tournament_id', activeMatch.tournament_id).eq('team_id', teamId);
     if(error || !data || data.length === 0) { 
-        for(let i=1; i<=18; i++) setupSquads[teamKey].bench.push({ id: `dummy_${teamKey}_${i}`, name: `${fallbackTeamName} Player${i}` });
+        for(let i=1; i<=18; i++) setupSquads[teamKey].bench.push({ id: `dummy_${teamKey}_${i}`, name: `${fallbackTeamName} Player ${i}` });
         renderTapAndFly(teamKey); return; 
     }
     data.forEach((row, index) => { 
-        let pName = (row.players && row.players.full_name) ? row.players.full_name : `${fallbackTeamName} Player${index + 1}`;
+        let pName = (row.players && row.players.full_name) ? row.players.full_name : `${fallbackTeamName} Player ${index + 1}`;
         let pId = row.player_id || `dummy_${teamKey}_${index + 1}`;
         setupSquads[teamKey].bench.push({ id: pId, name: pName }); 
     });
@@ -301,4 +301,136 @@ function renderTapAndFly(tKey) {
         let isC = sq.roles.c === p.id ? 'active c' : ''; let isVC = sq.roles.vc === p.id ? 'active vc' : ''; let isWK = sq.roles.wk === p.id ? 'active wk' : '';
         return `<div class="tf-player tf-xi" onclick="tapPlayer('${tKey}', '${p.id}', 'xi')"><span>${p.name}</span><div class="role-badges" onclick="event.stopPropagation()"><span class="r-badge ${isC}" onclick="setRole(event, '${tKey}', '${p.id}', 'c')">C</span><span class="r-badge ${isVC}" onclick="setRole(event, '${tKey}', '${p.id}', 'vc')">VC</span><span class="r-badge ${isWK}" onclick="setRole(event, '${tKey}', '${p.id}', 'wk')">WK</span></div></div>`;
     }).join('');
-    el(`subs-${tKey}`).innerHTML = sq.subs.map(p => `<div class="tf-player tf-sub" onclick="tapPlayer('${tKey}', '${p.id}',
+    el(`subs-${tKey}`).innerHTML = sq.subs.map(p => `<div class="tf-player tf-sub" onclick="tapPlayer('${tKey}', '${p.id}', 'subs')"><span>${p.name}</span> <span>⬅</span></div>`).join('');
+    el(`count-${tKey}-xi`).innerText = `${sq.xi.length}/11`; el(`count-${tKey}-subs`).innerText = `${sq.subs.length}/7`; el(`count-${tKey}-xi`).style.color = sq.xi.length > 11 ? '#ef4444' : '#10b981';
+}
+
+function tapPlayer(tKey, pId, fromPane) {
+    let sq = setupSquads[tKey];
+    if (fromPane === 'bench') {
+        let pIdx = sq.bench.findIndex(x => String(x.id) === String(pId)); let p = sq.bench.splice(pIdx, 1)[0];
+        if (sq.xi.length < 11) sq.xi.push(p); else if (sq.subs.length < 7) sq.subs.push(p); else { sq.bench.push(p); alert("Squad is full! Maximum 11 XI and 7 Subs."); }
+    } else if (fromPane === 'xi') {
+        let pIdx = sq.xi.findIndex(x => String(x.id) === String(pId)); let p = sq.xi.splice(pIdx, 1)[0]; sq.bench.push(p);
+        if(sq.roles.c === pId) sq.roles.c = null; if(sq.roles.vc === pId) sq.roles.vc = null; if(sq.roles.wk === pId) sq.roles.wk = null;
+    } else if (fromPane === 'subs') {
+        let pIdx = sq.subs.findIndex(x => String(x.id) === String(pId)); let p = sq.subs.splice(pIdx, 1)[0]; sq.bench.push(p);
+    }
+    renderTapAndFly(tKey);
+}
+
+function setRole(e, tKey, pId, role) {
+    e.stopPropagation();
+    if (setupSquads[tKey].roles[role] === pId) setupSquads[tKey].roles[role] = null; else setupSquads[tKey].roles[role] = pId;
+    renderTapAndFly(tKey);
+}
+
+function buildPlayerFromSetup(p, isXi, tKey) {
+    let roles = setupSquads[tKey].roles; let desig = [];
+    if(roles.c === p.id) desig.push('C'); if(roles.vc === p.id) desig.push('VC');
+    let skill = "Batter / Bowler"; if(roles.wk === p.id) { skill = "WK"; if(desig.includes('C')) desig = ['C/WK']; }
+    return { id: p.id, regNo: "", name: p.name, desig: desig.join('/'), r:0, b:0, f:0, s:0, out:false, outOnDuck:0, hasBatted: false, dismissalInfo: "", o:0, rc:0, w:0, m:0, ex:0, wd:0, nb:0, byes:0, legbyes:0, cw:0, catches:0, stumpings:0, runouts:0, quotaOvers: 0, inTime: null, outTime: null, isPlayingXI: isXi, skill: skill, breakMins: 0 };
+}
+
+async function lockPlayingXI() {
+    if(setupSquads.A.xi.length === 0 || setupSquads.B.xi.length === 0) { alert("Select at least 1 player in the Playing XI for both teams!"); return; }
+    state.matchId = activeMatch.match_id; state.teams.A.name = el('team-a-name').innerText; state.teams.B.name = el('team-b-name').innerText;
+    state.teams.A.players = [...setupSquads.A.xi.map(p => buildPlayerFromSetup(p, true, 'A')), ...setupSquads.A.subs.map(p => buildPlayerFromSetup(p, false, 'A'))];
+    state.teams.B.players = [...setupSquads.B.xi.map(p => buildPlayerFromSetup(p, true, 'B')), ...setupSquads.B.subs.map(p => buildPlayerFromSetup(p, false, 'B'))];
+
+    state.matchSettings.venue = el('match-venue') ? el('match-venue').value.trim() : "";
+    state.matchSettings.officials = { referee: el('match-referee')?el('match-referee').value.trim():"", coach: el('match-coach')?el('match-coach').value.trim():"", manager: el('match-manager')?el('match-manager').value.trim():"", umpire1: el('umpire-1')?el('umpire-1').value.trim():"", umpire2: el('umpire-2')?el('umpire-2').value.trim():"", umpire3: el('umpire-3')?el('umpire-3').value.trim():"", umpire4: el('umpire-4')?el('umpire-4').value.trim():"", scorer1: el('scorer-1')?el('scorer-1').value.trim():"", scorer2: el('scorer-2')?el('scorer-2').value.trim():"" };
+    saveToRegistry(state.matchSettings.venue, state.matchSettings.officials);
+
+    let win = el('tossWinner').value, dec = el('tossDecision').value; 
+    state.battingKey = ((win === 'A' && dec === 'bat') || (win === 'B' && dec === 'bowl')) ? 'A' : 'B'; 
+    state.bowlingKey = state.battingKey === 'A' ? 'B' : 'A';
+    
+    let tossWinName = win === 'A' ? state.teams.A.name : state.teams.B.name;
+    let tossDecText = dec === 'bat' ? 'bat' : 'bowl';
+    state.matchSettings.tossStr = `${tossWinName} won the toss and elected to ${tossDecText}`;
+
+    // Configure format settings immediately so cloud state is complete
+    if (activeMatch && activeMatch.full_state) {
+        let format = activeMatch.full_state.format || 'T20';
+        if (format.includes('Multi-Day') || format === 'Test') {
+            state.matchSettings.matchType = 'multiday'; state.matchSettings.maxOvers = 999; state.matchSettings.bowlerQuota = 999; state.matchSettings.maxInnings = 4;
+        } else if (format === 'One Day') {
+            state.matchSettings.matchType = 'oneday'; state.matchSettings.maxOvers = 50; state.matchSettings.bowlerQuota = 10; state.matchSettings.maxInnings = 2;
+        } else if (format === 'T10') {
+            state.matchSettings.matchType = 't20'; state.matchSettings.maxOvers = 10; state.matchSettings.bowlerQuota = 2; state.matchSettings.maxInnings = 2;
+        } else {
+            state.matchSettings.matchType = 't20'; state.matchSettings.maxOvers = 20; state.matchSettings.bowlerQuota = 4; state.matchSettings.maxInnings = 2;
+        }
+        state.matchSettings.originalMaxOvers = state.matchSettings.maxOvers;
+    }
+
+    // 🔥 FIXED: Save the complete initialized state object to Supabase so cloud resume never crashes!
+    let updatedFullState = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
+    updatedFullState.match_status = 'live';
+    updatedFullState.team1 = state.teams.A.name;
+    updatedFullState.team2 = state.teams.B.name;
+    if (activeMatch && activeMatch.full_state) {
+        updatedFullState.tournament = activeMatch.full_state.tournament || "Independent Match";
+        updatedFullState.format = activeMatch.full_state.format || "T20";
+        updatedFullState.tier = activeMatch.full_state.tier || "Local";
+        updatedFullState.host = activeMatch.full_state.host || "Independent / Open";
+        updatedFullState.matchName = activeMatch.full_state.matchName || "";
+    }
+
+    activeMatch.full_state = updatedFullState;
+    localStorage.setItem('cricStat_activeMatchMetadata', JSON.stringify(activeMatch));
+
+    const { error } = await supabaseClient.from('matches').update({ full_state: updatedFullState }).eq('match_id', activeMatch.match_id);
+    if(error) { alert("Error connecting to cloud: " + error.message); return; }
+
+    populateOpenersScreen();
+}
+
+function startInnings() {
+    try {
+        const s = el('sel-striker').value, ns = el('sel-nonstriker').value, b = el('sel-bowler').value;
+        if(!s || !ns || !b) { alert("You must select the Striker, Non-Striker, and Opening Bowler to begin."); return; }
+        if(s === ns) { alert("Striker and Non-Striker cannot be the same person!"); return; }
+
+        state.current.sIdx = parseInt(s); state.current.nsIdx = parseInt(ns); state.current.bIdx = parseInt(b);
+        
+        let batTeam = getBatTeam();
+        batTeam.players[state.current.sIdx].hasBatted = true; 
+        batTeam.players[state.current.nsIdx].hasBatted = true;
+        
+        state.current.bowlersInCurrentOver = toSafeSet(state.current.bowlersInCurrentOver);
+        state.current.lastOverBowlers = toSafeSet(state.current.lastOverBowlers);
+        state.current.bowlersInCurrentOver.add(state.current.bIdx);
+        state.current.inningsStartTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        if (activeMatch && activeMatch.full_state) {
+            let format = activeMatch.full_state.format || 'T20';
+            if (format.includes('Multi-Day') || format === 'Test') {
+                state.matchSettings.matchType = 'multiday'; state.matchSettings.maxOvers = 999; state.matchSettings.bowlerQuota = 999; state.matchSettings.maxInnings = 4;
+                if(el('breakBtn')) el('breakBtn').classList.remove('hidden');
+            } else if (format === 'One Day') {
+                state.matchSettings.matchType = 'oneday'; state.matchSettings.maxOvers = 50; state.matchSettings.bowlerQuota = 10; state.matchSettings.maxInnings = 2;
+            } else if (format === 'T10') {
+                state.matchSettings.matchType = 't20'; state.matchSettings.maxOvers = 10; state.matchSettings.bowlerQuota = 2; state.matchSettings.maxInnings = 2;
+            } else {
+                state.matchSettings.matchType = 't20'; state.matchSettings.maxOvers = 20; state.matchSettings.bowlerQuota = 4; state.matchSettings.maxInnings = 2;
+            }
+            state.matchSettings.originalMaxOvers = state.matchSettings.maxOvers;
+        }
+
+        if(activeMatch && activeMatch.full_state) { el('displayTournament').innerText = activeMatch.full_state.tournament || "MATCH IN PROGRESS"; }
+        el('dispGroundName').innerText = state.matchSettings.venue || "Live Ground"; 
+        
+        el('initialization-screen').classList.add('hidden'); el('top-title').classList.add('hidden'); el('scoringView').classList.remove('hidden');
+        
+        if (typeof updateUI === 'function') {
+            updateUI();
+        } else {
+            alert("Critical Error: The scoring engine (scorer.js) did not load properly. Check your script tags or syntax.");
+        }
+    } catch(e) {
+        console.error("Match Initialization Failed:", e);
+        alert("Initialization Failed: " + e.message);
+    }
+}
