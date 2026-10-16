@@ -17,82 +17,6 @@ var setupSquads = { A: { bench: [], xi: [], subs: [], roles: { c: null, vc: null
 var modalContext = {}, stateHistory = [], remarkLog = [];
 var state = { matchId: "", inningsNum: 1, battingKey: 'A', bowlingKey: 'B', matchResult: "", matchSettings: { matchType: 't20', category: 'men', maxOvers: 20, originalMaxOvers: 20, customTarget: null, customTargetOvers: null, targetMethod: "", bowlerQuota: 4, matchSelectors: [], venue: "", officials: {} }, teams: { A: { name: "", players: [], pendingPenalties: 0 }, B: { name: "", players: [], pendingPenalties: 0 } }, current: { runs:0, wkts:0, balls:0, sIdx:null, nsIdx:null, bIdx:null, isFreeHit: false, penalties: 0, lastOverBowlers: new Set(), extras: {w:0, nb:0, b:0, lb:0}, recentBalls: [], currentOverLog: [], runsInThisOver: 0, bowlersInCurrentOver: new Set(), overHistory: [], currPartnership: { runs: 0, balls: 0 }, fow: [], activeBreak: null, activeBreakStartTime: null, activeBreakInsp: null, pendingBreakMins: 0, inningsStartTime: null, inningsEndTime: null, allowances: 0 }, inningsSummaries: [], matchBreaks: [] };
 
-// 🔥 SELF-HEALING STATE HYDRATOR: Prevents "Error loading cloud state." crashes
-function toSafeSet(val) {
-    if (val instanceof Set) return val;
-    if (Array.isArray(val)) return new Set(val);
-    return new Set();
-}
-
-function hydrateCloudState(rawState, fallbackMatchId = "") {
-    let parsed = (typeof rawState === 'string') ? JSON.parse(rawState) : JSON.parse(JSON.stringify(rawState || {}));
-
-    parsed.matchId = parsed.matchId || fallbackMatchId || "";
-    parsed.inningsNum = parsed.inningsNum || 1;
-    parsed.battingKey = parsed.battingKey || 'A';
-    parsed.bowlingKey = parsed.bowlingKey || 'B';
-    parsed.matchResult = parsed.matchResult || "";
-
-    parsed.matchSettings = Object.assign({
-        matchType: 't20', category: 'men', maxOvers: 20, originalMaxOvers: 20,
-        customTarget: null, customTargetOvers: null, targetMethod: "",
-        bowlerQuota: 4, maxInnings: 2, matchSelectors: [], venue: "", officials: {}
-    }, parsed.matchSettings || {});
-
-    parsed.teams = parsed.teams || { A: { name: "Team A", players: [], pendingPenalties: 0 }, B: { name: "Team B", players: [], pendingPenalties: 0 } };
-    parsed.teams.A = Object.assign({ name: parsed.team1 || "Team A", players: [], pendingPenalties: 0 }, parsed.teams.A || {});
-    parsed.teams.B = Object.assign({ name: parsed.team2 || "Team B", players: [], pendingPenalties: 0 }, parsed.teams.B || {});
-    parsed.teams.A.players = Array.isArray(parsed.teams.A.players) ? parsed.teams.A.players : [];
-    parsed.teams.B.players = Array.isArray(parsed.teams.B.players) ? parsed.teams.B.players : [];
-
-    parsed.current = Object.assign({
-        runs: 0, wkts: 0, balls: 0, sIdx: null, nsIdx: null, bIdx: null,
-        isFreeHit: false, penalties: 0, extras: { w: 0, nb: 0, b: 0, lb: 0 },
-        recentBalls: [], currentOverLog: [], runsInThisOver: 0,
-        overHistory: [], currPartnership: { runs: 0, balls: 0 }, fow: [],
-        activeBreak: null, activeBreakStartTime: null, activeBreakInsp: null,
-        pendingBreakMins: 0, inningsStartTime: null, inningsEndTime: null, allowances: 0
-    }, parsed.current || {});
-
-    parsed.current.lastOverBowlers = toSafeSet(parsed.current.lastOverBowlers);
-    parsed.current.bowlersInCurrentOver = toSafeSet(parsed.current.bowlersInCurrentOver);
-    parsed.current.extras = Object.assign({ w: 0, nb: 0, b: 0, lb: 0 }, parsed.current.extras || {});
-    parsed.current.recentBalls = Array.isArray(parsed.current.recentBalls) ? parsed.current.recentBalls : [];
-    parsed.current.currentOverLog = Array.isArray(parsed.current.currentOverLog) ? parsed.current.currentOverLog : [];
-    parsed.current.overHistory = Array.isArray(parsed.current.overHistory) ? parsed.current.overHistory : [];
-    parsed.current.fow = Array.isArray(parsed.current.fow) ? parsed.current.fow : [];
-    parsed.current.currPartnership = Object.assign({ runs: 0, balls: 0 }, parsed.current.currPartnership || {});
-
-    parsed.inningsSummaries = Array.isArray(parsed.inningsSummaries) ? parsed.inningsSummaries : [];
-    parsed.matchBreaks = Array.isArray(parsed.matchBreaks) ? parsed.matchBreaks : [];
-
-    return parsed;
-}
-
-function populateOpenersScreen() {
-    el('toss-screen').classList.add('hidden');
-    el('login-screen').classList.add('hidden');
-    el('scoringView').classList.add('hidden');
-    el('initialization-screen').classList.remove('hidden');
-
-    el('init-bat-title').innerText = `${state.teams[state.battingKey].name} Openers`;
-    el('init-bowl-title').innerText = `${state.teams[state.bowlingKey].name} Bowler`;
-
-    let batOpts = '<option value="">-- Select Batter --</option>';
-    state.teams[state.battingKey].players.forEach((p, index) => {
-        if (p.isPlayingXI) batOpts += `<option value="${index}">${p.name}</option>`;
-    });
-
-    let bowlOpts = '<option value="">-- Select Bowler --</option>';
-    state.teams[state.bowlingKey].players.forEach((p, index) => {
-        if (p.isPlayingXI) bowlOpts += `<option value="${index}">${p.name}</option>`;
-    });
-
-    el('sel-striker').innerHTML = batOpts;
-    el('sel-nonstriker').innerHTML = batOpts;
-    el('sel-bowler').innerHTML = bowlOpts;
-}
-
 // ==========================================
 // 2. TIME & MODAL HELPERS
 // ==========================================
@@ -146,38 +70,20 @@ window.onload = async function() {
     if (activeMatchStr) {
         showModal("Resume Match?", "An unfinished match was found in your browser. Would you like to resume it instantly without entering the PIN?", function() {
             try {
-                state = hydrateCloudState(activeMatchStr);
-                activeMatch = JSON.parse(localStorage.getItem('cricStat_activeMatchMetadata')) || null;
-                let savedHistory = localStorage.getItem('cricStat_stateHistory');
-                if (savedHistory) stateHistory = JSON.parse(savedHistory);
-
-                // Check if Playing XI and Openers were actually selected
-                let hasPlayers = state.teams.A.players.length > 0 && state.teams.B.players.length > 0;
-                let hasOpeners = state.current.sIdx !== null && state.current.nsIdx !== null;
-
-                if (!hasPlayers) {
-                    localStorage.removeItem('cricStat_activeMatch');
-                    closeModal();
-                    return;
-                }
-
-                if (!hasOpeners) {
-                    closeModal();
-                    populateOpenersScreen();
-                    return;
-                }
-
+                let parsedState = JSON.parse(activeMatchStr); 
+                parsedState.current.lastOverBowlers = new Set(parsedState.current.lastOverBowlers); 
+                parsedState.current.bowlersInCurrentOver = new Set(parsedState.current.bowlersInCurrentOver); 
+                state = parsedState;
                 el('login-screen').classList.add('hidden'); 
                 el('top-title').classList.add('hidden');
                 el('scoringView').classList.remove('hidden'); 
-                if (state.matchSettings.matchType === 'multiday' && el('breakBtn')) el('breakBtn').classList.remove('hidden');
+                if (state.matchSettings.matchType === 'multiday') el('breakBtn').classList.remove('hidden');
+                activeMatch = JSON.parse(localStorage.getItem('cricStat_activeMatchMetadata')) || null;
+                let savedHistory = localStorage.getItem('cricStat_stateHistory');
+                if (savedHistory) stateHistory = JSON.parse(savedHistory);
                 if (typeof updateUI === 'function') updateUI(); 
                 closeModal();
-            } catch(e) {
-                console.error("Local resume failed:", e);
-                localStorage.removeItem('cricStat_activeMatch');
-                location.reload();
-            }
+            } catch(e) { localStorage.removeItem('cricStat_activeMatch'); location.reload(); }
         }, false, "360px", "Resume Match");
         el('modalCancelBtn').innerText = "Start Fresh (Enter PIN)"; 
         el('modalCancelBtn').onclick = function() { localStorage.removeItem('cricStat_activeMatch'); closeModal(); };
@@ -219,53 +125,26 @@ async function authenticateMatch() {
         let fullState = data.full_state || {};
         if (fullState.match_status === 'completed') { errBox.style.color = "#f59e0b"; errBox.innerHTML = "🏁 <b>Match Locked</b><br><span style='font-size:0.85rem; color:#94a3b8;'>This match has already been completed.</span>"; return; }
         
-        activeMatch = data;
-        localStorage.setItem('cricStat_activeMatchMetadata', JSON.stringify(activeMatch));
-
-        // 🔥 CHECK IF CLOUD STATE HAS ACTUAL INITIALIZED TEAMS
-        let hasValidCloudTeams = fullState.teams &&
-                                 fullState.teams.A && Array.isArray(fullState.teams.A.players) && fullState.teams.A.players.length > 0 &&
-                                 fullState.teams.B && Array.isArray(fullState.teams.B.players) && fullState.teams.B.players.length > 0;
-
-        if (fullState.match_status === 'live' && hasValidCloudTeams) {
+        activeMatch = data; localStorage.setItem('cricStat_activeMatchMetadata', JSON.stringify(activeMatch));
+        if (fullState.match_status === 'live') {
             showModal("☁️ Cloud Sync Found", "<div class='text-center mt-10 text-success font-bold'>Match is already in progress!</div><div class='text-center text-muted mt-5' style='font-size:0.85rem;'>Resuming from the latest cloud save...</div>", function() {
                 try {
-                    state = hydrateCloudState(fullState, activeMatch.match_id);
-                    closeModal();
-
-                    // If Playing XI was locked, but Openers were not chosen yet, take scorer to Openers Screen!
-                    if (state.current.sIdx === null || state.current.nsIdx === null) {
-                        populateOpenersScreen();
-                        return;
-                    }
-
-                    el('login-screen').classList.add('hidden');
-                    el('top-title').classList.add('hidden');
-                    el('scoringView').classList.remove('hidden'); 
+                    let parsedState = fullState; parsedState.current.lastOverBowlers = new Set(parsedState.current.lastOverBowlers || []); parsedState.current.bowlersInCurrentOver = new Set(parsedState.current.bowlersInCurrentOver || []); state = parsedState;
+                    el('login-screen').classList.add('hidden'); el('top-title').classList.add('hidden'); el('scoringView').classList.remove('hidden'); 
                     if (state.matchSettings.matchType === 'multiday') { if(el('breakBtn')) el('breakBtn').classList.remove('hidden'); }
-                    if (typeof updateUI === 'function') updateUI(); 
-                } catch(e) {
-                    console.error("Cloud state load error:", e);
-                    alert("Error loading cloud state: " + e.message);
-                }
-            }, true, "360px", "Resume Match");
-            return;
+                    if(typeof updateUI === 'function') updateUI(); 
+                    closeModal();
+                } catch(e) { alert("Error loading cloud state."); }
+            }, true, "360px", "Resume Match"); return;
         }
         
-        // If match is 'upcoming' OR was marked 'live' prematurely before Playing XI was saved, open Toss & Squad Setup
         setupSquads = { A: { bench: [], xi: [], subs: [], roles: { c: null, vc: null, wk: null } }, B: { bench: [], xi: [], subs: [], roles: { c: null, vc: null, wk: null } } };
         el('login-screen').classList.add('hidden'); el('toss-screen').classList.remove('hidden');
-        let t1 = fullState.team1 || (fullState.teams && fullState.teams.A ? fullState.teams.A.name : 'Team A');
-        let t2 = fullState.team2 || (fullState.teams && fullState.teams.B ? fullState.teams.B.name : 'Team B');
-        el('tossWinner').innerHTML = `<option value="A">${t1}</option><option value="B">${t2}</option>`;
-        el('team-a-name').innerText = t1; el('team-b-name').innerText = t2; errBox.innerText = ""; 
+        let t1 = fullState.team1 || (fullState.teams && fullState.teams.A ? fullState.teams.A.name : 'Team A'); let t2 = fullState.team2 || (fullState.teams && fullState.teams.B ? fullState.teams.B.name : 'Team B');
+        el('tossWinner').innerHTML = `<option value="A">${t1}</option><option value="B">${t2}</option>`; el('team-a-name').innerText = t1; el('team-b-name').innerText = t2; errBox.innerText = ""; 
         
-        await loadTournamentSquads(activeMatch.team_a_id, 'A', t1);
-        await loadTournamentSquads(activeMatch.team_b_id, 'B', t2);
-    } catch(e) {
-        let errBox = el('login-error');
-        if(errBox) { errBox.style.color = "#ef4444"; errBox.innerText = "❌ System Error: " + e.message; }
-    }
+        await loadTournamentSquads(activeMatch.team_a_id, 'A', t1); await loadTournamentSquads(activeMatch.team_b_id, 'B', t2);
+    } catch(e) { let errBox = el('login-error'); if(errBox) { errBox.style.color = "#ef4444"; errBox.innerText = "❌ System Error: " + e.message; } }
 }
 
 // ==========================================
@@ -346,45 +225,21 @@ async function lockPlayingXI() {
     state.battingKey = ((win === 'A' && dec === 'bat') || (win === 'B' && dec === 'bowl')) ? 'A' : 'B'; 
     state.bowlingKey = state.battingKey === 'A' ? 'B' : 'A';
     
+    // 🔥 NEW: Save the exact toss text for the Fan Portal
     let tossWinName = win === 'A' ? state.teams.A.name : state.teams.B.name;
     let tossDecText = dec === 'bat' ? 'bat' : 'bowl';
     state.matchSettings.tossStr = `${tossWinName} won the toss and elected to ${tossDecText}`;
 
-    // Configure format settings immediately so cloud state is complete
-    if (activeMatch && activeMatch.full_state) {
-        let format = activeMatch.full_state.format || 'T20';
-        if (format.includes('Multi-Day') || format === 'Test') {
-            state.matchSettings.matchType = 'multiday'; state.matchSettings.maxOvers = 999; state.matchSettings.bowlerQuota = 999; state.matchSettings.maxInnings = 4;
-        } else if (format === 'One Day') {
-            state.matchSettings.matchType = 'oneday'; state.matchSettings.maxOvers = 50; state.matchSettings.bowlerQuota = 10; state.matchSettings.maxInnings = 2;
-        } else if (format === 'T10') {
-            state.matchSettings.matchType = 't20'; state.matchSettings.maxOvers = 10; state.matchSettings.bowlerQuota = 2; state.matchSettings.maxInnings = 2;
-        } else {
-            state.matchSettings.matchType = 't20'; state.matchSettings.maxOvers = 20; state.matchSettings.bowlerQuota = 4; state.matchSettings.maxInnings = 2;
-        }
-        state.matchSettings.originalMaxOvers = state.matchSettings.maxOvers;
-    }
-
-    // 🔥 FIXED: Save the complete initialized state object to Supabase so cloud resume never crashes!
-    let updatedFullState = JSON.parse(JSON.stringify(state, (key, value) => value instanceof Set ? [...value] : value));
+    let updatedFullState = activeMatch.full_state || {}; 
     updatedFullState.match_status = 'live';
-    updatedFullState.team1 = state.teams.A.name;
-    updatedFullState.team2 = state.teams.B.name;
-    if (activeMatch && activeMatch.full_state) {
-        updatedFullState.tournament = activeMatch.full_state.tournament || "Independent Match";
-        updatedFullState.format = activeMatch.full_state.format || "T20";
-        updatedFullState.tier = activeMatch.full_state.tier || "Local";
-        updatedFullState.host = activeMatch.full_state.host || "Independent / Open";
-        updatedFullState.matchName = activeMatch.full_state.matchName || "";
-    }
-
-    activeMatch.full_state = updatedFullState;
-    localStorage.setItem('cricStat_activeMatchMetadata', JSON.stringify(activeMatch));
-
     const { error } = await supabaseClient.from('matches').update({ full_state: updatedFullState }).eq('match_id', activeMatch.match_id);
     if(error) { alert("Error connecting to cloud: " + error.message); return; }
 
-    populateOpenersScreen();
+    el('toss-screen').classList.add('hidden'); el('initialization-screen').classList.remove('hidden');
+    el('init-bat-title').innerText = `${state.teams[state.battingKey].name} Openers`; el('init-bowl-title').innerText = `${state.teams[state.bowlingKey].name} Bowler`;
+    let batOpts = '<option value="">-- Select Batter --</option>'; state.teams[state.battingKey].players.forEach((p, index) => { if(p.isPlayingXI) batOpts += `<option value="${index}">${p.name}</option>`; });
+    let bowlOpts = '<option value="">-- Select Bowler --</option>'; state.teams[state.bowlingKey].players.forEach((p, index) => { if(p.isPlayingXI) bowlOpts += `<option value="${index}">${p.name}</option>`; });
+    el('sel-striker').innerHTML = batOpts; el('sel-nonstriker').innerHTML = batOpts; el('sel-bowler').innerHTML = bowlOpts;
 }
 
 function startInnings() {
@@ -399,8 +254,9 @@ function startInnings() {
         batTeam.players[state.current.sIdx].hasBatted = true; 
         batTeam.players[state.current.nsIdx].hasBatted = true;
         
-        state.current.bowlersInCurrentOver = toSafeSet(state.current.bowlersInCurrentOver);
-        state.current.lastOverBowlers = toSafeSet(state.current.lastOverBowlers);
+        if (!(state.current.bowlersInCurrentOver instanceof Set)) {
+            state.current.bowlersInCurrentOver = new Set(state.current.bowlersInCurrentOver || []);
+        }
         state.current.bowlersInCurrentOver.add(state.current.bIdx);
         state.current.inningsStartTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         
@@ -411,8 +267,6 @@ function startInnings() {
                 if(el('breakBtn')) el('breakBtn').classList.remove('hidden');
             } else if (format === 'One Day') {
                 state.matchSettings.matchType = 'oneday'; state.matchSettings.maxOvers = 50; state.matchSettings.bowlerQuota = 10; state.matchSettings.maxInnings = 2;
-            } else if (format === 'T10') {
-                state.matchSettings.matchType = 't20'; state.matchSettings.maxOvers = 10; state.matchSettings.bowlerQuota = 2; state.matchSettings.maxInnings = 2;
             } else {
                 state.matchSettings.matchType = 't20'; state.matchSettings.maxOvers = 20; state.matchSettings.bowlerQuota = 4; state.matchSettings.maxInnings = 2;
             }
