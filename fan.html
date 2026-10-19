@@ -220,14 +220,16 @@
         <select id="filter-format" class="filter-select" onchange="renderFanMatches()"><option value="ALL">🏏 All Formats</option></select>
     </div>
 
-    <!-- LIVE MATCHES -->
-    <div class="section-title" style="color: #ef4444;">🔴 Live Matches</div>
+  <!-- LIVE MATCHES -->
+    <div class="section-title">
+        <div style="color: #ef4444; display: flex; align-items: center; gap: 8px;">🔴 Live Matches</div>
+        <button onclick="document.getElementById('completed-header').scrollIntoView({ behavior: 'smooth' })" style="margin-left: 15px; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid #10b981; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#10b981'; this.style.color='#0f172a'" onmouseout="this.style.background='rgba(16, 185, 129, 0.1)'; this.style.color='#10b981'">✅ Completed Matches ⬇</button>
+    </div>
     <div id="live-container"><div class="empty-msg">Fetching live action...</div></div>
 
     <!-- COMPLETED MATCHES -->
-    <div class="section-title" style="color: #10b981;">✅ Completed Matches</div>
+    <div id="completed-header" class="section-title" style="color: #10b981;">✅ Completed Matches</div>
     <div id="comp-container"><div class="empty-msg">Fetching recent results...</div></div>
-
     <!-- UPCOMING MATCHES -->
     <div class="section-title" style="color: #f59e0b;">📅 Upcoming Fixtures</div>
     <div id="up-container"><div class="empty-msg">Fetching scheduled games...</div></div>
