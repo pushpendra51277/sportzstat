@@ -1409,7 +1409,7 @@ function updateUI() {
     }
     el('miniLiveBatters').innerHTML = miniBatHtml;
 
-    if (cur.bIdx !== null) {
+   if (cur.bIdx !== null) {
         var actB = bwT[cur.bIdx];
         var bName = actB.name;
         if (actB.desig === 'C' || actB.desig === 'C/WK' || (actB.desig && actB.desig.includes('C'))) bName += ' (C)';
@@ -1418,7 +1418,11 @@ function updateUI() {
 
         el('activeBowlerNameRight').innerHTML = bName;
         el('activeBowlerNameRight').title = actB.name;
-        el('activeBowlerProgress').innerHTML = cur.currentOverLog.map(getBadgeHtml).join('');
+        
+        var badgesHtml = cur.currentOverLog.map(getBadgeHtml).join('');
+        el('activeBowlerProgress').innerHTML = badgesHtml;
+        if(el('mainCurrentOverProgress')) el('mainCurrentOverProgress').innerHTML = badgesHtml; // 🔥 Syncs to Main Display
+        
         var totalRuns = (actB.rc || 0);
         var miniBowlHtml = '<div style="display:flex; justify-content:flex-end; align-items:center; width:100%; margin-bottom:2px;"><div style="flex: 0 0 auto; margin-right:4px;">⚾</div><div style="color:white; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex: 0 1 auto; text-align:right;">' + actB.name + '</div></div><div style="color:var(--text-muted); font-size:0.75rem; text-align:right; white-space:nowrap;">' + formatOver(actB.o) + '-' + actB.m + '-' + totalRuns + '-<span class="text-danger" style="font-weight:bold;">' + actB.w + '</span></div>';
         el('miniLiveBowler').innerHTML = miniBowlHtml;
@@ -1426,6 +1430,7 @@ function updateUI() {
         el('activeBowlerNameRight').innerText = "Select...";
         el('activeBowlerNameRight').title = "";
         el('activeBowlerProgress').innerHTML = "";
+        if(el('mainCurrentOverProgress')) el('mainCurrentOverProgress').innerHTML = ""; // 🔥 Clears Main Display
         el('miniLiveBowler').innerHTML = '<div style="color: var(--text-muted); font-style:italic;">Select Bowler...</div>';
     }
 
