@@ -212,7 +212,11 @@
                     </div>
                 </div>
                 
-                <div class="recent-balls-box flex-row gap-5" style="justify-content: center;"><span style="font-size:0.65rem; text-transform:uppercase;" class="text-muted font-bold">Recent:</span><div id="recentBallsData" class="flex-row gap-5" style="flex-wrap: wrap; justify-content: center;"></div></div>
+             <div class="recent-balls-box flex-row gap-5" style="justify-content: flex-start; overflow: hidden; padding: 0 10px;">
+    <span style="font-size:0.65rem; text-transform:uppercase; flex-shrink: 0;" class="text-muted font-bold">Recent:</span>
+    <!-- 🔥 flex-wrap: nowrap forces it to stay on one line, and overflow-x: auto lets you swipe/scroll horizontally if it gets too long -->
+    <div id="recentBallsData" class="flex-row gap-5 custom-scroll" style="flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none;"></div>
+</div>
 
                 <div id="scoringEventsBox">
                     <div class="scorer-btn-grid">
