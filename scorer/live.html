@@ -179,14 +179,24 @@
                     <div id="targetDisplayBox" class="target-box hidden" onclick="openEditTarget()" title="Edit Target"><span style="font-size:1.2rem;">🎯</span> <span id="dispTargetText" style="font-size:1rem;"></span> <span style="font-size:0.7rem; opacity:0.6;">✏️</span></div>
                     <div id="inningsHistoryText"></div>
                     
-                    <div style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 5px; margin: 10px 0;">
-                        <div id="miniLiveBatters" style="text-align: left; font-size: 0.8rem; line-height: 1.4; padding-left: 5px; overflow: hidden;"></div>
-                        <div style="text-align: center;">
-                            <h1 class="big-score" style="margin-bottom: 5px;"><span id="liveRuns">0</span>/<span id="liveWkts" style="color: var(--danger);">0</span></h1>
-                            <p class="font-bold text-success mt-0 mb-0" style="font-size:0.85rem;">🏏 P'ship: <span id="livePartnership">0 (0)</span></p>
-                        </div>
-                        <div id="miniLiveBowler" style="text-align: right; font-size: 0.8rem; line-height: 1.4; padding-right: 5px; overflow: hidden;"></div>
-                    </div>
+                   <div style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 5px; margin: 10px 0;">
+    
+    <div style="text-align: left; padding-left: 5px; overflow: hidden;">
+        <div id="miniLiveBatters" style="font-size: 0.8rem; line-height: 1.4;"></div>
+        <!-- 🔥 Partnership and Current Over moved underneath the Batters -->
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+            <div class="font-bold text-success" style="font-size:0.75rem; white-space:nowrap;">🏏 P'ship: <span id="livePartnership">0 (0)</span></div>
+            <div id="mainCurrentOverProgress" style="display:flex; gap:3px; flex-wrap:wrap; align-items:center;"></div>
+        </div>
+    </div>
+    
+    <div style="text-align: center;">
+        <h1 class="big-score" style="margin: 0;"><span id="liveRuns">0</span>/<span id="liveWkts" style="color: var(--danger);">0</span></h1>
+    </div>
+    
+    <div id="miniLiveBowler" style="text-align: right; font-size: 0.8rem; line-height: 1.4; padding-right: 5px; overflow: hidden;"></div>
+
+</div>
 
                     <div id="leadTrailBox"></div>
                     <p style="font-size:1.3rem;" class="mt-5 mb-0">Overs: <span id="liveOvers" class="font-bold">0.0</span> <span class="text-muted ml-10" style="font-size:0.9rem;">CRR: <span id="liveCrr" class="text-white font-bold">0.00</span></span><span id="rrrBox" class="text-muted ml-10 hidden" style="font-size:0.9rem;">| Req: <span id="liveReq"></span> | RRR: <span id="liveRrr" class="text-accent font-bold">0.00</span></span></p>
