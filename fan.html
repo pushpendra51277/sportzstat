@@ -431,22 +431,82 @@
                         innMap.set(key, { ...inn, innNum: key });
                     });
                 }
+                
+                let currentInnNum = fs.inningsNum || (innMap.size + 1);
+                if (status === 'live' && fs.current && (fs.current.balls > 0 || fs.current.runs > 0) && !innMap.has(currentInnNum)) {
+                    innMap.set(currentInnNum, {
+                        innNum: currentInnNum,
+                        batTeam: fs.teams[fs.battingKey].name,
+                        batters: fs.teams[fs.battingKey].players,
+                        bowlers: fs.teams[fs.bowlingKey].players,
+                        extras: fs.current.extras || { w: 0, nb: 0, b: 0, lb: 0 },
+                        penalties: fs.current.penalties || 0,
+                        fow: fs.current.fow || [],
+                        isOngoing: true
+                    });
+                }
+
                 let displayInnings = Array.from(innMap.values()).sort((a, b) => a.innNum - b.innNum);
 
                 if (displayInnings.length > 0) {
                     let tabsHtml = `<div class="folder-tabs">`;
                     let panesHtml = ``;
+                    
+                    let savedTabIdx = activeTabs[m.match_id] !== undefined ? activeTabs[m.match_id] : (displayInnings.length - 1);
+                    if (savedTabIdx >= displayInnings.length) savedTabIdx = displayInnings.length - 1;
+
                     displayInnings.forEach((inn, idx) => {
-                        let isAct = idx === displayInnings.length - 1 ? 'active' : '';
-                        let dState = idx === displayInnings.length - 1 ? 'block' : 'none';
-                        tabsHtml += `<div class="folder-tab ${isAct}" id="tab-${m.match_id}-${idx}" onclick="switchFolder('${m.match_id}', ${idx}, ${displayInnings.length}, event)">Inn ${inn.innNum}: ${inn.batTeam}</div>`;
+                        let isAct = (idx === savedTabIdx) ? 'active' : ''; 
+                        let dState = (idx === savedTabIdx) ? 'block' : 'none';
+                        let iLabel = `Inn ${inn.innNum || (idx+1)}: ${inn.batTeam}`;
+                        if (inn.isOngoing) iLabel += ` (LIVE)`;
+
+                        tabsHtml += `<div class="folder-tab ${isAct}" id="tab-${m.match_id}-${idx}" onclick="switchFolder('${m.match_id}', ${idx}, ${displayInnings.length}, event)">${iLabel}</div>`;
                         panesHtml += `<div class="inn-pane ${isAct}" id="pane-${m.match_id}-${idx}" style="display:${dState};">`;
-                        panesHtml += `<table class="details-table" style="margin-bottom: 15px;"><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th></tr>`;
+                        
+                        panesHtml += `<table class="details-table" style="margin-bottom: 15px;"><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr>`;
                         (inn.batters || []).filter(b => b.hasBatted).forEach(b => {
-                            panesHtml += `<tr><td>${b.name}</td><td><b>${b.r}</b></td><td>${b.b}</td><td>${b.f}</td><td>${b.s}</td></tr>`;
+                            let sr = b.b > 0 ? ((b.r/b.b)*100).toFixed(1) : '0.0';
+                            let outStr = b.out ? (b.dismissalInfo || 'out') : 'not out';
+                            panesHtml += `<tr>
+                                <td><span style="font-weight:bold; color:white;">${b.name}</span><div style="font-size:0.65rem; color:#64748b;">${outStr}</div></td>
+                                <td style="font-weight:bold; color:white;">${b.r}</td><td>${b.b}</td><td>${b.f}</td><td>${b.s}</td><td>${sr}</td>
+                            </tr>`;
                         });
-                        panesHtml += `</table></div>`;
+
+                        let ex = inn.extras || { w: 0, nb: 0, b: 0, lb: 0 };
+                        let exTotal = (ex.w || 0) + (ex.nb || 0) + (ex.b || 0) + (ex.lb || 0);
+                        panesHtml += `<tr style="background:rgba(255,255,255,0.03);"><td style="color:#f59e0b; font-weight:bold;">Extras</td><td colspan="5" style="color:white; font-weight:bold;">${exTotal} <span style="font-weight:normal; color:#94a3b8; font-size:0.7rem;">(W:${ex.w||0}, NB:${ex.nb||0}, B:${ex.b||0}, LB:${ex.lb||0})</span></td></tr>`;
+                        panesHtml += `</table>`;
+
+                        panesHtml += `<table class="details-table" style="margin-bottom: 12px;"><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Econ</th></tr>`;
+                        (inn.bowlers || []).filter(bw => bw.o > 0 || bw.rc > 0).forEach(bw => {
+                            let oVal = Number(bw.o) || 0;
+                            let oversStr = "", absBalls = 0;
+                            if (oVal % 1 !== 0) {
+                                oversStr = Math.floor(oVal) + "." + Math.round((oVal - Math.floor(oVal)) * 10);
+                                absBalls = Math.floor(oVal) * 6 + Math.round((oVal - Math.floor(oVal)) * 10);
+                            } else {
+                                oversStr = Math.floor(oVal / 6) + "." + (oVal % 6);
+                                absBalls = oVal;
+                            }
+                            let econ = absBalls > 0 ? ((bw.rc/absBalls)*6).toFixed(2) : '0.00';
+                            panesHtml += `<tr>
+                                <td><span style="font-weight:bold; color:white;">${bw.name}</span></td>
+                                <td>${oversStr}</td><td>${bw.m}</td><td>${bw.rc}</td><td style="font-weight:bold; color:#10b981;">${bw.w}</td><td>${econ}</td>
+                            </tr>`;
+                        });
+                        panesHtml += `</table>`;
+
+                        if (inn.fow && inn.fow.length > 0) {
+                            let fowItems = inn.fow.map(f => `<b style="color:white;">${f.runs}/${f.wktNum === 'Unbroken' ? '*' : f.wktNum}</b> <span style="color:#94a3b8;">(${f.outBatter}, ${f.overs} ov)</span>`).join(' &bull; ');
+                            panesHtml += `<div style="font-size:0.75rem; background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:6px; border-left:3px solid #f59e0b; line-height:1.5;"><b style="color:#f59e0b;">Fall of Wickets:</b> ${fowItems}</div>`;
+                        }
+
+                        panesHtml += `</div>`;
                     });
+
+                    tabsHtml += `</div>`; 
                     detailsHtml += tabsHtml + panesHtml;
                 } else {
                     detailsHtml += `<div style="color:#64748b; font-style:italic; text-align:center; padding: 10px;">Scorecard details will appear once the match begins.</div>`;
