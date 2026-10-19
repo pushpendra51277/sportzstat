@@ -598,7 +598,7 @@
                 }
 
                 // 🔥 Build the clickable Live Scoreboard Panel if the match has live/current state
-                let hasLivePanelData = (status === 'live' || status === 'completed') && fs.current && fs.teams;
+                let hasLivePanelData = (status === 'live' || status === 'completed') && fs.current;
                 let livePanelBtnHtml = '';
                 let livePanelHtml = '';
                 if (hasLivePanelData) {
