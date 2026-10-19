@@ -279,7 +279,6 @@
         };
 
         async function fetchMatches() {
-            // 🔥 Fetch both matches and live_matches tables simultaneously
             const [matchesRes, liveRes] = await Promise.all([
                 db.from('matches').select('match_id, full_state, tournaments(name)').order('created_at', { ascending: false }),
                 db.from('live_matches').select('*')
@@ -298,7 +297,7 @@
             allFanMatches.forEach(m => {
                 let fs = m.full_state || {};
                 let liveData = liveMap.get(m.match_id);
-                if (liveData) m.live_data = liveData; // Attach lightweight live feed
+                if (liveData) m.live_data = liveData;
 
                 let t1 = fs.team1 || (fs.teams?.A?.name);
                 let t2 = fs.team2 || (fs.teams?.B?.name);
@@ -364,59 +363,63 @@
                     scoreText = `<div class="score-line" style="${scoreColor}">${batTeam}: ${runs}/${wkts} <span class="overs">(${overs} ov)</span></div>`;
                 }
 
-                // 🔥 Always show the Live Scoreboard Button for any match with live data or score state
+                // 🔥 Unconditional Live Scoreboard Button for Live Matches
                 let isOpen = openLivePanels.has(m.match_id);
-                let livePanelBtnHtml = `<button type="button" class="btn-live-panel" id="btn-live-panel-${m.match_id}" onclick="toggleLivePanel('${m.match_id}', event)">${isOpen ? '📺 Hide Live Scoreboard ▲' : '📺 Open Live Scoreboard ▼'}</button>`;
+                let livePanelBtnHtml = '';
+                let livePanelHtml = '';
                 
-                // Build Panel HTML
-                let batTeamName = ld.batTeam || t1;
-                let runsVal = ld.runs !== undefined ? ld.runs : 0;
-                let wktsVal = ld.wkts !== undefined ? ld.wkts : 0;
-                let oversVal = ld.overs || '0.0';
-                let crrVal = ld.crr || '0.00';
-                let targetTxt = ld.target || '';
-                
-                let battersHtml = '';
-                if (Array.isArray(ld.batters)) {
-                    ld.batters.forEach(b => {
-                        if (b) battersHtml += `<div style="font-size:0.8rem; color:white; font-weight:bold;">${b.name}: ${b.r} (${b.b})</div>`;
-                    });
-                }
-                let bowlerHtml = ld.bowler ? `<div style="font-size:0.8rem; color:#94a3b8;">${ld.bowler.name}:${ld.bowler.o}-${ld.bowler.r}-${ld.bowler.w}</div>` : '';
-                let recentBadges = Array.isArray(ld.recentBalls) ? ld.recentBalls.map(getBadgeHtml).join('') : '';
-                let pshipText = fs.current?.currPartnership ? `${fs.current.currPartnership.runs} (${fs.current.currPartnership.balls})` : '0 (0)';
-                let thisOverBadges = fs.current?.currentOverLog ? fs.current.currentOverLog.map(getBadgeHtml).join('') : '';
+                if (status === 'live') {
+                    livePanelBtnHtml = `<button type="button" class="btn-live-panel" id="btn-live-panel-${m.match_id}" onclick="toggleLivePanel('${m.match_id}', event)">${isOpen ? '📺 Hide Live Scoreboard ▲' : '📺 Open Live Scoreboard ▼'}</button>`;
+                    
+                    let batTeamName = ld.batTeam || t1;
+                    let runsVal = ld.runs !== undefined ? ld.runs : (fs.current?.runs || 0);
+                    let wktsVal = ld.wkts !== undefined ? ld.wkts : (fs.current?.wkts || 0);
+                    let oversVal = ld.overs || '0.0';
+                    let crrVal = ld.crr || '0.00';
+                    let targetTxt = ld.target || '';
+                    
+                    let battersHtml = '';
+                    if (Array.isArray(ld.batters)) {
+                        ld.batters.forEach(b => {
+                            if (b) battersHtml += `<div style="font-size:0.8rem; color:white; font-weight:bold;">${b.name}: ${b.r} (${b.b})</div>`;
+                        });
+                    }
+                    let bowlerHtml = ld.bowler ? `<div style="font-size:0.8rem; color:#94a3b8;">${ld.bowler.name}:${ld.bowler.o}-${ld.bowler.r}-${ld.bowler.w}</div>` : '';
+                    let recentBadges = Array.isArray(ld.recentBalls) ? ld.recentBalls.map(getBadgeHtml).join('') : '';
+                    let pshipText = fs.current?.currPartnership ? `${fs.current.currPartnership.runs} (${fs.current.currPartnership.balls})` : '0 (0)';
+                    let thisOverBadges = fs.current?.currentOverLog ? fs.current.currentOverLog.map(getBadgeHtml).join('') : '';
 
-                let livePanelHtml = `
-                    <div class="fan-live-panel-wrap" id="live-panel-${m.match_id}" ${isOpen ? 'style="display: block;"' : ''} onclick="event.stopPropagation()">
-                        <div class="fan-score-display">
-                            <div class="fan-innings-badge">LIVE FEED</div>
-                            <p style="color:#3b82f6; font-weight:bold; margin:0; font-size:0.95rem;">${tourney}</p>
-                            <div style="font-size:0.8rem; color:#94a3b8; margin-top:3px; margin-bottom:5px;">Batting: <span style="color:#f59e0b; font-weight:bold;">${batTeamName}</span>${targetTxt ? '| Target: ' + targetTxt : ''}</div>
+                    livePanelHtml = `
+                        <div class="fan-live-panel-wrap" id="live-panel-${m.match_id}" ${isOpen ? 'style="display: block;"' : ''} onclick="event.stopPropagation()">
+                            <div class="fan-score-display">
+                                <div class="fan-innings-badge">LIVE FEED</div>
+                                <p style="color:#3b82f6; font-weight:bold; margin:0; font-size:0.95rem;">${tourney}</p>
+                                <div style="font-size:0.8rem; color:#94a3b8; margin-top:3px; margin-bottom:5px;">Batting: <span style="color:#f59e0b; font-weight:bold;">${batTeamName}</span>${targetTxt ? '| Target: ' + targetTxt : ''}</div>
 
-                            <div style="display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px; margin:12px 0;">
-                                <div style="text-align:left; padding-left:4px;">${battersHtml}</div>
-                                <div style="text-align:center;"><h1 class="fan-big-score">${runsVal}/<span style="color:#ef4444;">${wktsVal}</span></h1></div>
-                                <div style="text-align:right; padding-right:4px;">${bowlerHtml}</div>
-                            </div>
+                                <div style="display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px; margin:12px 0;">
+                                    <div style="text-align:left; padding-left:4px;">${battersHtml}</div>
+                                    <div style="text-align:center;"><h1 class="fan-big-score">${runsVal}/<span style="color:#ef4444;">${wktsVal}</span></h1></div>
+                                    <div style="text-align:right; padding-right:4px;">${bowlerHtml}</div>
+                                </div>
 
-                            <p style="font-size:1.3rem; margin:6px 0 0 0; color:white;">Overs: <span style="font-weight:bold;">${oversVal}</span> <span style="color:#94a3b8; margin-left:10px; font-size:0.9rem;">CRR: <span style="color:white; font-weight:bold;">${crrVal}</span></span></p>
+                                <p style="font-size:1.3rem; margin:6px 0 0 0; color:white;">Overs: <span style="font-weight:bold;">${oversVal}</span> <span style="color:#94a3b8; margin-left:10px; font-size:0.9rem;">CRR: <span style="color:white; font-weight:bold;">${crrVal}</span></span></p>
 
-                            <div style="display:flex; align-items:center; justify-content:center; gap:15px; flex-wrap:wrap; margin-top:12px; padding-top:10px; border-top:1px dashed rgba(56, 189, 248, 0.3);">
-                                <div style="color:#10b981; font-weight:bold; font-size:0.9rem; white-space:nowrap;">🏏 P'ship: ${pshipText}</div>
-                                <div class="fan-this-ov-wrap" style="display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.4); padding:4px 10px; border-radius:8px; border:1px solid #334155;">
-                                    <span style="font-size:0.7rem; color:#94a3b8; text-transform:uppercase; font-weight:bold;">THIS OV:</span>
-                                    <div style="display:flex; gap:3px; flex-wrap:wrap; align-items:center;">${thisOverBadges}</div>
+                                <div style="display:flex; align-items:center; justify-content:center; gap:15px; flex-wrap:wrap; margin-top:12px; padding-top:10px; border-top:1px dashed rgba(56, 189, 248, 0.3);">
+                                    <div style="color:#10b981; font-weight:bold; font-size:0.9rem; white-space:nowrap;">🏏 P'ship: ${pshipText}</div>
+                                    <div class="fan-this-ov-wrap" style="display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.4); padding:4px 10px; border-radius:8px; border:1px solid #334155;">
+                                        <span style="font-size:0.7rem; color:#94a3b8; text-transform:uppercase; font-weight:bold;">THIS OV:</span>
+                                        <div style="display:flex; gap:3px; flex-wrap:wrap; align-items:center;">${thisOverBadges}</div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="fan-recent-balls-box">
-                            <span style="font-size:0.65rem; text-transform:uppercase; color:#94a3b8; font-weight:bold; flex-shrink:0;">RECENT:</span>
-                            <div style="display:flex; align-items:center; gap:5px; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;">${recentBadges}</div>
+                            <div class="fan-recent-balls-box">
+                                <span style="font-size:0.65rem; text-transform:uppercase; color:#94a3b8; font-weight:bold; flex-shrink:0;">RECENT:</span>
+                                <div style="display:flex; align-items:center; gap:5px; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;">${recentBadges}</div>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                }
 
                 let isExpanded = expandedMatches.has(m.match_id) ? 'style="display: block;"' : '';
                 let detailsHtml = `<div class="match-details" id="details-${m.match_id}" ${isExpanded} onclick="event.stopPropagation()">`;
