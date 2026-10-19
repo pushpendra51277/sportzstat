@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sportzstat - Live Match Center</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; max-width: 900px; margin: 0 auto; }
+        * { box-sizing: border-box; }
+        
+        .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; flex-wrap: wrap; gap: 15px;}
+        .login-btn { background: #1e293b; color: #38bdf8; text-decoration: none; padding: 8px 15px; border-radius: 6px; border: 1px solid #334155; font-size: 0.85rem; font-weight: bold; transition: 0.2s; white-space: nowrap; }
+        .login-btn:hover { background: #0f172a; color: white; border-color: #38bdf8; }
+        
+        h1 { color: #38bdf8; margin: 0; font-size: 2rem; display: flex; align-items: center; gap: 10px; letter-spacing: 1px;}
+        p.sub { color: #94a3b8; font-size: 0.9rem; border-bottom: 1px solid #334155; padding-bottom: 20px; margin-bottom: 20px; margin-top: 5px; }
+
+        .filter-bar { background: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #334155; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 30px; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .filter-select, .search-input { background: #0f172a; color: white; border: 1px solid #475569; padding: 12px 15px; border-radius: 6px; font-size: 0.95rem; flex: 1; min-width: 160px; outline: none; transition: 0.2s; }
+        .filter-select:focus, .search-input:focus { border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2); }
+        .search-input { flex: 2; min-width: 250px; }
+
+        .section-title { font-size: 1.2rem; font-weight: bold; margin: 30px 0 15px 0; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #1e293b; padding-bottom: 8px; }
+        
+        .match-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 18px; margin-bottom: 15px; cursor: pointer; transition: 0.2s; position: relative; }
+        .match-card:hover { border-color: #38bdf8; background: rgba(30, 41, 59, 0.8); }
+        
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .tourney-name { font-size: 0.75rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px; }
+        .match-number { background: #334155; color: #f8fafc; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 900; }
+        
+        .badge { font-size: 0.7rem; font-weight: bold; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;}
+        .badge-live { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .badge-comp { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .badge-up { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .format-badge { background: #0f172a; color: #38bdf8; border: 1px solid #38bdf8; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; margin-left: 10px; }
+
+        .teams { font-size: 1.15rem; font-weight: bold; color: white; margin-bottom: 8px; }
+        .score-line { font-size: 1rem; font-weight: bold; color: #10b981; margin-bottom: 10px; }
+        .overs { font-size: 0.85rem; color: #94a3b8; font-weight: normal; }
+        
+        .tap-details { font-size: 0.85rem; color: #64748b; margin-top: 5px; transition: 0.2s;}
+        .match-card:hover .tap-details { color: #38bdf8; }
+
+        .empty-msg { color: #64748b; font-style: italic; font-size: 0.95rem; background: #0f172a; padding: 20px; border-radius: 8px; border: 1px dashed #334155; text-align: center;}
+        
+        .match-details { display: none; margin-top: 15px; border-top: 1px solid #334155; padding-top: 15px; animation: fadeIn 0.3s ease; cursor: default; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        .details-table { width: 100%; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 20px; border-collapse: collapse; }
+        .details-table th { color: #94a3b8; border-bottom: 1px solid #334155; padding: 6px 4px; text-align: right; }
+        .details-table th:first-child { text-align: left; }
+        .details-table td { padding: 6px 4px; border-bottom: 1px solid #1e293b; text-align: right; }
+        .details-table td:first-child { text-align: left; }
+        
+        .meta-box { margin-top: 8px; margin-bottom: 12px; font-size: 0.85rem; line-height: 1.5; background: rgba(0,0,0,0.25); padding: 10px 15px; border-radius: 6px; border-left: 3px solid #38bdf8; }
+        .meta-toss { color: #cbd5e1; }
+        .meta-result { color: #10b981; font-weight: bold; margin-top: 4px; font-size: 0.9rem; }
+        .meta-points { color: #f59e0b; margin-top: 4px; font-weight: bold; }
+        .meta-stars { color: #38bdf8; margin-top: 4px; font-weight: bold; }
+
+        .folder-tabs { display: flex; gap: 4px; border-bottom: 1px solid #38bdf8; margin-bottom: 15px; overflow-x: auto; scrollbar-width: none; }
+        .folder-tabs::-webkit-scrollbar { display: none; }
+        .folder-tab { background: rgba(0,0,0,0.2); border: 1px solid #334155; border-bottom: none; padding: 8px 15px; color: #94a3b8; cursor: pointer; border-radius: 6px 6px 0 0; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; white-space: nowrap; transition: 0.2s; }
+        .folder-tab:hover { color: white; background: rgba(56, 189, 248, 0.1); }
+        .folder-tab.active { background: #0f172a; color: #38bdf8; border-color: #38bdf8; border-bottom: 2px solid #0f172a; margin-bottom: -1px; }
+        .inn-pane { display: none; animation: fadeIn 0.3s ease; }
+        .inn-pane.active { display: block; }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <h1>📺 SPORTZSTAT LIVE</h1>
+        <a href="login.html" class="login-btn">🔐 Official Staff Login</a>
+    </div>
+    <p class="sub">Live match center and global scorecards.</p>
+
+    <!-- PRO FILTER BAR -->
+    <div class="filter-bar">
+        <input type="text" id="fan-search-input" class="search-input" placeholder="🔍 Search Teams or Tournaments..." onkeyup="renderFanMatches()">
+        <select id="filter-team" class="filter-select" onchange="renderFanMatches()"><option value="ALL">🛡️ All Teams</option></select>
+        <select id="filter-tourney" class="filter-select" onchange="renderFanMatches()"><option value="ALL">🏆 All Tournaments</option></select>
+        <select id="filter-format" class="filter-select" onchange="renderFanMatches()"><option value="ALL">🏏 All Formats</option></select>
+    </div>
+
+    <!-- LIVE MATCHES -->
+    <div class="section-title" style="color: #ef4444;">🔴 Live Matches</div>
+    <div id="live-container"><div class="empty-msg">Fetching live action...</div></div>
+
+    <!-- COMPLETED MATCHES -->
+    <div class="section-title" style="color: #10b981;">✅ Completed Matches</div>
+    <div id="comp-container"><div class="empty-msg">Fetching recent results...</div></div>
+
+    <!-- UPCOMING MATCHES -->
+    <div class="section-title" style="color: #f59e0b;">📅 Upcoming Fixtures</div>
+    <div id="up-container"><div class="empty-msg">Fetching scheduled games...</div></div>
+
+    <script>
+        const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
+        const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let allFanMatches = [];
+        let expandedMatches = new Set();
+        let activeTabs = {};
+
+        window.onload = async () => {
+            await fetchMatches();
+            setInterval(fetchMatches, 10000); 
+        };
+
+        function toggleDetails(matchId, event) {
+            const detailsDiv = document.getElementById('details-' + matchId);
+            if (detailsDiv.style.display === 'none' || detailsDiv.style.display === '') {
+                detailsDiv.style.display = 'block';
+                expandedMatches.add(matchId);
+            } else {
+                detailsDiv.style.display = 'none';
+                expandedMatches.delete(matchId);
+            }
+        }
+
+        window.switchFolder = function(matchId, targetIdx, totalInn, event) {
+            event.stopPropagation();
+            activeTabs[matchId] = targetIdx;
+            
+            for(let i=0; i<totalInn; i++) {
+                let tab = document.getElementById(`tab-${matchId}-${i}`);
+                let pane = document.getElementById(`pane-${matchId}-${i}`);
+                if(tab) tab.classList.remove('active');
+                if(pane) { pane.classList.remove('active'); pane.style.display = 'none'; }
+            }
+            let actTab = document.getElementById(`tab-${matchId}-${targetIdx}`);
+            let actPane = document.getElementById(`pane-${matchId}-${targetIdx}`);
+            if(actTab) actTab.classList.add('active');
+            if(actPane) { actPane.classList.add('active'); actPane.style.display = 'block'; }
+        };
+
+        async function fetchMatches() {
+            const { data, error } = await db.from('matches').select('match_id, full_state, tournaments(name)').order('created_at', { ascending: false });
+            if (error) { console.error("Cloud Error:", error); return; }
+            
+            allFanMatches = (data || []).filter(m => !m.match_id || !m.match_id.startsWith('HIST-'));
+            let filterSets = { teams: new Set(), tourneys: new Set(), formats: new Set() };
+            
+            allFanMatches.forEach(m => {
+                let fs = m.full_state || {};
+                let t1 = fs.team1 || (fs.teams?.A?.name);
+                let t2 = fs.team2 || (fs.teams?.B?.name);
+                let tourney = (m.tournaments && m.tournaments.name) ? m.tournaments.name : fs.tournament;
+                let format = fs.format;
+                if (!format || format === 'undefined' || format === '') {
+                    if (fs.matchSettings && fs.matchSettings.matchType === 'multiday') { format = 'Multi-Day (Test)'; } 
+                    else if (fs.inningsSummaries && fs.inningsSummaries.length > 2) { format = 'Multi-Day (Test)'; } 
+                    else if (fs.matchSettings && fs.matchSettings.matchType === 'oneday') { format = 'One Day (ODI)'; } 
+                    else { format = 'T20'; }
+                }
+
+                if (t1) filterSets.teams.add(t1);
+                if (t2) filterSets.teams.add(t2);
+                if (tourney) filterSets.tourneys.add(tourney);
+                if (format) filterSets.formats.add(format);
+                
+                m.computedFormat = format || 'T20';
+            });
+
+            let updateDropdown = (id, set, defaultText) => { 
+                let el = document.getElementById(id); 
+                let currentVal = el.value;
+                el.innerHTML = `<option value="ALL">${defaultText}</option>`;
+                Array.from(set).sort().forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`); 
+                if (Array.from(set).includes(currentVal)) el.value = currentVal;
+            };
+
+            updateDropdown('filter-team', filterSets.teams, '🛡️ All Teams');
+            updateDropdown('filter-tourney', filterSets.tourneys, '🏆 All Tournaments');
+            updateDropdown('filter-format', filterSets.formats, '🏏 All Formats');
+
+            renderFanMatches();
+        }
+
+        function renderFanMatches() {
+            const query = document.getElementById('fan-search-input').value.toLowerCase().trim();
+            const fTeam = document.getElementById('filter-team').value;
+            const fTourn = document.getElementById('filter-tourney').value;
+            const fForm = document.getElementById('filter-format').value;
+            
+            let liveHtml = '', compHtml = '', upHtml = '';
+            let liveCnt = 1, compCnt = 1, upCnt = 1;
+
+            allFanMatches.forEach(m => {
+                let fs = m.full_state || {};
+                let t1 = fs.team1 || (fs.teams?.A?.name) || 'Team 1';
+                let t2 = fs.team2 || (fs.teams?.B?.name) || 'Team 2';
+                let tourney = (m.tournaments && m.tournaments.name) ? m.tournaments.name : (fs.tournament || 'Independent Match');
+                let format = m.computedFormat;
+
+                // 🔥 Auto-Detect completed matches stuck in live status
+                let status = (fs.match_status || 'upcoming').toLowerCase();
+                let fpsCheck = fs.fan_portal_summary || {};
+                if (status === 'live' && ((fs.matchResult && fs.matchResult.trim() !== '') || (fpsCheck.result && fpsCheck.result !== 'Match in Progress' && fpsCheck.result !== ''))) {
+                    status = 'completed';
+                }
+
+                if (fTeam !== 'ALL' && t1 !== fTeam && t2 !== fTeam) return;
+                if (fTourn !== 'ALL' && tourney !== fTourn) return;
+                if (fForm !== 'ALL' && format !== fForm) return;
+                
+                let searchStr = `${t1} ${t2}${tourney}`.toLowerCase();
+                if (query && !searchStr.includes(query)) return; 
+
+                let scoreText = '';
+                if (status === 'live' || status === 'completed') {
+                    let batTeam = fs.teams?.[fs.battingKey]?.name || t1;
+                    let runs = fs.current?.runs || 0;
+                    let wkts = fs.current?.wkts || 0;
+                    let rawBalls = fs.current?.balls || 0;
+                    let overs = Math.floor(rawBalls / 6) + "." + (rawBalls % 6);
+                    let scoreColor = status === 'completed' ? 'color:#38bdf8;' : '';
+                    scoreText = `<div class="score-line" style="${scoreColor}">${batTeam}: ${runs}/${wkts} <span class="overs">(${overs} ov)</span></div>`;
+                }
+
+                let fps = fs.fan_portal_summary || {};
+                let tossStr = fps.toss && fps.toss !== "Toss not recorded" ? `🪙 ${fps.toss}` : '';
+                let resultStr = '';
+                let pointsStr = '';
+                let starsStr = '';
+
+                if (fps.top_batters && fps.top_batters.length > 0 && fps.top_batters[0].name) {
+                    let bestBat = fps.top_batters[0];
+                    let bestBowl = fps.top_bowlers && fps.top_bowlers.length > 0 ? fps.top_bowlers[0] : null;
+                    starsStr = `🌟 Key Performers: ${bestBat.name} (${bestBat.runs}r)`;
+                    if (bestBowl && bestBowl.name) starsStr += ` & ${bestBowl.name} (${bestBowl.wkts}w)`;
+                }
+
+                if (status === 'completed') {
+                    if (fps.result && fps.result !== "Match in Progress") resultStr = `🏆 ${fps.result}`;
+                    if (fps.team_points) {
+                        let ptsArr = [];
+                        for (const [tName, pts] of Object.entries(fps.team_points)) { ptsArr.push(`${tName}:${pts}`); }
+                        if (ptsArr.length > 0) pointsStr = `📊 Points: ${ptsArr.join(' | ')}`;
+                    }
+                }
+
+                let metaHtml = '';
+                if (tossStr || resultStr || pointsStr || starsStr) {
+                    metaHtml += `<div class="meta-box">`;
+                    if (tossStr) metaHtml += `<div class="meta-toss">${tossStr}</div>`;
+                    if (resultStr) metaHtml += `<div class="meta-result">${resultStr}</div>`;
+                    if (pointsStr) metaHtml += `<div class="meta-points">${pointsStr}</div>`;
+                    if (starsStr) metaHtml += `<div class="meta-stars">${starsStr}</div>`;
+                    metaHtml += `</div>`;
+                }
+
+                let isExpanded = expandedMatches.has(m.match_id) ? 'style="display: block;"' : '';
+                let detailsHtml = `<div class="match-details" id="details-${m.match_id}" ${isExpanded} onclick="event.stopPropagation()">`;
+                
+                let innMap = new Map();
+                if (Array.isArray(fs.inningsSummaries)) {
+                    fs.inningsSummaries.forEach((inn, idx) => {
+                        let key = inn.innNum || (idx + 1);
+                        innMap.set(key, { ...inn, innNum: key });
+                    });
+                }
+
+                let currentInnNum = fs.inningsNum || (innMap.size + 1);
+                if (status === 'live' && fs.current && (fs.current.balls > 0 || fs.current.runs > 0) && !innMap.has(currentInnNum)) {
+                    innMap.set(currentInnNum, {
+                        innNum: currentInnNum,
+                        batTeam: fs.teams[fs.battingKey].name,
+                        batters: fs.teams[fs.battingKey].players,
+                        bowlers: fs.teams[fs.bowlingKey].players,
+                        extras: fs.current.extras || { w: 0, nb: 0, b: 0, lb: 0 },
+                        penalties: fs.current.penalties || 0,
+                        fow: fs.current.fow || [],
+                        isOngoing: true
+                    });
+                }
+
+                let displayInnings = Array.from(innMap.values()).sort((a, b) => a.innNum - b.innNum);
+
+                if (displayInnings.length > 0) {
+                    let tabsHtml = `<div class="folder-tabs">`;
+                    let panesHtml = ``;
+
+                    let savedTabIdx = activeTabs[m.match_id] !== undefined ? activeTabs[m.match_id] : (displayInnings.length - 1);
+                    if (savedTabIdx >= displayInnings.length) savedTabIdx = displayInnings.length - 1;
+
+                    displayInnings.forEach((inn, idx) => {
+                        let isAct = (idx === savedTabIdx) ? 'active' : ''; 
+                        let dState = (idx === savedTabIdx) ? 'block' : 'none';
+                        let iLabel = `Inn ${inn.innNum || (idx+1)}: ${inn.batTeam}`;
+                        if (inn.isOngoing) iLabel += ` (LIVE)`;
+
+                        tabsHtml += `<div class="folder-tab ${isAct}" id="tab-${m.match_id}-${idx}" onclick="switchFolder('${m.match_id}', ${idx}, ${displayInnings.length}, event)">${iLabel}</div>`;
+                        panesHtml += `<div class="inn-pane ${isAct}" id="pane-${m.match_id}-${idx}" style="display:${dState};">`;
+                        
+                        panesHtml += `<table class="details-table" style="margin-bottom: 15px;"><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr>`;
+                        (inn.batters || []).filter(b => b.hasBatted).forEach(b => {
+                            let sr = b.b > 0 ? ((b.r/b.b)*100).toFixed(1) : '0.0';
+                            let outStr = b.out ? (b.dismissalInfo || 'out') : 'not out';
+                            panesHtml += `<tr>
+                                <td><span style="font-weight:bold; color:white;">${b.name}</span><div style="font-size:0.65rem; color:#64748b;">${outStr}</div></td>
+                                <td style="font-weight:bold; color:white;">${b.r}</td><td>${b.b}</td><td>${b.f}</td><td>${b.s}</td><td>${sr}</td>
+                            </tr>`;
+                        });
+
+                        let ex = inn.extras || { w: 0, nb: 0, b: 0, lb: 0 };
+                        let exTotal = (ex.w || 0) + (ex.nb || 0) + (ex.b || 0) + (ex.lb || 0);
+                        panesHtml += `<tr style="background:rgba(255,255,255,0.03);"><td style="color:#f59e0b; font-weight:bold;">Extras</td><td colspan="5" style="color:white; font-weight:bold;">${exTotal} <span style="font-weight:normal; color:#94a3b8; font-size:0.7rem;">(W:${ex.w||0}, NB:${ex.nb||0}, B:${ex.b||0}, LB:${ex.lb||0})</span></td></tr>`;
+                        panesHtml += `</table>`;
+
+                        panesHtml += `<table class="details-table" style="margin-bottom: 12px;"><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Econ</th></tr>`;
+                        (inn.bowlers || []).filter(bw => bw.o > 0 || bw.rc > 0).forEach(bw => {
+                            let oVal = Number(bw.o) || 0;
+                            let oversStr = "", absBalls = 0;
+                            if (oVal % 1 !== 0) {
+                                oversStr = Math.floor(oVal) + "." + Math.round((oVal - Math.floor(oVal)) * 10);
+                                absBalls = Math.floor(oVal) * 6 + Math.round((oVal - Math.floor(oVal)) * 10);
+                            } else {
+                                oversStr = Math.floor(oVal / 6) + "." + (oVal % 6);
+                                absBalls = oVal;
+                            }
+                            let econ = absBalls > 0 ? ((bw.rc/absBalls)*6).toFixed(2) : '0.00';
+                            panesHtml += `<tr>
+                                <td><span style="font-weight:bold; color:white;">${bw.name}</span></td>
+                                <td>${oversStr}</td><td>${bw.m}</td><td>${bw.rc}</td><td style="font-weight:bold; color:#10b981;">${bw.w}</td><td>${econ}</td>
+                            </tr>`;
+                        });
+                        panesHtml += `</table>`;
+
+                        if (inn.fow && inn.fow.length > 0) {
+                            let fowItems = inn.fow.map(f => `<b style="color:white;">${f.runs}/${f.wktNum === 'Unbroken' ? '*' : f.wktNum}</b> <span style="color:#94a3b8;">(${f.outBatter}, ${f.overs} ov)</span>`).join(' &bull; ');
+                            panesHtml += `<div style="font-size:0.75rem; background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:6px; border-left:3px solid #f59e0b; line-height:1.5;"><b style="color:#f59e0b;">Fall of Wickets:</b> ${fowItems}</div>`;
+                        }
+
+                        panesHtml += `</div>`;
+                    });
+
+                    tabsHtml += `</div>`; 
+                    detailsHtml += tabsHtml + panesHtml;
+                } else {
+                    detailsHtml += `<div style="color:#64748b; font-style:italic; text-align:center; padding: 10px;">Scorecard details will appear once the match begins.</div>`;
+                }
+                detailsHtml += `</div>`;
+
+                let createCard = (num, badgeClass, badgeText) => `
+                    <div class="match-card" onclick="toggleDetails('${m.match_id}', event)">
+                        <div class="card-header">
+                            <div class="tourney-name"><span class="match-number">#${num}</span> ${tourney} <span class="format-badge">${format}</span></div>
+                            <div class="badge ${badgeClass}">● ${badgeText}</div>
+                        </div>
+                        <div class="teams">${t1} <span style="color:#64748b; font-size:0.85em; font-weight:normal; margin: 0 5px;">vs</span> ${t2}</div>
+                        ${scoreText}
+                        ${metaHtml}
+                        <div class="tap-details">Tap card to expand scorecard ↓</div>
+                        ${detailsHtml}
+                    </div>
+                `;
+
+                if (status === 'live' || status === 'innings_break') { liveHtml += createCard(liveCnt++, 'badge-live', 'LIVE'); }
+                else if (status === 'completed') { compHtml += createCard(compCnt++, 'badge-comp', 'COMPLETED'); }
+                else { upHtml += createCard(upCnt++, 'badge-up', 'UPCOMING'); }
+            });
+
+            const safeUpdate = (id, newHtml) => {
+                const el = document.getElementById(id);
+                if (el && el.innerHTML !== newHtml) { el.innerHTML = newHtml; }
+            };
+
+            safeUpdate('live-container', liveHtml || '<div class="empty-msg">No active matches matching your criteria.</div>');
+            safeUpdate('comp-container', compHtml || '<div class="empty-msg">No completed matches matching your criteria.</div>');
+            safeUpdate('up-container', upHtml || '<div class="empty-msg">No upcoming fixtures matching your criteria.</div>');
+        }
+    </script>
+</body>
+</html>
