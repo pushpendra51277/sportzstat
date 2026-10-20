@@ -424,9 +424,7 @@
                     let wktsVal = ld.wkts !== undefined ? ld.wkts : (fs.current?.wkts || 0);
                     let oversVal = ld.overs || fallbackOvers;
                     let crrVal = ld.crr || (fallbackBalls > 0 ? ((runsVal / fallbackBalls) * 6).toFixed(2) : '0.00');
-                    let targetTxt = ld.target || '';
                     
-                    // 🔥 Bulletproof Batter Extraction
                     let activeBatters = [];
                     if (Array.isArray(ld.batters) && ld.batters.some(b => b !== null)) {
                         activeBatters = ld.batters.filter(b => b !== null);
@@ -452,7 +450,6 @@
                         `;
                     });
 
-                    // 🔥 Bulletproof Bowler Extraction
                     let activeBowler = ld.bowler || null;
                     if (!activeBowler && fs.current && fs.teams && fs.bowlingKey) {
                         let bList = fs.teams[fs.bowlingKey].players;
@@ -477,13 +474,47 @@
                     let pshipText = fs.current?.currPartnership ? `${fs.current.currPartnership.runs} (${fs.current.currPartnership.balls})` : '0 (0)';
                     let thisOverBadges = fs.current?.currentOverLog ? fs.current.currentOverLog.map(getBadgeHtml).join('') : '';
 
+                    // 🔥 DYNAMIC TARGET, RRR, AND REQUIRED CALCULATIONS (Second Innings)
+                    let targetHtml = '';
+                    let reqHtml = '';
+                    let rrrHtml = '';
+                    
+                    if (fs.inningsNum > 1 && fs.inningsSummaries && fs.inningsSummaries.length > 0) {
+                        let prevInn = fs.inningsSummaries.find(i => i.innNum === fs.inningsNum - 1) || fs.inningsSummaries[0];
+                        let tRuns = (fs.matchSettings && fs.matchSettings.customTarget) ? fs.matchSettings.customTarget : (prevInn.runs + 1);
+                        let tOvers = (fs.matchSettings && fs.matchSettings.customTargetOvers) ? fs.matchSettings.customTargetOvers : ((fs.matchSettings && fs.matchSettings.maxOvers) ? fs.matchSettings.maxOvers : 20);
+                        
+                        let runsNeeded = tRuns - runsVal;
+                        if (runsNeeded < 0) runsNeeded = 0;
+                        
+                        let targetFullOvers = Math.floor(tOvers);
+                        let targetExtraBalls = Math.round((tOvers - targetFullOvers) * 10);
+                        let totalTargetBalls = (targetFullOvers * 6) + targetExtraBalls;
+                        let ballsLeft = totalTargetBalls - fallbackBalls;
+                        if (ballsLeft < 0) ballsLeft = 0;
+                        
+                        let rrrVal = ballsLeft > 0 ? ((runsNeeded / ballsLeft) * 6).toFixed(2) : "0.00";
+                        let runsColor = runsNeeded < ballsLeft ? '#10b981' : (runsNeeded > ballsLeft ? '#ef4444' : 'white');
+                        
+                        targetHtml = `<div style="color:#38bdf8; font-size:0.9rem; margin-bottom:5px; font-weight:bold;">🎯 Target: ${tRuns}</div>`;
+                        reqHtml = `<span style="color:#94a3b8; font-size:0.95rem; margin-left:12px;">| Req: <b style="color:${runsColor};">${runsNeeded}</b>/<b style="color:#38bdf8;">${ballsLeft}</b></span>`;
+                        rrrHtml = `<span style="color:#94a3b8; font-size:0.95rem; margin-left:12px;">| RRR: <b style="color:#f59e0b;">${rrrVal}</b></span>`;
+                    }
+
+                    // 🔥 EXTRAS AND PENALTIES LINE
+                    let ex = fs.current?.extras || { w: 0, nb: 0, b: 0, lb: 0 };
+                    let exTotal = (ex.w||0) + (ex.nb||0) + (ex.b||0) + (ex.lb||0);
+                    let pen = fs.current?.penalties || 0;
+                    let extrasHtml = `<div style="font-size:0.8rem; color:#64748b; margin-top:8px;">Extras: ${exTotal} (W:${ex.w\vert{}\vert{}0}, NB:${ex.nb||0}, B:${ex.b\vert{}\vert{}0}, LB:${ex.lb||0}) <span style="color:#f59e0b; margin-left:5px;">| PEN: ${pen}</span></div>`;
+
                     livePanelHtml = `
                         <div class="fan-live-panel-wrap" id="live-panel-${m.match_id}" ${isOpen ? 'style="display: block;"' : ''} onclick="event.stopPropagation()">
                             <div style="border: 2px solid #3b82f6; border-radius: 12px; background: #020617; padding: 15px; position: relative; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);">
                                 
                                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
-                                    <div style="background:#ef4444; color:white; padding:4px 10px; border-radius:6px; font-size:0.7rem; font-weight:800; letter-spacing:0.5px;">LIVE FEED</div>
+                                    <div style="background:#ef4444; color:white; padding:4px 10px; border-radius:6px; font-size:0.7rem; font-weight:800; letter-spacing:0.5px;">INNINGS ${fs.inningsNum || 1}</div>
                                     <div style="text-align:center; flex:1;">
+                                        ${targetHtml}
                                         <div style="color:#3b82f6; font-weight:bold; font-size:1.1rem; text-transform:uppercase;">${tourney}</div>
                                         <div style="color:#cbd5e1; font-size:0.85rem; margin-top:3px;">📍 Batting: <span style="color:#f59e0b; font-weight:bold;">${batTeamName}</span></div>
                                     </div>
@@ -510,7 +541,8 @@
 
                                 <div style="text-align:center; border-bottom:1px dashed #1e293b; padding-bottom:15px; margin-bottom:15px;">
                                     <span style="font-size:1.4rem; color:white;">Overs: <b style="font-weight:900;">${oversVal}</b></span>
-                                    <span style="font-size:1rem; color:#94a3b8; margin-left:15px;">CRR: <b style="color:white;">${crrVal}</b></span>${targetTxt ? `<div style="color:#10b981; font-size:0.95rem; font-weight:bold; margin-top:6px;">Target: ${targetTxt}</div>` : ''}
+                                    <span style="font-size:1rem; color:#94a3b8; margin-left:15px;">CRR: <b style="color:white;">${crrVal}</b></span>${reqHtml}
+                                    ${rrrHtml}${extrasHtml}
                                 </div>
 
                                 <div style="display:flex; justify-content:center; align-items:center; gap:20px; flex-wrap:wrap;">
