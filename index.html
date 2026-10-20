@@ -138,9 +138,22 @@
             margin: 0 1px !important;
         }
 
-        @media (max-width: 500px) {
-            .mob-col { width: 100% !important; text-align: center !important; justify-content: center !important; margin-bottom: 10px; }
-            .mob-col-right { text-align: center !important; justify-content: center !important; }
+        /* GRID LAYOUT FIX */
+        .blue-box-grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 600px) {
+            .blue-box-grid {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+            .mob-align-left { text-align: center !important; justify-content: center !important; margin-bottom: 10px; }
+            .mob-align-right { text-align: center !important; justify-content: center !important; margin-top: 10px; }
         }
     </style>
 </head>
@@ -216,6 +229,31 @@
                 else if (s === 'wd' || s === 'nb' || s === 'b' || s === 'lb') type = 'extra';
             }
             return type === 'divider' ? '<span class="over-divider">/</span>' : `<div class="ball-badge ball-${type}">${lbl}</div>`;
+        }
+
+        function getEffectiveBalls(cur) {
+            if (!cur) return 0;
+            let effective = 0, prevActual = 0;
+            let hist = Array.isArray(cur.overHistory) ? cur.overHistory : [];
+            for (let i = 0; i < hist.length; i++) {
+                let actualBallsInOver = hist[i].totalBallsAtEnd - prevActual;
+                if (hist[i].isPartialTerminal) effective += actualBallsInOver;
+                else effective += 6;
+                prevActual = hist[i].totalBallsAtEnd;
+            }
+            let currentOverBalls = Math.max(0, (cur.balls || 0) - prevActual);
+            effective += currentOverBalls;
+            return effective;
+        }
+
+        function getTeamOversDisplay(cur) {
+            if (!cur) return "0.0";
+            let hist = Array.isArray(cur.overHistory) ? cur.overHistory : [];
+            if (hist.length === 0) return formatOver(cur.balls || 0);
+            let completedOvers = hist.length;
+            let ballsInPreviousOvers = hist[completedOvers - 1].totalBallsAtEnd || (completedOvers * 6);
+            let currentOverBalls = Math.max(0, (cur.balls || 0) - ballsInPreviousOvers);
+            return completedOvers + "." + currentOverBalls;
         }
 
         function toggleLivePanel(matchId, event) {
@@ -344,8 +382,8 @@
                 let searchStr = `${t1} ${t2}${tourney}`.toLowerCase();
                 if (query && !searchStr.includes(query)) return; 
 
-                // Determine precise balls via ld.overs explicitly
-                let oversVal = ld.overs || "0.0";
+                let fallbackOvers = getTeamOversDisplay(fs.current);
+                let oversVal = ld.overs || fallbackOvers;
                 let oParts = String(oversVal).split('.');
                 let liveBalls = (parseInt(oParts[0]) * 6) + (parseInt(oParts[1] || 0));
 
@@ -401,64 +439,112 @@
                     let wktsVal = ld.wkts !== undefined ? ld.wkts : (fs.current?.wkts || 0);
                     let crrVal = ld.crr || "0.00";
                     
-                    // 🔥 SECURE BATTER EXTRACTION
-                    let battersHtml = '';
-                    if (Array.isArray(ld.batters)) {
-                        ld.batters.forEach(b => {
-                            if (b && b.name) {
-                                let isStr = b.isStriker ? '<span style="color:#f472b6; font-size:0.75rem; margin-right:4px;">🏏</span>' : '';
-                                let nameColor = b.isStriker ? 'white' : '#cbd5e1';
-                                let runColor = b.isStriker ? '#38bdf8' : '#94a3b8';
-                                let rVal = b.r !== undefined ? b.r : 0;
-                                let bVal = b.b !== undefined ? b.b : 0;
-                                battersHtml += `
-                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                                        <div style="color:${nameColor}; font-weight:bold; font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:130px;">${b.name}</div>
-                                        <div style="white-space:nowrap; text-align:right;">
-                                            ${isStr}<span style="color:${runColor}; font-weight:bold; font-size:1rem;">${rVal}</span>
-                                            <span style="color:#64748b; font-size:0.8rem; margin-left:2px;">(${bVal})</span>
-                                        </div>
-                                    </div>
-                                `;
-                            }
-                        });
+                    // 🔥 100% INDESTRUCTIBLE BATTER EXTRACTION
+                    let activeBatters = [];
+                    
+                    // Step A: Forcefully pull from the heavy 'fs' database to guarantee accuracy
+                    if (fs.teams && fs.battingKey && fs.teams[fs.battingKey].players) {
+                        let pList = fs.teams[fs.battingKey].players;
+                        
+                        // Pull explicitly assigned striker & non-striker
+                        if (fs.current && fs.current.sIdx !== null && pList[fs.current.sIdx]) {
+                            activeBatters.push({ name: pList[fs.current.sIdx].name, r: pList[fs.current.sIdx].r, b: pList[fs.current.sIdx].b, isStriker: true });
+                        }
+                        if (fs.current && fs.current.nsIdx !== null && pList[fs.current.nsIdx]) {
+                            activeBatters.push({ name: pList[fs.current.nsIdx].name, r: pList[fs.current.nsIdx].r, b: pList[fs.current.nsIdx].b, isStriker: false });
+                        }
+
+                        // Step B: If activeBatters is STILL empty (e.g. after a wicket), find anyone who is NOT OUT
+                        if (activeBatters.length === 0) {
+                            let notOuts = pList.filter(p => p.hasBatted && !p.out && p.out !== 'out' && p.dismissalInfo !== 'Retired Out');
+                            notOuts.forEach((p, idx) => {
+                                if (idx < 2) activeBatters.push({ name: p.name, r: p.r, b: p.b, isStriker: (idx === 0) });
+                            });
+                        }
+                    }
+                    
+                    // Step C: If 'fs' somehow completely failed, fallback to lightweight 'ld'
+                    if (activeBatters.length === 0 && Array.isArray(ld.batters)) {
+                        ld.batters.forEach(b => { if (b && b.name) activeBatters.push(b); });
                     }
 
-                    // 🔥 SECURE BOWLER EXTRACTION
+                    // Render Batters
+                    let battersHtml = '';
+                    if (activeBatters.length > 0) {
+                        battersHtml = activeBatters.map(b => `
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                                <div style="color:${b.isStriker ? 'white' : '#94a3b8'}; font-weight:bold; font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:130px;">${b.name}</div>
+                                <div style="white-space:nowrap; text-align:right;">
+                                    ${b.isStriker ? '<span style="color:#f472b6; font-size:0.75rem; margin-right:4px;">🏏</span>' : ''}
+                                    <span style="color:${b.isStriker ? '#38bdf8' : '#94a3b8'}; font-weight:bold; font-size:1rem;">${b.r !== undefined ? b.r : 0}</span>
+                                    <span style="color:#64748b; font-size:0.8rem; margin-left:2px;">(${b.b !== undefined ? b.b : 0})</span>
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        battersHtml = `<div style="color:#64748b; font-style:italic; font-size:0.85rem;">Waiting for batter...</div>`;
+                    }
+
+                    // 🔥 100% INDESTRUCTIBLE BOWLER EXTRACTION
+                    let activeBowlerObj = null;
+                    
+                    if (fs.teams && fs.bowlingKey && fs.teams[fs.bowlingKey].players) {
+                        let bList = fs.teams[fs.bowlingKey].players;
+                        if (fs.current && fs.current.bIdx !== null && bList[fs.current.bIdx]) {
+                            let bw = bList[fs.current.bIdx];
+                            activeBowlerObj = { name: bw.name, o: formatOver(bw.o), m: bw.m || 0, r: bw.rc || 0, w: bw.w || 0 };
+                        } else {
+                            // Fallback: the bowler with the most overs/action
+                            let sortedBowlers = bList.filter(p => p.o > 0 || p.rc > 0).sort((a,b) => b.o - a.o);
+                            if (sortedBowlers.length > 0) {
+                                let bw = sortedBowlers[0];
+                                activeBowlerObj = { name: bw.name, o: formatOver(bw.o), m: bw.m || 0, r: bw.rc || 0, w: bw.w || 0 };
+                            }
+                        }
+                    }
+
+                    if (!activeBowlerObj && ld.bowler && ld.bowler.name) {
+                        activeBowlerObj = { name: ld.bowler.name, o: ld.bowler.o, m: ld.bowler.m || 0, r: ld.bowler.r || 0, w: ld.bowler.w || 0 };
+                    }
+
                     let bowlerHtml = '';
-                    if (ld.bowler && ld.bowler.name) {
-                        let m_val = ld.bowler.m !== undefined ? ld.bowler.m : 0;
-                        let o_val = ld.bowler.o !== undefined ? ld.bowler.o : '0.0';
-                        let r_val = ld.bowler.r !== undefined ? ld.bowler.r : 0;
-                        let w_val = ld.bowler.w !== undefined ? ld.bowler.w : 0;
+                    if (activeBowlerObj) {
                         bowlerHtml = `
                             <div style="text-align:right;">
-                                <div style="color:white; font-weight:bold; font-size:0.95rem; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px;">⚾ ${ld.bowler.name}</div>
-                                <div style="color:#94a3b8; font-size:0.85rem;">${o_val}-${m_val}-${r_val}-<span style="color:#ef4444; font-weight:bold;">${w_val}</span></div>
+                                <div style="color:white; font-weight:bold; font-size:0.95rem; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px;">⚾ ${activeBowlerObj.name}</div>
+                                <div style="color:#94a3b8; font-size:0.85rem;">${activeBowlerObj.o}-${activeBowlerObj.m}-${activeBowlerObj.r}-<span style="color:#ef4444; font-weight:bold;">${activeBowlerObj.w}</span></div>
                             </div>
                         `;
+                    } else {
+                        bowlerHtml = `<div style="color:#64748b; font-style:italic; font-size:0.85rem; text-align:right;">Waiting for bowler...</div>`;
                     }
 
-                    let recentBadges = Array.isArray(ld.recentBalls) ? ld.recentBalls.map(getBadgeHtml).join('') : '';
-                    let pshipText = fs.current?.currPartnership ? `${fs.current.currPartnership.runs} (${fs.current.currPartnership.balls})` : '0 (0)';
-                    let thisOverBadges = fs.current?.currentOverLog ? fs.current.currentOverLog.map(getBadgeHtml).join('') : '';
-
-                    // 🔥 SECURE TARGET & RRR CALCULATION
+                    // 🔥 INDESTRUCTIBLE TARGET, REQ, AND RRR MATH
                     let targetHtml = '';
                     let reqHtml = '';
                     let rrrHtml = '';
-                    let targetTxt = ld.target || "";
                     
-                    if (targetTxt && targetTxt.trim() !== '') {
-                        targetHtml = `<div style="color:#38bdf8; font-size:0.9rem; margin-bottom:5px; font-weight:bold;">🎯 ${targetTxt}</div>`;
+                    let targetTxt = ld.target || "";
+                    let currentInningsNumber = fs.inningsNum || 1;
+                    if (fps.innings && Array.isArray(fps.innings) && fps.innings.length > currentInningsNumber) {
+                        currentInningsNumber = fps.innings.length; 
+                    }
+
+                    // Try to calculate native math if we are in Innings 2+
+                    if (currentInningsNumber > 1 && fps.innings && fps.innings.length > 0) {
+                        let prevScoreStr = fps.innings[0].score || "0/0";
+                        let tRuns = parseInt(prevScoreStr.split('/')[0], 10) + 1;
                         
-                        let targetMatch = targetTxt.match(/Target:\s*(\d+)/i);
-                        if (targetMatch && targetMatch[1]) {
-                            let tRuns = parseInt(targetMatch[1], 10);
+                        if (fs.matchSettings && fs.matchSettings.customTarget) {
+                            tRuns = fs.matchSettings.customTarget;
+                        }
+
+                        if (tRuns > 0) {
                             let runsNeeded = tRuns - runsVal;
                             if (runsNeeded < 0) runsNeeded = 0;
                             
                             let tOvers = (fs.matchSettings && fs.matchSettings.customTargetOvers) ? fs.matchSettings.customTargetOvers : ((fs.matchSettings && fs.matchSettings.maxOvers) ? fs.matchSettings.maxOvers : 20);
+                            
                             let targetFullOvers = Math.floor(tOvers);
                             let targetExtraBalls = Math.round((tOvers - targetFullOvers) * 10);
                             let totalTargetBalls = (targetFullOvers * 6) + targetExtraBalls;
@@ -469,32 +555,29 @@
                             let rrrCalc = ballsLeft > 0 ? ((runsNeeded / ballsLeft) * 6).toFixed(2) : "0.00";
                             let runsColor = runsNeeded <= ballsLeft ? '#10b981' : '#ef4444';
                             
+                            targetHtml = `<div style="color:#38bdf8; font-size:0.9rem; margin-bottom:5px; font-weight:bold;">🎯 Target: ${tRuns}</div>`;
                             reqHtml = `<span style="color:#94a3b8; font-size:0.95rem; margin-left:12px;">| Req: <b style="color:${runsColor};">${runsNeeded}</b>/<b style="color:#38bdf8;">${ballsLeft}</b></span>`;
                             rrrHtml = `<span style="color:#94a3b8; font-size:0.95rem; margin-left:12px;">| RRR: <b style="color:#f59e0b;">${rrrCalc}</b></span>`;
                         }
+                    } else if (targetTxt && targetTxt.trim() !== '') {
+                        // Safe fallback to scorer string
+                        targetHtml = `<div style="color:#38bdf8; font-size:0.9rem; margin-bottom:5px; font-weight:bold;">🎯 ${targetTxt}</div>`;
                     }
 
-                    // 🔥 INNINGS NUMBER
-                    let currentInningsNumber = 1;
-                    if (fps.innings && Array.isArray(fps.innings)) {
-                        currentInningsNumber = fps.innings.length; 
-                        if (currentInningsNumber < 1) currentInningsNumber = 1;
-                    }
+                    let recentBadges = Array.isArray(ld.recentBalls) ? ld.recentBalls.map(getBadgeHtml).join('') : '';
+                    let pshipText = fs.current?.currPartnership ? `${fs.current.currPartnership.runs} (${fs.current.currPartnership.balls})` : '0 (0)';
+                    let thisOverBadges = fs.current?.currentOverLog ? fs.current.currentOverLog.map(getBadgeHtml).join('') : '';
 
-                    // 🔥 EXTRAS CALCULATION (FORMAT BUG REMOVED)
                     let ex = (fs.current && fs.current.extras) ? fs.current.extras : { w: 0, nb: 0, b: 0, lb: 0 };
-                    let exW = ex.w ? ex.w : 0;
-                    let exNB = ex.nb ? ex.nb : 0;
-                    let exB = ex.b ? ex.b : 0;
-                    let exLB = ex.lb ? ex.lb : 0;
-                    let exTotal = exW + exNB + exB + exLB;
-                    let pen = (fs.current && fs.current.penalties) ? fs.current.penalties : 0;
-                    let extrasHtml = '<div style="font-size:0.8rem; color:#64748b; margin-top:8px;">Extras: ' + exTotal + ' (W:' + exW + ', NB:' + exNB + ', B:' + exB + ', LB:' + exLB + ') <span style="color:#f59e0b; margin-left:5px;">| PEN: ' + pen + '</span></div>';
+                    let exTotal = (ex.w||0) + (ex.nb||0) + (ex.b||0) + (ex.lb||0);
+                    let pen = fs.current?.penalties || 0;
+                    let extrasHtml = `<div style="font-size:0.8rem; color:#64748b; margin-top:8px;">Extras: ${exTotal} (W:${ex.w\vert{}\vert{}0}, NB:${ex.nb||0}, B:${ex.b\vert{}\vert{}0}, LB:${ex.lb||0}) <span style="color:#f59e0b; margin-left:5px;">| PEN: ${pen}</span></div>`;
 
                     livePanelHtml = `
                         <div class="fan-live-panel-wrap" id="live-panel-${m.match_id}" ${isOpen ? 'style="display: block;"' : ''} onclick="event.stopPropagation()">
                             <div style="border: 2px solid #3b82f6; border-radius: 12px; background: #020617; padding: 15px; position: relative; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);">
                                 
+                                <!-- Header -->
                                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
                                     <div style="background:#ef4444; color:white; padding:4px 10px; border-radius:6px; font-size:0.7rem; font-weight:800; letter-spacing:0.5px;">INNINGS ${currentInningsNumber}</div>
                                     <div style="text-align:center; flex:1;">
@@ -505,12 +588,13 @@
                                     <div style="width:70px;"></div>
                                 </div>
 
-                                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:15px;">
-                                    <div class="mob-col" style="flex:1; min-width:140px; text-align:left;">
+                                <!-- STRICT CSS GRID LAYOUT -->
+                                <div class="blue-box-grid">
+                                    <div class="mob-align-left" style="text-align:left;">
                                         ${battersHtml}
                                     </div>
                                     
-                                    <div class="mob-col" style="flex:1; text-align:center; min-width:140px;">
+                                    <div style="text-align:center;">
                                         <div style="display:flex; justify-content:center; align-items:baseline; gap:5px; line-height:1;">
                                             <span style="font-size:3.5rem; font-weight:900; color:#f59e0b;">${runsVal}</span>
                                             <span style="font-size:2.5rem; font-weight:900; color:#f59e0b;">/</span>
@@ -518,17 +602,22 @@
                                         </div>
                                     </div>
                                     
-                                    <div class="mob-col mob-col-right" style="flex:1; min-width:140px; display:flex; justify-content:flex-end;">
+                                    <div class="mob-align-right" style="text-align:right;">
                                         ${bowlerHtml}
                                     </div>
                                 </div>
 
+                                <!-- Footer Stats -->
                                 <div style="text-align:center; border-bottom:1px dashed #1e293b; padding-bottom:15px; margin-bottom:15px;">
-                                    <span style="font-size:1.4rem; color:white;">Overs: <b style="font-weight:900;">${oversVal}</b></span>
-                                    <span style="font-size:1rem; color:#94a3b8; margin-left:15px;">CRR: <b style="color:white;">${crrVal}</b></span>${reqHtml}
-                                    ${rrrHtml}${extrasHtml}
+                                    <div style="display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:8px;">
+                                        <span style="font-size:1.4rem; color:white;">Overs: <b style="font-weight:900;">${oversVal}</b></span>
+                                        <span style="font-size:1rem; color:#94a3b8; margin-left:10px;">CRR: <b style="color:white;">${crrVal}</b></span>
+                                        ${reqHtml}${rrrHtml}
+                                    </div>
+                                    ${extrasHtml}
                                 </div>
 
+                                <!-- Partnership & Over Log -->
                                 <div style="display:flex; justify-content:center; align-items:center; gap:20px; flex-wrap:wrap;">
                                     <div style="color:#10b981; font-weight:bold; font-size:0.95rem;">🏏 P'ship: ${pshipText}</div>
                                     <div class="fan-this-ov-wrap" style="display:flex; align-items:center; gap:6px; background:#0f172a; border:1px solid #334155; padding:6px 14px; border-radius:20px;">
@@ -538,6 +627,7 @@
                                 </div>
                             </div>
 
+                            <!-- Standalone Recent Strip -->
                             <div class="fan-recent-balls-box" style="margin-top:10px;">
                                 <span style="font-size:0.7rem; text-transform:uppercase; color:#94a3b8; font-weight:bold; flex-shrink:0;">RECENT:</span>
                                 <div style="display:flex; align-items:center; gap:6px; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;">${recentBadges}</div>
