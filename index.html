@@ -190,7 +190,7 @@
         <select id="filter-format" class="filter-select" onchange="renderFanMatches()"><option value="ALL">🏏 All Formats</option></select>
     </div>
 
-<!-- QUICK NAVIGATION BUTTONS (STICKY) -->
+    <!-- QUICK NAVIGATION BUTTONS (STICKY) -->
     <div style="position: sticky; top: 0; z-index: 50; background: #0f172a; padding: 15px 0; margin-bottom: 15px; display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid #1e293b;">
         <button onclick="document.getElementById('live-header').scrollIntoView({ behavior: 'smooth' })" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid #ef4444; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: 0.2s; white-space: nowrap;" onmouseover="this.style.background='#ef4444'; this.style.color='white'" onmouseout="this.style.background='rgba(239, 68, 68, 0.1)'; this.style.color='#ef4444'">🔴 Live Matches ⬇</button>
         
@@ -226,6 +226,11 @@
             setInterval(fetchMatches, 10000); 
         };
 
+        function formatOver(balls) {
+            let b = Number(balls) || 0;
+            return Math.floor(b / 6) + "." + (b % 6);
+        }
+
         function getBadgeHtml(b) {
             if (!b) return '';
             let type = 'normal';
@@ -241,6 +246,31 @@
                 else if (s === 'wd' || s === 'nb' || s === 'b' || s === 'lb') type = 'extra';
             }
             return type === 'divider' ? '<span class="over-divider">/</span>' : `<div class="ball-badge ball-${type}">${lbl}</div>`;
+        }
+
+        function getEffectiveBalls(cur) {
+            if (!cur) return 0;
+            let effective = 0, prevActual = 0;
+            let hist = Array.isArray(cur.overHistory) ? cur.overHistory : [];
+            for (let i = 0; i < hist.length; i++) {
+                let actualBallsInOver = hist[i].totalBallsAtEnd - prevActual;
+                if (hist[i].isPartialTerminal) effective += actualBallsInOver;
+                else effective += 6;
+                prevActual = hist[i].totalBallsAtEnd;
+            }
+            let currentOverBalls = Math.max(0, (cur.balls || 0) - prevActual);
+            effective += currentOverBalls;
+            return effective;
+        }
+
+        function getTeamOversDisplay(cur) {
+            if (!cur) return "0.0";
+            let hist = Array.isArray(cur.overHistory) ? cur.overHistory : [];
+            if (hist.length === 0) return formatOver(cur.balls || 0);
+            let completedOvers = hist.length;
+            let ballsInPreviousOvers = hist[completedOvers - 1].totalBallsAtEnd || (completedOvers * 6);
+            let currentOverBalls = Math.max(0, (cur.balls || 0) - ballsInPreviousOvers);
+            return completedOvers + "." + currentOverBalls;
         }
 
         function toggleLivePanel(matchId, event) {
@@ -352,7 +382,6 @@
                 let tourney = (m.tournaments && m.tournaments.name) ? m.tournaments.name : (fs.tournament || 'Independent Match');
                 let format = m.computedFormat;
 
-                // 🔥 Correct Status Check (Allows matches with Results to properly stay Completed)
                 let status = (fs.match_status || 'upcoming').toLowerCase();
                 let fps = fs.fan_portal_summary || {};
                 
@@ -369,17 +398,20 @@
                 let searchStr = `${t1} ${t2}${tourney}`.toLowerCase();
                 if (query && !searchStr.includes(query)) return; 
 
+                // 🔥 Accurate Overs & Balls Fallback
+                let fallbackOvers = getTeamOversDisplay(fs.current);
+                let fallbackBalls = getEffectiveBalls(fs.current);
+
                 let scoreText = '';
                 if (status === 'live' || status === 'completed') {
                     let batTeam = ld.batTeam || fs.teams?.[fs.battingKey]?.name || t1;
                     let runs = ld.runs !== undefined ? ld.runs : (fs.current?.runs || 0);
                     let wkts = ld.wkts !== undefined ? ld.wkts : (fs.current?.wkts || 0);
-                    let overs = ld.overs || '0.0';
+                    let overs = ld.overs || fallbackOvers;
                     let scoreColor = status === 'completed' ? 'color:#38bdf8;' : '';
                     scoreText = `<div class="score-line" style="${scoreColor}">${batTeam}: ${runs}/${wkts} <span class="overs">(${overs} ov)</span></div>`;
                 }
 
-                // 🔥 Build Meta Details (Toss, Results, Points)
                 let tossStr = fps.toss && fps.toss !== "Toss not recorded" ? `🪙 ${fps.toss}` : '';
                 let resultStr = '';
                 let pointsStr = '';
@@ -421,8 +453,8 @@
                     let batTeamName = ld.batTeam || t1;
                     let runsVal = ld.runs !== undefined ? ld.runs : (fs.current?.runs || 0);
                     let wktsVal = ld.wkts !== undefined ? ld.wkts : (fs.current?.wkts || 0);
-                    let oversVal = ld.overs || '0.0';
-                    let crrVal = ld.crr || '0.00';
+                    let oversVal = ld.overs || fallbackOvers;
+                    let crrVal = ld.crr || (fallbackBalls > 0 ? ((runsVal / fallbackBalls) * 6).toFixed(2) : '0.00');
                     let targetTxt = ld.target || '';
                     
                     let battersHtml = '';
