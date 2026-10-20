@@ -37,7 +37,7 @@
         .format-badge { background: #0f172a; color: #38bdf8; border: 1px solid #38bdf8; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; }
 
         .teams { font-size: 1.15rem; font-weight: bold; color: white; margin-bottom: 8px; }
-        .score-line { font-size: 1rem; font-weight: bold; color: #10b981; margin-bottom: 10px; }
+        .score-line { font-size: 1rem; font-weight: bold; color: #10b981; margin-bottom: 5px; }
         .overs { font-size: 0.85rem; color: #94a3b8; font-weight: normal; }
         
         .card-actions-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
@@ -90,7 +90,6 @@
             animation: fadeIn 0.25s ease;
         }
 
-        /* EXACT SCORING ENGINE BLUE BOX CSS MIRROR */
         .score-display-mirror {
             background: #020617;
             border: 2px solid #3b82f6;
@@ -401,6 +400,18 @@
                         scoreText = '<div class="score-line" style="' + scoreColor + '">' + batTeam + ': ' + runsVal + '/' + wktsVal + ' <span class="overs">(' + oversVal + ' ov)</span></div>';
                     }
 
+                    // 🔥 NEW: INNINGS 1 SCORE DISPLAY (Rendered below main score on the banner)
+                    let currentInningsNumber = fs.inningsNum || 1;
+                    if (fps.innings && Array.isArray(fps.innings) && fps.innings.length > currentInningsNumber) {
+                        currentInningsNumber = fps.innings.length; 
+                    }
+                    let pastInningsHtml = '';
+                    if (currentInningsNumber > 1 && fps.innings && fps.innings.length > 0) {
+                        let inn1Team = fps.innings[0].team || "Team A";
+                        let inn1Score = fps.innings[0].score || "0/0";
+                        pastInningsHtml = '<div style="color:#64748b; font-size:0.85rem; margin-bottom:10px;">Inn 1: ' + inn1Team + ' scored ' + inn1Score + '</div>';
+                    }
+
                     let tossStr = fps.toss && fps.toss !== "Toss not recorded" ? '🪙 ' + fps.toss : '';
                     let resultStr = '';
                     let pointsStr = '';
@@ -478,10 +489,6 @@
                         let targetHtml = '';
                         let reqHtml = '';
                         let rrrHtml = '';
-                        let currentInningsNumber = fs.inningsNum || 1;
-                        if (fps.innings && Array.isArray(fps.innings) && fps.innings.length > currentInningsNumber) {
-                            currentInningsNumber = fps.innings.length; 
-                        }
 
                         if (currentInningsNumber > 1 && fps.innings && fps.innings.length > 0) {
                             let prevScoreStr = fps.innings[0].score || "0/0";
@@ -504,13 +511,10 @@
                                 let rrrCalc = ballsLeft > 0 ? ((runsNeeded / ballsLeft) * 6).toFixed(2) : "0.00";
                                 let runsColor = runsNeeded <= ballsLeft ? '#10b981' : '#ef4444';
                                 
-                                let inn1Team = fps.innings[0].team || "Team A";
-                                
                                 targetHtml = '<div style="text-align:center; margin-bottom:12px;">' +
                                                '<div style="display:inline-block; border:1px solid #38bdf8; background:rgba(56,189,248,0.15); color:#38bdf8; padding:4px 12px; border-radius:20px; font-size:0.85rem; font-weight:bold;">' +
                                                  '🎯 Target: ' + tRuns + ' (' + tOvers + ' ov)' +
                                                '</div>' +
-                                               '<div style="color:#10b981; font-size:0.8rem; margin-top:4px; font-weight:bold;">Inn 1: ' + inn1Team + ' scored ' + prevScoreStr + '</div>' +
                                              '</div>';
                                 
                                 reqHtml = '<span style="color:#94a3b8; font-size:0.9rem; margin-left:8px;">| Req: <b style="color:' + runsColor + ';">' + runsNeeded + '</b>/<b style="color:#38bdf8;">' + ballsLeft + '</b></span>';
@@ -577,10 +581,9 @@
                         });
                     }
                     
-                    let currentInnNum = fs.inningsNum || (innMap.size + 1);
-                    if (status === 'live' && fs.current && (fs.current.balls > 0 || fs.current.runs > 0) && !innMap.has(currentInnNum)) {
-                        innMap.set(currentInnNum, {
-                            innNum: currentInnNum,
+                    if (status === 'live' && fs.current && (fs.current.balls > 0 || fs.current.runs > 0) && !innMap.has(currentInningsNumber)) {
+                        innMap.set(currentInningsNumber, {
+                            innNum: currentInningsNumber,
                             batTeam: batTeamObj.name,
                             batters: batTeamObj.players || [],
                             bowlers: bowlTeamObj.players || [],
@@ -668,6 +671,7 @@
                             '</div>' +
                             '<div class="teams">' + t1 + ' <span style="color:#64748b; font-size:0.85em; font-weight:normal; margin: 0 5px;">vs</span> ' + t2 + '</div>' +
                             scoreText +
+                            pastInningsHtml + 
                             metaHtml +
                             '<div class="card-actions-row">' +
                                 '<div class="tap-details">📋 Tap card for full scorecard ↓</div>' +
@@ -682,7 +686,6 @@
                     else { upHtml += createCard(upCnt++, 'badge-up', 'UPCOMING'); }
                     
                 } catch (e) {
-                    // SILENTLY CATCH CORRUPTED MATCHES SO THE REST OF THE PAGE STILL LOADS
                     console.error("Match rendering skipped due to data corruption for match: " + m.match_id, e);
                 }
             });
