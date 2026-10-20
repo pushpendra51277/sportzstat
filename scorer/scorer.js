@@ -397,8 +397,10 @@ async function logCareerStats() {
     finalState.team1 = state.teams.A.name;
     finalState.team2 = state.teams.B.name;
 
+    var tName = "Independent Match";
     if (activeMatch && activeMatch.full_state) {
-        finalState.tournament = activeMatch.full_state.tournament || "Independent Match";
+        tName = activeMatch.full_state.tournament || "Independent Match";
+        finalState.tournament = tName;
         finalState.format = activeMatch.full_state.format || "T20";
         finalState.tier = activeMatch.full_state.tier || "Local";
         finalState.host = activeMatch.full_state.host || "Independent / Open";
@@ -406,23 +408,99 @@ async function logCareerStats() {
 
     finalState.fan_portal_summary = fps;
 
-    try {
-        await supabaseClient.from('matches').update({ full_state: finalState }).eq('match_id', state.matchId);
-    } catch (e) {}
+    // 1. Save standard JSON state
+    try { await supabaseClient.from('matches').update({ full_state: finalState }).eq('match_id', state.matchId); } catch (e) {}
 
-    var completedPayload = {
-        inningsSummaries: state.inningsSummaries,
-        fan_portal_summary: fps
-    };
-    var payloadStr = JSON.stringify(completedPayload);
+    var completedPayload = { inningsSummaries: state.inningsSummaries, fan_portal_summary: fps };
+    try { await supabaseClient.from('completed_matches').upsert({ match_id: state.matchId, final_data: JSON.stringify(completedPayload) }, { onConflict: 'match_id' }); } catch (e) {}
+    try { await supabaseClient.from('live_matches').delete().eq('match_id', state.matchId); } catch (e) {}
 
+    // ==========================================
+    // 🔥 NEW: SECURE CAREER STATS TO PERMANENT LEDGER
+    // ==========================================
     try {
-        await supabaseClient.from('completed_matches').upsert({ match_id: state.matchId, final_data: payloadStr }, { onConflict: 'match_id' });
-    } catch (e) {}
+        let statsPayload = [];
+        
+        const processTeamStats = async (teamKey, teamName) => {
+            let players = state.teams[teamKey].players;
+            
+            // Fetch exact player UUIDs from Master DB
+            let names = players.map(p => p.name);
+            let { data: dbPlayers } = await supabaseClient.from('players').select('player_id, full_name').in('full_name', names);
+            
+            // Get Team UUID (Assuming activeMatch has team IDs, fallback to null if independent)
+            let teamUUID = null;
+            if (activeMatch && activeMatch.team_a_id && teamKey === 'A') teamUUID = activeMatch.team_a_id;
+            if (activeMatch && activeMatch.team_b_id && teamKey === 'B') teamUUID = activeMatch.team_b_id;
+            
+            players.forEach(p => {
+                let participated = p.hasBatted || (p.o > 0) || (p.catches > 0) || (p.stumpings > 0) || (p.runouts > 0);
+                if (!participated) return;
 
-    try {
-        await supabaseClient.from('live_matches').delete().eq('match_id', state.matchId);
-    } catch (e) {}
+                let pid = p.player_id || p.id;
+                if (!pid && dbPlayers) {
+                    let matched = dbPlayers.find(dp => dp.full_name === p.name);
+                    if (matched) pid = matched.player_id;
+                }
+
+                if (pid) {
+                    let oversBowledNumeric = 0.0;
+                    if (p.o > 0) {
+                        oversBowledNumeric = parseFloat(Math.floor(p.o / 6) + "." + (p.o % 6));
+                    }
+
+                    // Auto-Calculate Advanced Milestones
+                    let runsScored = p.r || 0;
+                    let wktsTaken = p.w || 0;
+                    let isHalfCentury = (runsScored >= 50 && runsScored < 100) ? 1 : 0;
+                    let isCentury = (runsScored >= 100) ? 1 : 0;
+                    let is4W = (wktsTaken === 4) ? 1 : 0;
+                    let is5W = (wktsTaken >= 5) ? 1 : 0;
+
+                    statsPayload.push({
+                        stat_id: crypto.randomUUID ? crypto.randomUUID() : undefined, // Let Supabase auto-generate if missing
+                        player_id: pid,
+                        match_id: state.matchId,
+                        team_id: teamUUID,
+                        
+                        // Batting
+                        runs_scored: runsScored,
+                        balls_faced: p.b || 0,
+                        fours: p.f || 0,
+                        sixes: p.s || 0,
+                        is_not_out: !(p.out === true || p.out === 'out'),
+                        half_centuries: isHalfCentury,
+                        centuries: isCentury,
+                        
+                        // Bowling
+                        overs_bowled: oversBowledNumeric,
+                        maidens_bowled: p.m || 0,
+                        runs_conceded: p.rc || 0,
+                        wickets_taken: wktsTaken,
+                        four_wicket_hauls: is4W,
+                        five_wicket_hauls: is5W,
+                        hat_tricks: 0, // Hat-tricks require ball-by-ball analysis
+                        
+                        // Fielding
+                        catches: p.catches || 0,
+                        stumpings: p.stumpings || 0,
+                        run_outs: p.runouts || 0
+                    });
+                }
+            });
+        };
+
+        await processTeamStats('A', state.teams.A.name);
+        await processTeamStats('B', state.teams.B.name);
+
+        if (statsPayload.length > 0) {
+            // Push securely to the unbreakable ledger using exact column names
+            await supabaseClient.from('player_match_stats').upsert(statsPayload, { onConflict: 'player_id, match_id' });
+            console.log("✅ Career stats securely locked into player_match_stats ledger!");
+        }
+    } catch (e) {
+        console.error("Failed to save career stats to ledger:", e);
+    }
 }
 
 async function logBallEvent(batterObj, bowlerObj, runsBat, runsExtra, extraType, isWicket, wicketType, dismissedObj) {
