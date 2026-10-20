@@ -503,9 +503,9 @@
 
                     // 🔥 EXTRAS AND PENALTIES LINE
                     let ex = fs.current?.extras || { w: 0, nb: 0, b: 0, lb: 0 };
-                    let exTotal = (ex.w||0) + (ex.nb||0) + (ex.b||0) + (ex.lb||0);
+                    let exTotal = (ex.w || 0) + (ex.nb || 0) + (ex.b || 0) + (ex.lb || 0);
                     let pen = fs.current?.penalties || 0;
-                    let extrasHtml = `<div style="font-size:0.8rem; color:#64748b; margin-top:8px;">Extras: ${exTotal} (W:${ex.w\vert{}\vert{}0}, NB:${ex.nb||0}, B:${ex.b\vert{}\vert{}0}, LB:${ex.lb||0}) <span style="color:#f59e0b; margin-left:5px;">| PEN: ${pen}</span></div>`;
+                    let extrasHtml = `<div style="font-size:0.8rem; color:#64748b; margin-top:8px;">Extras: ${exTotal} (W:${ex.w \vert{}\vert{} 0}, NB:${ex.nb || 0}, B:${ex.b \vert{}\vert{} 0}, LB:${ex.lb || 0}) <span style="color:#f59e0b; margin-left:5px;">| PEN: ${pen}</span></div>`;
 
                     livePanelHtml = `
                         <div class="fan-live-panel-wrap" id="live-panel-${m.match_id}" ${isOpen ? 'style="display: block;"' : ''} onclick="event.stopPropagation()">
