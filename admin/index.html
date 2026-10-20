@@ -1563,17 +1563,28 @@
                 </tr>`).join('');
         }
 
-        async function saveMatchesToCloud() {
+       async function saveMatchesToCloud() {
             if(!currentTournamentId) { alert("Tournament ID missing. Ensure Basic Settings are saved first."); return; }
             if(masterFixtures.length === 0) { alert("No matches found to deploy."); return; }
 
             const btn = document.getElementById('btnDeploy');
-            btn.innerText = "⏳ Injecting Fixtures to Supabase...";
+            btn.innerText = "⏳ Checking Cloud & Injecting Fixtures...";
 
             let tName = document.getElementById('t-name').value;
             let tFormat = document.getElementById('t-format').value;
             let tHost = loadedTournamentHost ? loadedTournamentHost : currentAdminAssociation; 
             let tTier = document.getElementById('t-tier').value; 
+
+            // 🔥 1. Fetch current cloud state to check match statuses safely
+            const { data: cloudMatches } = await db.from('matches').select('match_id, full_state').eq('tournament_id', currentTournamentId);
+            let cloudMap = new Map();
+            if (cloudMatches) {
+                cloudMatches.forEach(cm => cloudMap.set(cm.match_id, cm.full_state));
+            }
+
+            let updatesCount = 0;
+            let insertsCount = 0;
+            let skippedCount = 0;
 
             for (let m of masterFixtures) {
                 let t1Obj = selectedTourneyTeams.find(t => t.name === m.t1);
@@ -1581,28 +1592,57 @@
                 let team1UUID = t1Obj ? t1Obj.team_id : null; 
                 let team2UUID = t2Obj ? t2Obj.team_id : null;
 
-                let matchPayload = {
-                    match_id: m.id,
-                    tournament_id: currentTournamentId,
-                    team_a_id: team1UUID,
-                    team_b_id: team2UUID,
-                    scorer_pin: m.pin,
-                    full_state: { tournament: tName, format: tFormat, host: tHost, tier: tTier, team1: m.t1, team2: m.t2, matchName: m.name, match_status: 'upcoming' }
-                };
+                let existingState = cloudMap.get(m.id);
 
-                await db.from('matches').upsert([matchPayload]);
-                m.isLive = true; 
+                if (existingState) {
+                    // 🛡️ MATCH ALREADY EXISTS ON CLOUD
+                    let status = (existingState.match_status || 'upcoming').toLowerCase();
+                    
+                    // ONLY update if it is UPCOMING (Safe to change TBD -> Real Team)
+                    // NEVER touch live or completed matches to protect historical stats!
+                    if (status === 'upcoming') {
+                        existingState.team1 = m.t1;
+                        existingState.team2 = m.t2;
+                        existingState.matchName = m.name;
+                        existingState.tournament = tName; // Updates in case you fixed a typo in tournament name
+                        
+                        await db.from('matches').update({
+                            team_a_id: team1UUID,
+                            team_b_id: team2UUID,
+                            full_state: existingState
+                        }).eq('match_id', m.id);
+                        updatesCount++;
+                    } else {
+                        skippedCount++; // Safely ignored completed/live match
+                    }
+                } else {
+                    // ✨ COMPLETELY NEW MATCH
+                    let matchPayload = {
+                        match_id: m.id,
+                        tournament_id: currentTournamentId,
+                        team_a_id: team1UUID,
+                        team_b_id: team2UUID,
+                        scorer_pin: m.pin,
+                        full_state: { tournament: tName, format: tFormat, host: tHost, tier: tTier, team1: m.t1, team2: m.t2, matchName: m.name, match_status: 'upcoming' }
+                    };
+                    await db.from('matches').insert([matchPayload]);
+                    insertsCount++;
+                    m.isLive = true; 
+                }
             }
             
             updateFinalLockedMatches();
             renderCanvas(); 
             
             document.getElementById('deploy-action-card').innerHTML = `
-                <h3 style="color: #10b981; font-size: 1.5rem; margin-top: 0;">✅ Successfully Deployed!</h3>
-                <p style="color: #cbd5e1; max-width: 600px; margin: 0 auto;">Your tournament is now live. Scorers can log in using the exact Match IDs and PINs listed above.</p>
+                <h3 style="color: #10b981; font-size: 1.5rem; margin-top: 0;">✅ Successfully Deployed & Synced!</h3>
+                <p style="color: #cbd5e1; max-width: 600px; margin: 0 auto;">
+                    <b>${insertsCount}</b> new matches added.<br>
+                    <b>${updatesCount}</b> upcoming matches updated.<br>
+                    <b style="color:#f59e0b;">${skippedCount}</b> active/completed matches safely bypassed to protect stats.
+                </p>
             `;
         }
-
         // ==========================================
         // ⏳ HISTORICAL DATA INJECTOR (SUPER ADMIN ONLY)
         // ==========================================
