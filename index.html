@@ -72,12 +72,6 @@
         .details-table th:first-child { text-align: left; }
         .details-table td { padding: 6px 4px; border-bottom: 1px solid #1e293b; text-align: right; }
         .details-table td:first-child { text-align: left; }
-        
-        .meta-box { margin-top: 8px; margin-bottom: 12px; font-size: 0.85rem; line-height: 1.5; background: rgba(0,0,0,0.25); padding: 10px 15px; border-radius: 6px; border-left: 3px solid #38bdf8; }
-        .meta-toss { color: #cbd5e1; }
-        .meta-result { color: #10b981; font-weight: bold; margin-top: 4px; font-size: 0.9rem; }
-        .meta-points { color: #f59e0b; margin-top: 4px; font-weight: bold; }
-        .meta-stars { color: #38bdf8; margin-top: 4px; font-weight: bold; }
 
         .folder-tabs { display: flex; gap: 4px; border-bottom: 1px solid #38bdf8; margin-bottom: 15px; overflow-x: auto; scrollbar-width: none; }
         .folder-tabs::-webkit-scrollbar { display: none; }
@@ -155,6 +149,21 @@
             gap: 6px;
             overflow: auto;
             white-space: nowrap;
+        }
+        
+        .blue-box-grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .blue-box-grid { grid-template-columns: 1fr; text-align: center; gap: 10px; }
+            .mob-align-left { justify-content: center; margin-bottom: 10px; text-align: center; }
+            .mob-align-right { justify-content: center; margin-top: 10px; text-align: center; }
         }
     </style>
 </head>
@@ -480,7 +489,15 @@
                             let rrrCalc = ballsLeft > 0 ? ((runsNeeded / ballsLeft) * 6).toFixed(2) : "0.00";
                             let runsColor = runsNeeded <= ballsLeft ? '#10b981' : '#ef4444';
                             
-                            targetHtml = '<div style="text-align:center; margin-bottom:12px;"><div style="display:inline-block; border:1px solid #38bdf8; background:rgba(56,189,248,0.15); color:#38bdf8; padding:4px 12px; border-radius:20px; font-size:0.85rem; font-weight:bold;">🎯 Target: ' + tRuns + ' (' + tOvers + ' ov)</div></div>';
+                            // 🔥 UPDATED TARGET BADGE: NOW INCLUDES INNINGS 1 SCORE
+                            let inn1Team = fps.innings[0].team || "Team A";
+                            targetHtml = '<div style="text-align:center; margin-bottom:12px;">' +
+                                           '<div style="display:inline-block; border:1px solid #38bdf8; background:rgba(56,189,248,0.15); color:#38bdf8; padding:4px 12px; border-radius:20px; font-size:0.85rem; font-weight:bold;">' +
+                                             '🎯 Target: ' + tRuns + ' (' + tOvers + ' ov)' +
+                                           '</div>' +
+                                           '<div style="color:#10b981; font-size:0.8rem; margin-top:4px;">Inn 1: ' + inn1Team + ' scored ' + prevScoreStr + '</div>' +
+                                         '</div>';
+                            
                             reqHtml = '<span style="color:#94a3b8; font-size:0.9rem; margin-left:8px;">| Req: <b style="color:' + runsColor + ';">' + runsNeeded + '</b>/<b style="color:#38bdf8;">' + ballsLeft + '</b></span>';
                             rrrHtml = '<span style="color:#94a3b8; font-size:0.9rem; margin-left:8px;">| RRR: <b style="color:#f59e0b;">' + rrrCalc + '</b></span>';
                         }
@@ -499,8 +516,8 @@
 
                     livePanelHtml = '<div class="fan-live-panel-wrap" id="live-panel-' + m.match_id + '" ' + (isOpen ? 'style="display: block;"' : '') + ' onclick="event.stopPropagation()">' +
                         '<div class="score-display-mirror">' +
-                            '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">' +
-                                '<span class="innings-badge-mirror">INNINGS ' + currentInningsNumber + '</span>' +
+                            '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:5px;">' +
+                                '<div><span class="innings-badge-mirror">INNINGS ' + currentInningsNumber + '</span></div>' +
                                 '<div style="text-align:center; flex:1;">' +
                                     '<div style="color:#3b82f6; font-weight:bold; font-size:1.1rem; text-transform:uppercase;">' + tourney + '</div>' +
                                     '<div style="color:#cbd5e1; font-size:0.8rem; margin-top:2px;">📍 Batting: <span style="color:#f59e0b; font-weight:bold;">' + batTeamName + '</span></div>' +
@@ -508,12 +525,12 @@
                                 '<div style="min-width:70px;"></div>' +
                             '</div>' +
                             targetHtml +
-                            '<div style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 5px; margin: 10px 0;">' +
-                                '<div style="text-align: left; font-size: 0.8rem; line-height: 1.4; padding-left: 5px; overflow: hidden;">' + miniBatHtml + '</div>' +
-                                '<div style="text-align: center;">' +
+                            '<div class="blue-box-grid">' +
+                                '<div class="mob-align-left">' + battersHtml + '</div>' +
+                                '<div style="text-align:center;">' +
                                     '<h1 class="big-score-mirror">' + runsVal + '/<span style="color:var(--danger);">' + wktsVal + '</span></h1>' +
                                 '</div>' +
-                                '<div style="text-align: right; font-size: 0.8rem; line-height: 1.4; padding-right: 5px; overflow: hidden;">' + miniBowlHtml + '</div>' +
+                                '<div class="mob-align-right">' + bowlerHtml + '</div>' +
                             '</div>' +
                             '<div style="text-align:center; border-bottom:1px dashed #1e293b; padding-bottom:10px; margin-bottom:10px;">' +
                                 '<p style="font-size:1.3rem;" class="mt-5 mb-0">Overs: <span class="font-bold">' + oversVal + '</span> <span class="text-muted ml-10" style="font-size:0.9rem;">CRR: <span class="text-white font-bold">' + crrVal + '</span></span>' + reqHtml + rrrHtml + '</p>' +
