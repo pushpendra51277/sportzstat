@@ -95,36 +95,6 @@
             cursor: default;
             animation: fadeIn 0.25s ease;
         }
-        .fan-score-display {
-            text-align: center;
-            background: #020617;
-            padding: 16px 14px;
-            border-radius: 12px;
-            border: 2px solid #3b82f6;
-            margin: 5px 0 10px 0;
-            position: relative;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
-        }
-        .fan-innings-badge {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: #ef4444;
-            color: white;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 0.65rem;
-            font-weight: 800;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
-        .fan-big-score {
-            font-size: 3rem;
-            font-weight: 900;
-            color: #f59e0b;
-            margin: 0;
-            line-height: 1;
-        }
         .fan-recent-balls-box {
             background: #020617;
             border: 1px solid #1e293b;
@@ -169,8 +139,8 @@
         }
 
         @media (max-width: 500px) {
-            .fan-big-score { font-size: 2.3rem; }
-            .fan-score-display { padding: 14px 8px; }
+            .mob-col { width: 100% !important; text-align: center !important; justify-content: center !important; margin-bottom: 10px; }
+            .mob-col-right { text-align: center !important; justify-content: center !important; }
         }
     </style>
 </head>
@@ -398,7 +368,6 @@
                 let searchStr = `${t1} ${t2}${tourney}`.toLowerCase();
                 if (query && !searchStr.includes(query)) return; 
 
-                // 🔥 Accurate Overs & Balls Fallback
                 let fallbackOvers = getTeamOversDisplay(fs.current);
                 let fallbackBalls = getEffectiveBalls(fs.current);
 
@@ -457,44 +426,97 @@
                     let crrVal = ld.crr || (fallbackBalls > 0 ? ((runsVal / fallbackBalls) * 6).toFixed(2) : '0.00');
                     let targetTxt = ld.target || '';
                     
+                    // 🔥 Build Scoring Engine "Blue Box" Batters
                     let battersHtml = '';
                     if (Array.isArray(ld.batters)) {
                         ld.batters.forEach(b => {
-                            if (b) battersHtml += `<div style="font-size:0.8rem; color:white; font-weight:bold;">${b.name}: ${b.r} (${b.b})</div>`;
+                            if (b) {
+                                let isStr = b.isStriker ? '<span style="color:#f472b6; font-size:0.75rem; margin-right:4px;">🏏</span>' : '';
+                                let nameColor = b.isStriker ? 'white' : '#cbd5e1';
+                                let runColor = b.isStriker ? '#38bdf8' : '#94a3b8';
+                                battersHtml += `
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                                        <div style="color:${nameColor}; font-weight:bold; font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:130px;">${b.name}</div>
+                                        <div style="white-space:nowrap; text-align:right;">
+                                            ${isStr}<span style="color:${runColor}; font-weight:bold; font-size:1rem;">${b.r}</span>
+                                            <span style="color:#64748b; font-size:0.8rem; margin-left:2px;">(${b.b})</span>
+                                        </div>
+                                    </div>
+                                `;
+                            }
                         });
                     }
-                    let bowlerHtml = ld.bowler ? `<div style="font-size:0.8rem; color:#94a3b8;">${ld.bowler.name}:${ld.bowler.o}-${ld.bowler.r}-${ld.bowler.w}</div>` : '';
+
+                    // 🔥 Build Scoring Engine "Blue Box" Bowler
+                    let bowlerHtml = '';
+                    if (ld.bowler) {
+                        let m_val = ld.bowler.m !== undefined ? ld.bowler.m : 0;
+                        bowlerHtml = `
+                            <div style="text-align:right;">
+                                <div style="color:white; font-weight:bold; font-size:0.95rem; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px;">⚾ ${ld.bowler.name}</div>
+                                <div style="color:#94a3b8; font-size:0.85rem;">${ld.bowler.o}-${m_val}-${ld.bowler.r}-<span style="color:#ef4444; font-weight:bold;">${ld.bowler.w}</span></div>
+                            </div>
+                        `;
+                    }
+
                     let recentBadges = Array.isArray(ld.recentBalls) ? ld.recentBalls.map(getBadgeHtml).join('') : '';
                     let pshipText = fs.current?.currPartnership ? `${fs.current.currPartnership.runs} (${fs.current.currPartnership.balls})` : '0 (0)';
                     let thisOverBadges = fs.current?.currentOverLog ? fs.current.currentOverLog.map(getBadgeHtml).join('') : '';
 
+                    // 🔥 Replicated Scoring Engine "Blue Box" Layout
                     livePanelHtml = `
                         <div class="fan-live-panel-wrap" id="live-panel-${m.match_id}" ${isOpen ? 'style="display: block;"' : ''} onclick="event.stopPropagation()">
-                            <div class="fan-score-display">
-                                <div class="fan-innings-badge">LIVE FEED</div>
-                                <p style="color:#3b82f6; font-weight:bold; margin:0; font-size:0.95rem;">${tourney}</p>
-                                <div style="font-size:0.8rem; color:#94a3b8; margin-top:3px; margin-bottom:5px;">Batting: <span style="color:#f59e0b; font-weight:bold;">${batTeamName}</span>${targetTxt ? '| Target: ' + targetTxt : ''}</div>
-
-                                <div style="display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px; margin:12px 0;">
-                                    <div style="text-align:left; padding-left:4px;">${battersHtml}</div>
-                                    <div style="text-align:center;"><h1 class="fan-big-score">${runsVal}/<span style="color:#ef4444;">${wktsVal}</span></h1></div>
-                                    <div style="text-align:right; padding-right:4px;">${bowlerHtml}</div>
+                            <div style="border: 2px solid #3b82f6; border-radius: 12px; background: #020617; padding: 15px; position: relative; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);">
+                                
+                                <!-- TOP HEADER -->
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
+                                    <div style="background:#ef4444; color:white; padding:4px 10px; border-radius:6px; font-size:0.7rem; font-weight:800; letter-spacing:0.5px;">LIVE FEED</div>
+                                    <div style="text-align:center; flex:1;">
+                                        <div style="color:#3b82f6; font-weight:bold; font-size:1.1rem; text-transform:uppercase;">${tourney}</div>
+                                        <div style="color:#cbd5e1; font-size:0.85rem; margin-top:3px;">📍 Batting: <span style="color:#f59e0b; font-weight:bold;">${batTeamName}</span></div>
+                                    </div>
+                                    <div style="width:70px;"></div> <!-- Spacer for balance -->
                                 </div>
 
-                                <p style="font-size:1.3rem; margin:6px 0 0 0; color:white;">Overs: <span style="font-weight:bold;">${oversVal}</span> <span style="color:#94a3b8; margin-left:10px; font-size:0.9rem;">CRR: <span style="color:white; font-weight:bold;">${crrVal}</span></span></p>
+                                <!-- 3-COLUMN MIDDLE GRID -->
+                                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:15px;">
+                                    <div class="mob-col" style="flex:1; min-width:140px; text-align:left;">
+                                        ${battersHtml}
+                                    </div>
+                                    
+                                    <div class="mob-col" style="flex:1; text-align:center; min-width:140px;">
+                                        <div style="display:flex; justify-content:center; align-items:baseline; gap:5px; line-height:1;">
+                                            <span style="font-size:3.5rem; font-weight:900; color:#f59e0b;">${runsVal}</span>
+                                            <span style="font-size:2.5rem; font-weight:900; color:#f59e0b;">/</span>
+                                            <span style="font-size:3.5rem; font-weight:900; color:#ef4444;">${wktsVal}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mob-col mob-col-right" style="flex:1; min-width:140px; display:flex; justify-content:flex-end;">
+                                        ${bowlerHtml}
+                                    </div>
+                                </div>
 
-                                <div style="display:flex; align-items:center; justify-content:center; gap:15px; flex-wrap:wrap; margin-top:12px; padding-top:10px; border-top:1px dashed rgba(56, 189, 248, 0.3);">
-                                    <div style="color:#10b981; font-weight:bold; font-size:0.9rem; white-space:nowrap;">🏏 P'ship: ${pshipText}</div>
-                                    <div class="fan-this-ov-wrap" style="display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.4); padding:4px 10px; border-radius:8px; border:1px solid #334155;">
-                                        <span style="font-size:0.7rem; color:#94a3b8; text-transform:uppercase; font-weight:bold;">THIS OV:</span>
-                                        <div style="display:flex; gap:3px; flex-wrap:wrap; align-items:center;">${thisOverBadges}</div>
+                                <!-- OVERS & CRR -->
+                                <div style="text-align:center; border-bottom:1px dashed #1e293b; padding-bottom:15px; margin-bottom:15px;">
+                                    <span style="font-size:1.4rem; color:white;">Overs: <b style="font-weight:900;">${oversVal}</b></span>
+                                    <span style="font-size:1rem; color:#94a3b8; margin-left:15px;">CRR: <b style="color:white;">${crrVal}</b></span>${targetTxt ? `<div style="color:#10b981; font-size:0.95rem; font-weight:bold; margin-top:6px;">Target: ${targetTxt}</div>` : ''}
+                                </div>
+
+                                <!-- BOTTOM STRIP (Partnership & This Over) -->
+                                <div style="display:flex; justify-content:center; align-items:center; gap:20px; flex-wrap:wrap;">
+                                    <div style="color:#10b981; font-weight:bold; font-size:0.95rem;">🏏 P'ship: ${pshipText}</div>
+                                    <div class="fan-this-ov-wrap" style="display:flex; align-items:center; gap:6px; background:#0f172a; border:1px solid #334155; padding:6px 14px; border-radius:20px;">
+                                        <span style="font-size:0.75rem; color:#94a3b8; font-weight:bold;">THIS OV:</span>
+                                        <div style="display:flex; gap:4px; align-items:center;">${thisOverBadges}</div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="fan-recent-balls-box">
-                                <span style="font-size:0.65rem; text-transform:uppercase; color:#94a3b8; font-weight:bold; flex-shrink:0;">RECENT:</span>
-                                <div style="display:flex; align-items:center; gap:5px; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;">${recentBadges}</div>
+                            <!-- STANDALONE RECENT BALLS -->
+                            <div class="fan-recent-balls-box" style="margin-top:10px;">
+                                <span style="font-size:0.7rem; text-transform:uppercase; color:#94a3b8; font-weight:bold; flex-shrink:0;">RECENT:</span>
+                                <div style="display:flex; align-items:center; gap:6px; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;">${recentBadges}</div>
                             </div>
                         </div>
                     `;
