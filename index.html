@@ -426,35 +426,49 @@
                     let crrVal = ld.crr || (fallbackBalls > 0 ? ((runsVal / fallbackBalls) * 6).toFixed(2) : '0.00');
                     let targetTxt = ld.target || '';
                     
-                    // 🔥 Build Scoring Engine "Blue Box" Batters
-                    let battersHtml = '';
-                    if (Array.isArray(ld.batters)) {
-                        ld.batters.forEach(b => {
-                            if (b) {
-                                let isStr = b.isStriker ? '<span style="color:#f472b6; font-size:0.75rem; margin-right:4px;">🏏</span>' : '';
-                                let nameColor = b.isStriker ? 'white' : '#cbd5e1';
-                                let runColor = b.isStriker ? '#38bdf8' : '#94a3b8';
-                                battersHtml += `
-                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                                        <div style="color:${nameColor}; font-weight:bold; font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:130px;">${b.name}</div>
-                                        <div style="white-space:nowrap; text-align:right;">
-                                            ${isStr}<span style="color:${runColor}; font-weight:bold; font-size:1rem;">${b.r}</span>
-                                            <span style="color:#64748b; font-size:0.8rem; margin-left:2px;">(${b.b})</span>
-                                        </div>
-                                    </div>
-                                `;
-                            }
-                        });
+                    // 🔥 Bulletproof Batter Extraction
+                    let activeBatters = [];
+                    if (Array.isArray(ld.batters) && ld.batters.some(b => b !== null)) {
+                        activeBatters = ld.batters.filter(b => b !== null);
+                    } else if (fs.current && fs.teams && fs.battingKey) {
+                        let pList = fs.teams[fs.battingKey].players;
+                        if (fs.current.sIdx !== null && pList[fs.current.sIdx]) activeBatters.push({ ...pList[fs.current.sIdx], isStriker: true });
+                        if (fs.current.nsIdx !== null && pList[fs.current.nsIdx]) activeBatters.push({ ...pList[fs.current.nsIdx], isStriker: false });
                     }
 
-                    // 🔥 Build Scoring Engine "Blue Box" Bowler
+                    let battersHtml = '';
+                    activeBatters.forEach(b => {
+                        let isStr = b.isStriker ? '<span style="color:#f472b6; font-size:0.75rem; margin-right:4px;">🏏</span>' : '';
+                        let nameColor = b.isStriker ? 'white' : '#cbd5e1';
+                        let runColor = b.isStriker ? '#38bdf8' : '#94a3b8';
+                        battersHtml += `
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                                <div style="color:${nameColor}; font-weight:bold; font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:130px;">${b.name}</div>
+                                <div style="white-space:nowrap; text-align:right;">
+                                    ${isStr}<span style="color:${runColor}; font-weight:bold; font-size:1rem;">${b.r}</span>
+                                    <span style="color:#64748b; font-size:0.8rem; margin-left:2px;">(${b.b})</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    // 🔥 Bulletproof Bowler Extraction
+                    let activeBowler = ld.bowler || null;
+                    if (!activeBowler && fs.current && fs.teams && fs.bowlingKey) {
+                        let bList = fs.teams[fs.bowlingKey].players;
+                        if (fs.current.bIdx !== null && bList[fs.current.bIdx]) {
+                            let bw = bList[fs.current.bIdx];
+                            activeBowler = { name: bw.name, o: formatOver(bw.o), m: bw.m || 0, r: bw.rc || 0, w: bw.w || 0 };
+                        }
+                    }
+
                     let bowlerHtml = '';
-                    if (ld.bowler) {
-                        let m_val = ld.bowler.m !== undefined ? ld.bowler.m : 0;
+                    if (activeBowler) {
+                        let m_val = activeBowler.m !== undefined ? activeBowler.m : 0;
                         bowlerHtml = `
                             <div style="text-align:right;">
-                                <div style="color:white; font-weight:bold; font-size:0.95rem; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px;">⚾ ${ld.bowler.name}</div>
-                                <div style="color:#94a3b8; font-size:0.85rem;">${ld.bowler.o}-${m_val}-${ld.bowler.r}-<span style="color:#ef4444; font-weight:bold;">${ld.bowler.w}</span></div>
+                                <div style="color:white; font-weight:bold; font-size:0.95rem; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px;">⚾ ${activeBowler.name}</div>
+                                <div style="color:#94a3b8; font-size:0.85rem;">${activeBowler.o}-${m_val}-${activeBowler.r}-<span style="color:#ef4444; font-weight:bold;">${activeBowler.w}</span></div>
                             </div>
                         `;
                     }
@@ -463,22 +477,19 @@
                     let pshipText = fs.current?.currPartnership ? `${fs.current.currPartnership.runs} (${fs.current.currPartnership.balls})` : '0 (0)';
                     let thisOverBadges = fs.current?.currentOverLog ? fs.current.currentOverLog.map(getBadgeHtml).join('') : '';
 
-                    // 🔥 Replicated Scoring Engine "Blue Box" Layout
                     livePanelHtml = `
                         <div class="fan-live-panel-wrap" id="live-panel-${m.match_id}" ${isOpen ? 'style="display: block;"' : ''} onclick="event.stopPropagation()">
                             <div style="border: 2px solid #3b82f6; border-radius: 12px; background: #020617; padding: 15px; position: relative; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);">
                                 
-                                <!-- TOP HEADER -->
                                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
                                     <div style="background:#ef4444; color:white; padding:4px 10px; border-radius:6px; font-size:0.7rem; font-weight:800; letter-spacing:0.5px;">LIVE FEED</div>
                                     <div style="text-align:center; flex:1;">
                                         <div style="color:#3b82f6; font-weight:bold; font-size:1.1rem; text-transform:uppercase;">${tourney}</div>
                                         <div style="color:#cbd5e1; font-size:0.85rem; margin-top:3px;">📍 Batting: <span style="color:#f59e0b; font-weight:bold;">${batTeamName}</span></div>
                                     </div>
-                                    <div style="width:70px;"></div> <!-- Spacer for balance -->
+                                    <div style="width:70px;"></div>
                                 </div>
 
-                                <!-- 3-COLUMN MIDDLE GRID -->
                                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:15px;">
                                     <div class="mob-col" style="flex:1; min-width:140px; text-align:left;">
                                         ${battersHtml}
@@ -497,13 +508,11 @@
                                     </div>
                                 </div>
 
-                                <!-- OVERS & CRR -->
                                 <div style="text-align:center; border-bottom:1px dashed #1e293b; padding-bottom:15px; margin-bottom:15px;">
                                     <span style="font-size:1.4rem; color:white;">Overs: <b style="font-weight:900;">${oversVal}</b></span>
                                     <span style="font-size:1rem; color:#94a3b8; margin-left:15px;">CRR: <b style="color:white;">${crrVal}</b></span>${targetTxt ? `<div style="color:#10b981; font-size:0.95rem; font-weight:bold; margin-top:6px;">Target: ${targetTxt}</div>` : ''}
                                 </div>
 
-                                <!-- BOTTOM STRIP (Partnership & This Over) -->
                                 <div style="display:flex; justify-content:center; align-items:center; gap:20px; flex-wrap:wrap;">
                                     <div style="color:#10b981; font-weight:bold; font-size:0.95rem;">🏏 P'ship: ${pshipText}</div>
                                     <div class="fan-this-ov-wrap" style="display:flex; align-items:center; gap:6px; background:#0f172a; border:1px solid #334155; padding:6px 14px; border-radius:20px;">
@@ -513,7 +522,6 @@
                                 </div>
                             </div>
 
-                            <!-- STANDALONE RECENT BALLS -->
                             <div class="fan-recent-balls-box" style="margin-top:10px;">
                                 <span style="font-size:0.7rem; text-transform:uppercase; color:#94a3b8; font-weight:bold; flex-shrink:0;">RECENT:</span>
                                 <div style="display:flex; align-items:center; gap:6px; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;">${recentBadges}</div>
