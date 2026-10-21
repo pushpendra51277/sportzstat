@@ -37,7 +37,7 @@
         .format-badge { background: #0f172a; color: #38bdf8; border: 1px solid #38bdf8; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; }
 
         .teams { font-size: 1.15rem; font-weight: bold; color: white; margin-bottom: 8px; }
-        .score-line { font-size: 1rem; font-weight: bold; color: #10b981; margin-bottom: 5px; }
+        .score-line { font-size: 1rem; font-weight: bold; color: #10b981; margin-bottom: 10px; }
         .overs { font-size: 0.85rem; color: #94a3b8; font-weight: normal; }
         
         .card-actions-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
@@ -400,7 +400,6 @@
                         scoreText = '<div class="score-line" style="' + scoreColor + '">' + batTeam + ': ' + runsVal + '/' + wktsVal + ' <span class="overs">(' + oversVal + ' ov)</span></div>';
                     }
 
-                    // 🔥 NEW: INNINGS 1 SCORE DISPLAY (Rendered below main score on the banner)
                     let currentInningsNumber = fs.inningsNum || 1;
                     if (fps.innings && Array.isArray(fps.innings) && fps.innings.length > currentInningsNumber) {
                         currentInningsNumber = fps.innings.length; 
@@ -522,11 +521,31 @@
                             }
                         }
 
-                        let recentBadges = Array.isArray(ld.recentBalls) ? ld.recentBalls.map(getBadgeHtml).join('') : '';
+                        // 🔥 FIXED: GET RECENT BALLS DIRECTLY FROM LIVE DATA OR OVER HISTORY
+                        let recentBadges = "";
+                        if (Array.isArray(ld.recentBalls) && ld.recentBalls.length > 0) {
+                            recentBadges = ld.recentBalls.map(getBadgeHtml).join('');
+                        } else if (curObj.recentBalls && Array.isArray(curObj.recentBalls)) {
+                            recentBadges = curObj.recentBalls.map(getBadgeHtml).join('');
+                        } else if (overHistory.length > 0) {
+                            // Fallback: build recent balls from over history log
+                            let allLogs = [];
+                            overHistory.forEach(ov => {
+                                if (ov.currentOverLog) allLogs = allLogs.concat(ov.currentOverLog);
+                            });
+                            recentBadges = allLogs.map(getBadgeHtml).join('');
+                        }
+
                         let pshipRuns = (fs.current && fs.current.currPartnership) ? fs.current.currPartnership.runs : 0;
                         let pshipBalls = (fs.current && fs.current.currPartnership) ? fs.current.currPartnership.balls : 0;
                         let pshipText = pshipRuns + ' (' + pshipBalls + ')';
-                        let thisOverBadges = (fs.current && Array.isArray(fs.current.currentOverLog)) ? fs.current.currentOverLog.map(getBadgeHtml).join('') : '';
+                        
+                        let thisOverBadges = "";
+                        if (fs.current && Array.isArray(fs.current.currentOverLog)) {
+                            thisOverBadges = fs.current.currentOverLog.map(getBadgeHtml).join('');
+                        } else if (ld.currentOverLog) {
+                            thisOverBadges = ld.currentOverLog.map(getBadgeHtml).join('');
+                        }
 
                         let ex = (fs.current && fs.current.extras) ? fs.current.extras : { w: 0, nb: 0, b: 0, lb: 0 };
                         let exTotal = (ex.w || 0) + (ex.nb || 0) + (ex.b || 0) + (ex.lb || 0);
