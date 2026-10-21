@@ -4,17 +4,54 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sportzstat - Tournament Hub</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { darkBg: '#0f172a', cardBg: '#1e293b', accentBlue: '#38bdf8' }
+                }
+            }
+        }
+    </script>
+    
     <style>
-        body { margin: 0; background-color: #020617; color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+        /* ========================================== */
+        /* GLOBAL & DASHBOARD SPECIFIC STYLES         */
+        /* ========================================== */
+        body { margin: 0; background-color: #0f172a; color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow-x: hidden; }
         * { box-sizing: border-box; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Dashboard Modals */
+        .dash-modal-overlay { opacity: 0; pointer-events: none; transition: opacity 0.2s ease-in-out; z-index: 1000; position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        .dash-modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .dash-modal-content { transform: scale(0.95); transition: transform 0.2s ease-in-out; }
+        .dash-modal-overlay.active .dash-modal-content { transform: scale(1); }
+        .wizard-step { display: none; }
+        .wizard-step.active { display: block; animation: dashFadeIn 0.3s ease; }
+        @keyframes dashFadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .form-input { width: 100%; padding: 12px; background: #020617; border: 1px solid #334155; color: white; border-radius: 8px; outline: none; transition: 0.2s; }
+        .form-input:focus { border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
+
+        /* ========================================== */
+        /* OLD ADVANCED TOURNAMENT BUILDER STYLES     */
+        /* ========================================== */
+        #view-advanced { display: none; height: 100vh; overflow: hidden; width: 100%; flex-direction: row; background: #020617; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         .sidebar { width: 280px; background: #0f172a; border-right: 1px solid #1e293b; display: flex; flex-direction: column; flex-shrink: 0; z-index: 20; transition: transform 0.3s ease; }
         .sidebar-header { padding: 25px 20px; border-bottom: 1px solid #1e293b; }
-        .back-link { color: #94a3b8; text-decoration: none; font-size: 0.85rem; font-weight: bold; display: inline-block; margin-bottom: 15px; transition: 0.2s; }
+        .back-link { color: #94a3b8; text-decoration: none; font-size: 0.85rem; font-weight: bold; display: inline-block; margin-bottom: 15px; transition: 0.2s; cursor: pointer; }
         .back-link:hover { color: #38bdf8; }
         .app-title { margin: 0; color: #3b82f6; letter-spacing: 1px; font-size: 1.2rem; text-transform: uppercase; }
         .app-subtitle { margin: 5px 0 0 0; color: #64748b; font-size: 0.75rem; }
@@ -25,7 +62,6 @@
         .nav-item:hover { background: #1e293b; color: white; }
         .nav-item.active { background: #1e293b; color: #38bdf8; border-left-color: #38bdf8; font-weight: bold; }
         
-        /* 🔥 MOBILE FIX: Adjusted padding and scrolling for content area */
         .content-area { flex: 1; overflow-y: auto; background: #020617; position: relative; }
         .hub-section { display: none; animation: fadeIn 0.3s ease; max-width: 1100px; margin: 0 auto; padding: 40px; }
         .hub-section.active { display: block; }
@@ -48,7 +84,6 @@
         .btn-action:hover { opacity: 0.9; }
         
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        
         .tourney-grid { display: grid; grid-template-columns: 1.2fr 2fr; gap: 20px; align-items: start; margin-top: 20px; }
         .team-dual-pane { display: flex; gap: 10px; height: 300px; }
         .team-list-box { flex: 1; background: #0f172a; border: 1px solid #475569; border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; }
@@ -56,8 +91,6 @@
         .team-list-item { background: #1e293b; padding: 8px 10px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; border: 1px solid transparent; transition: 0.2s; }
         .team-list-item:hover { border-color: #38bdf8; background: rgba(56, 189, 248, 0.1); }
         .custom-scroll { overflow-y: auto; padding: 5px; }
-        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
         
         .pool-box { background: #020617; border: 1px solid #334155; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
         .pool-box-header { color: #f59e0b; font-weight: bold; margin-bottom: 10px; font-size: 0.95rem; border-bottom: 1px dashed #334155; padding-bottom: 5px; }
@@ -95,7 +128,6 @@
         .input-dark:focus { border-color: #38bdf8; }
         .w-100 { width: 100%; }
 
-        /* 🔥 MOBILE RESPONSIVENESS AND SUPER ADMIN CLASSES */
         .super-admin-only { display: none !important; }
 
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 15; opacity: 0; transition: opacity 0.3s; }
@@ -122,437 +154,917 @@
 </head>
 <body>
 
-    <!-- 🔥 MOBILE OVERLAY -->
-    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
-
-    <!-- SIDEBAR NAVIGATION -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <a href="../index.html" class="back-link">← Back to Dashboard</a>
-            <h2 class="app-title">TOURNAMENT HUB</h2>
-            <p class="app-subtitle">Cloud Connected</p>
-        </div>
-        
-        <div class="nav-menu">
-            <div class="nav-group-title">Configuration</div>
-            <div class="nav-item active" onclick="switchTab('sec-settings', this)">⚙️ Setup & Teams</div>
-            
-            <!-- 🔥 SUPER ADMIN ONLY TAB -->
-            <div class="nav-item super-admin-only" id="nav-historical" onclick="switchTab('sec-historical', this)">⏳ Historical Data</div>
-
-            <div class="nav-group-title">Scheduling</div>
-            <div class="nav-item" id="nav-fixtures" onclick="switchTab('sec-fixtures', this)">📅 Fixture Engine</div>
-            
-            <div class="nav-group-title">Participants</div>
-            <div class="nav-item" id="nav-squads" onclick="switchTab('sec-squads', this)">👥 Roster Verification</div>
-            
-            <div class="nav-group-title">Launch</div>
-            <div class="nav-item" id="nav-deploy" onclick="switchTab('sec-deploy', this)">🚀 Deploy to Cloud</div>
-        </div>
-    </aside>
-
-    <!-- MAIN CONTENT AREA -->
-    <main class="content-area">
-        
-        <!-- 🔥 MOBILE HEADER (Only visible on phones) -->
-        <div class="mobile-header">
-            <div style="display: flex; align-items: center;">
-                <button class="menu-btn" onclick="toggleSidebar()">☰</button>
-                <h2 id="mobile-app-title" style="margin: 0; color: #3b82f6; font-size: 1.1rem; letter-spacing: 1px; text-transform: uppercase;">Tournament Hub</h2>
+    <!-- ========================================================================= -->
+    <!-- VIEW 1: THE QUICK DASHBOARD HUB (NEW)                                     -->
+    <!-- ========================================================================= -->
+    <div id="view-dashboard" class="block w-full min-h-screen px-4 md:px-8 py-4 pb-20">
+        <!-- GLOBAL HEADER -->
+        <header class="flex justify-between items-center pb-4 border-b border-slate-800 mb-8 max-w-6xl mx-auto">
+            <div class="flex items-center gap-3">
+                <h1 class="text-2xl font-black tracking-wider text-accentBlue uppercase">
+                    📺 Sportzstat
+                </h1>
+                <span class="hidden md:inline-block bg-slate-800 text-slate-300 text-xs font-bold px-2 py-1 rounded">QUICK HUB</span>
             </div>
-        </div>
+            <div class="flex items-center gap-4">
+                <a href="../login.html" class="text-sm font-bold text-slate-400 hover:text-white transition mr-4">← Log Out</a>
+                <div class="text-right hidden md:block">
+                    <div class="text-sm font-bold text-white">Match Admin</div>
+                    <div class="text-xs text-emerald-400">Connected</div>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-slate-700 border-2 border-slate-600 flex items-center justify-center font-bold">
+                    👤
+                </div>
+            </div>
+        </header>
 
-        <!-- MODULE 1: SETUP & TEAMS -->
-        <section id="sec-settings" class="hub-section active">
-            <div class="admin-form">
+        <main class="max-w-6xl mx-auto">
+            <!-- WELCOME SECTION -->
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-white mb-2">Welcome back! 👋</h2>
+                <p class="text-slate-400">What would you like to do today?</p>
+            </div>
+
+            <!-- 3 CORE ACTION CARDS -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                 
-                <div style="background: rgba(59, 130, 246, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #3b82f6; display: flex; gap: 15px; align-items: center; flex-wrap:wrap;">
-                    <div style="flex: 1; min-width:200px;">
-                        <label style="font-size: 0.8rem; color: #38bdf8; margin-bottom: 5px; font-weight: bold; display:block;">Mode Selection</label>
-                        <select id="tournament-mode-select" onchange="toggleTournamentMode(this.value)" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #3b82f6; color: white; border-radius: 6px; outline:none;">
-                            <option value="new">➕ Create New Tournament</option>
-                            <option value="edit">✏️ Edit Existing Tournament</option>
-                        </select>
+                <!-- CARD 1: Start New Match -->
+                <div onclick="openDashModal('wizard-modal')" class="bg-cardBg border border-slate-700 rounded-xl p-6 hover:border-blue-400 hover:shadow-[0_0_20px_rgba(56,189,248,0.15)] transition cursor-pointer flex flex-col group">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl bg-blue-500/20 p-3 rounded-lg group-hover:scale-110 transition-transform">🚀</span>
+                        <h3 class="text-lg font-bold text-blue-400 uppercase tracking-wide">Start New Match</h3>
                     </div>
-                    <div id="existing-tournament-wrapper" style="flex: 1; min-width:200px; display: none;">
-                        <label style="font-size: 0.8rem; color: #f59e0b; margin-bottom: 5px; font-weight: bold; display:block;">Select Tournament to Edit</label>
-                        <select id="existing-tournament-select" onchange="loadExistingTournamentData(this.value)" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #f59e0b; color: white; border-radius: 6px; outline:none;">
-                            <option value="">Loading tournaments...</option>
-                        </select>
-                    </div>
-                    <div id="tourney-status-badge" style="background: rgba(148, 163, 184, 0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid #94a3b8; color: #94a3b8; font-size: 0.85rem; font-weight: bold;">Unsaved</div>
+                    <p class="text-slate-400 text-sm flex-grow mb-6 leading-relaxed">
+                        Create a brand new match, generate a secure PIN, and instantly launch the live scoring engine.
+                    </p>
+                    <button class="w-full py-3 rounded-lg font-bold text-white shadow-lg bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 transition-all">
+                        START NOW ➔
+                    </button>
                 </div>
 
-                <h3 style="margin-top: 0; margin-bottom: 15px; color:white; border-bottom: 1px solid #334155; padding-bottom: 10px;">1. Tournament Details & Teams</h3>
+                <!-- CARD 2: Schedule Fixture -->
+                <div onclick="openDashModal('scheduler-modal')" class="bg-cardBg border border-slate-700 rounded-xl p-6 hover:border-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.15)] transition cursor-pointer flex flex-col group">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl bg-emerald-500/20 p-3 rounded-lg group-hover:scale-110 transition-transform">📅</span>
+                        <h3 class="text-lg font-bold text-emerald-400 uppercase tracking-wide">Schedule Fixture</h3>
+                    </div>
+                    <p class="text-slate-400 text-sm flex-grow mb-6 leading-relaxed">
+                        Add an upcoming match to an existing tournament without disrupting current live games.
+                    </p>
+                    <button class="w-full py-3 rounded-lg font-bold text-white shadow-lg bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 transition-all">
+                        QUICK SCHEDULE ➔
+                    </button>
+                </div>
+
+                <!-- CARD 3: Inject Match Data -->
+                <div onclick="openDashModal('injector-modal')" class="bg-cardBg border border-slate-700 rounded-xl p-6 hover:border-amber-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] transition cursor-pointer flex flex-col group">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl bg-amber-500/20 p-3 rounded-lg group-hover:scale-110 transition-transform">📥</span>
+                        <h3 class="text-lg font-bold text-amber-400 uppercase tracking-wide">Inject Match Data</h3>
+                    </div>
+                    <p class="text-slate-400 text-sm flex-grow mb-6 leading-relaxed">
+                        Manually paste scorecard data or a summary for a completed historical match.
+                    </p>
+                    <button class="w-full py-3 rounded-lg font-bold text-white shadow-lg bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 transition-all">
+                        INJECT DATA ➔
+                    </button>
+                </div>
+            </div>
+
+            <!-- ACTIVE TOURNAMENTS & ADVANCED BRIDGE -->
+            <div>
+                <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4 flex-wrap gap-4">
+                    <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                        📋 Recent Tournaments
+                    </h3>
+                    <!-- THE BRIDGE BUTTON: Switches view to old HTML without reloading -->
+                    <button onclick="toggleView('advanced')" class="text-sm font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/50 px-4 py-2 rounded transition-colors flex items-center gap-2">
+                        ⚙️ Advanced Tournament Builder ➔
+                    </button>
+                </div>
                 
-                <div class="tourney-grid">
-                    <div class="card" style="margin:0; height: fit-content;">
-                        <div class="input-group">
-                            <label>Tournament Name *</label>
-                            <input type="text" id="t-name" placeholder="e.g. Veda Premier League">
+                <div id="dash-tourney-list-container" class="flex flex-col gap-3">
+                    <div class="text-slate-500 italic">Loading your tournaments...</div>
+                </div>
+            </div>
+        </main>
+
+        <!-- DASHBOARD MODALS -->
+        <!-- WIZARD -->
+        <div id="wizard-modal" class="dash-modal-overlay">
+            <div class="dash-modal-content bg-cardBg border border-blue-500 rounded-xl w-full max-w-2xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-900 sticky top-0 z-10">
+                    <h2 class="text-xl font-bold text-white">🚀 Start New Match</h2>
+                    <button onclick="closeDashModal('wizard-modal')" class="text-slate-400 hover:text-red-400 text-2xl font-bold leading-none">&times;</button>
+                </div>
+                <div class="p-6 overflow-y-auto custom-scroll">
+                    <!-- Progress Bar -->
+                    <div class="flex justify-between mb-8 relative">
+                        <div class="absolute top-1/2 left-0 w-full h-1 bg-slate-700 -z-10 -translate-y-1/2 rounded"></div>
+                        <div id="wiz-prog-1" class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold ring-4 ring-cardBg">1</div>
+                        <div id="wiz-prog-2" class="w-8 h-8 rounded-full bg-slate-700 text-slate-400 flex items-center justify-center font-bold ring-4 ring-cardBg transition-colors">2</div>
+                        <div id="wiz-prog-3" class="w-8 h-8 rounded-full bg-slate-700 text-slate-400 flex items-center justify-center font-bold ring-4 ring-cardBg transition-colors">3</div>
+                    </div>
+                    <!-- Step 1 -->
+                    <div id="wiz-step-1" class="wizard-step active">
+                        <h3 class="text-lg font-bold text-accentBlue mb-4">Who is playing today?</h3>
+                        <div class="mb-4">
+                            <label class="block text-sm font-bold text-slate-400 mb-1">Tournament / Event Name (Optional)</label>
+                            <input type="text" id="wiz-tname" class="form-input" placeholder="e.g., Sunday Friendly">
                         </div>
-                        
-                        <div class="input-group">
-                            <label>Match Tier (Scouting Context) *</label>
-                            <select id="t-tier">
-                                <option value="Local">Tier 2: Local / Club / Practice</option>
-                                <option value="Inter-Division">Tier 1: Inter-Division / Elite</option>
-                            </select>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-400 mb-1">Team 1</label>
+                                <input type="text" id="wiz-team1" class="form-input" placeholder="Enter Team 1 Name">
+                            </div>
+                            <div class="hidden md:block text-center font-black text-slate-600 mt-6">VS</div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-400 mb-1">Team 2</label>
+                                <input type="text" id="wiz-team2" class="form-input" placeholder="Enter Team 2 Name">
+                            </div>
                         </div>
-                        
-                        <div class="grid-2">
-                            <div class="input-group">
-                                <label>Format *</label>
-                                <select id="t-format">
+                        <button onclick="nextWizardStep(2)" class="w-full mt-8 py-3 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-500 transition">
+                            Next: Match Rules ➔
+                        </button>
+                    </div>
+                    <!-- Step 2 -->
+                    <div id="wiz-step-2" class="wizard-step">
+                        <h3 class="text-lg font-bold text-accentBlue mb-4">Match Rules & Setup</h3>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-400 mb-1">Format</label>
+                                <select id="wiz-format" class="form-input" onchange="autoSetOvers(this.value, 'wiz-overs')">
                                     <option value="T20">T20</option>
                                     <option value="One Day">One Day</option>
-                                    <option value="Multi-Day">Multi-Day</option>
                                     <option value="T10">T10</option>
                                 </select>
                             </div>
-                            <div class="input-group">
-                                <label>Starting Date *</label>
-                                <input type="date" id="t-date" style="color-scheme: dark;">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-400 mb-1">Overs Per Innings</label>
+                                <input type="number" id="wiz-overs" class="form-input" value="20">
                             </div>
                         </div>
-                        <div class="input-group" style="margin-bottom:0;">
-                            <label>Points System (Per Win)</label>
-                            <input type="number" id="tWinPoints" value="2">
+                        <div class="mb-6">
+                            <label class="block text-sm font-bold text-slate-400 mb-1">Venue / Ground (Optional)</label>
+                            <input type="text" id="wiz-venue" class="form-input" placeholder="e.g., Central Park Ground">
+                        </div>
+                        <div class="flex gap-4 mt-8">
+                            <button onclick="nextWizardStep(1)" class="flex-1 py-3 rounded-lg font-bold text-slate-300 bg-slate-700 hover:bg-slate-600 transition">⬅ Back</button>
+                            <button onclick="createWizardMatch()" id="wiz-submit-btn" class="flex-[2] py-3 rounded-lg font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 transition">🚀 CREATE MATCH</button>
                         </div>
                     </div>
-
-                    <div class="card" style="margin:0;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <label style="color:#94a3b8; font-weight:bold; font-size:0.8rem; text-transform:uppercase;">Select Teams</label>
-                            <span id="teamCountBadge" style="background:#10b981; color:#020617; padding:3px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold;">0 Selected</span>
+                    <!-- Step 3 -->
+                    <div id="wiz-step-3" class="wizard-step text-center">
+                        <div class="text-5xl mb-4">🎉</div>
+                        <h3 class="text-2xl font-black text-emerald-400 mb-2">Match Created Successfully!</h3>
+                        <p class="text-slate-400 text-sm mb-6">Your match is live in the cloud. Send this invite to your scorer.</p>
+                        <div class="bg-black/50 border border-slate-700 rounded-lg p-4 text-left mb-6 font-mono text-sm text-slate-300 relative whitespace-pre-wrap" id="wiz-full-invite-text"></div>
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <button onclick="copyWizardInvite()" class="flex-1 py-3 rounded-lg font-bold text-white bg-slate-700 hover:bg-slate-600 transition flex items-center justify-center gap-2">📋 Copy Invite</button>
+                            <button onclick="shareWizardWhatsApp()" class="flex-[2] py-3 rounded-lg font-bold text-white bg-[#25D366] hover:bg-[#20b958] transition flex items-center justify-center gap-2">💬 Send via WhatsApp</button>
                         </div>
-                        
-                        <!-- 🔥 BOLD "CREATE NEW TEAM" RIGHT BELOW SELECT TEAMS HEADING -->
-                        <div style="display: flex; gap: 5px; margin-bottom: 15px;">
-                            <input type="text" id="newTeamName" placeholder="Create new team..." style="flex:1; padding:10px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:white; font-weight: bold; font-size: 0.95rem;">
-                            <button type="button" class="btn-success" style="padding: 10px 20px; font-size: 0.9rem;" onclick="createNewTeamNatively()">+ ADD</button>
-                        </div>
-
-                        <input type="text" id="teamSearch" placeholder="🔍 Search database teams..." style="width:100%; padding:8px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:white; margin-bottom: 10px;" onkeyup="renderTeamPanes()">
-                        
-                        <div class="team-dual-pane">
-                            <div class="team-list-box">
-                                <div class="team-list-header">Available Teams</div>
-                                <div class="custom-scroll" id="available-teams-list" style="height: 250px;">
-                                    <div style="text-align:center; padding:20px; color:#64748b;">Loading DB...</div>
-                                </div>
-                            </div>
-                            
-                            <div class="team-list-box" style="border-color: #10b981;">
-                                <div class="team-list-header" style="background: #047857;">Selected Teams</div>
-                                <div class="custom-scroll" id="selected-teams-list" style="height: 250px;"></div>
-                            </div>
+                        <div class="mt-8 pt-6 border-t border-slate-800">
+                            <p class="text-slate-400 mb-3 text-sm">Are you scoring this match yourself?</p>
+                            <button onclick="openScorerSelf()" class="w-full py-3 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-500 transition">🏏 Open Live Scorer Now</button>
                         </div>
                     </div>
-                </div>
-
-                <div style="border-top: 1px solid #334155; margin-top: 30px; padding-top: 20px;">
-                    <button type="button" id="btn-save-proceed" style="background: linear-gradient(90deg, #f59e0b, #ea580c); width: 100%; padding: 18px; font-size: 1.2rem; font-weight: bold; border-radius: 8px; border: none; color: white; cursor:pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4);" onclick="saveTournamentAndProceed()">Save Tournament & Proceed to Fixtures ➡</button>
                 </div>
             </div>
-        </section>
+        </div>
 
-        <!-- 🔥 MODULE: HISTORICAL DATA INJECTOR (SUPER ADMIN ONLY) -->
-        <section id="sec-historical" class="hub-section">
-            <div class="admin-form">
-                <h3 style="margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 10px;">⏳ Historical Match Injector</h3>
-                <p style="color:#94a3b8; font-size:0.85rem; margin-bottom: 25px;">Enter past performances directly. This creates a hidden, completed match in the database that instantly merges into the player's Master Career Stats.</p>
-                
-                <div class="card" style="margin-bottom: 0;">
-                    <div class="grid-2">
-                        <div class="input-group">
-                            <label>Match Date *</label>
-                            <input type="date" id="hist-date" style="color-scheme: dark;">
+        <!-- SCHEDULER -->
+        <div id="scheduler-modal" class="dash-modal-overlay">
+            <div class="dash-modal-content bg-cardBg border border-emerald-500 rounded-xl w-full max-w-lg shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-900 sticky top-0 z-10">
+                    <h2 class="text-xl font-bold text-white">📅 Schedule Fixture</h2>
+                    <button onclick="closeDashModal('scheduler-modal')" class="text-slate-400 hover:text-red-400 text-2xl font-bold leading-none">&times;</button>
+                </div>
+                <div class="p-6 overflow-y-auto custom-scroll">
+                    <p class="text-slate-400 text-sm mb-6">Schedule an upcoming match for an existing tournament.</p>
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-slate-400 mb-1">Select Tournament *</label>
+                        <select id="sch-tourney" class="form-input"><option value="">Loading tournaments...</option></select>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-400 mb-1">Team 1</label>
+                            <input type="text" id="sch-team1" class="form-input" placeholder="Team 1 Name">
                         </div>
-                        <div class="input-group">
-                            <label>Player Name (Must match Master DB exactly) *</label>
-                            <input type="text" id="hist-player" placeholder="e.g. Rajat Patidar">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-400 mb-1">Team 2</label>
+                            <input type="text" id="sch-team2" class="form-input" placeholder="Team 2 Name">
                         </div>
                     </div>
-
-                    <h4 style="color: #f59e0b; margin-top: 15px; margin-bottom: 10px; border-bottom: 1px dashed #334155; padding-bottom: 5px;">Batting Stats</h4>
-                    <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));">
-                        <div class="input-group"><label>Runs</label><input type="number" id="hist-runs" value="0"></div>
-                        <div class="input-group"><label>Balls Faced</label><input type="number" id="hist-bf" value="0"></div>
-                        <div class="input-group"><label>Fours</label><input type="number" id="hist-4s" value="0"></div>
-                        <div class="input-group"><label>Sixes</label><input type="number" id="hist-6s" value="0"></div>
-                        <div class="input-group">
-                            <label>Out?</label>
-                            <select id="hist-out">
-                                <option value="true">Yes</option>
-                                <option value="false">Not Out</option>
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-400 mb-1">Date</label>
+                            <input type="date" id="sch-date" class="form-input" style="color-scheme: dark;">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-400 mb-1">Format</label>
+                            <select id="sch-format" class="form-input">
+                                <option value="T20">T20</option>
+                                <option value="One Day">One Day</option>
+                                <option value="T10">T10</option>
                             </select>
                         </div>
                     </div>
-
-                    <h4 style="color: #10b981; margin-top: 10px; margin-bottom: 10px; border-bottom: 1px dashed #334155; padding-bottom: 5px;">Bowling Stats</h4>
-                    <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));">
-                        <div class="input-group"><label>Overs</label><input type="number" id="hist-o" value="0" step="0.1"></div>
-                        <div class="input-group"><label>Maidens</label><input type="number" id="hist-m" value="0"></div>
-                        <div class="input-group"><label>Runs Conceded</label><input type="number" id="hist-rc" value="0"></div>
-                        <div class="input-group"><label>Wickets</label><input type="number" id="hist-wkts" value="0"></div>
-                    </div>
-
-                    <h4 style="color: #8b5cf6; margin-top: 10px; margin-bottom: 10px; border-bottom: 1px dashed #334155; padding-bottom: 5px;">Fielding Stats</h4>
-                    <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));">
-                        <div class="input-group"><label>Catches</label><input type="number" id="hist-catches" value="0"></div>
-                        <div class="input-group"><label>Stumpings</label><input type="number" id="hist-stumpings" value="0"></div>
-                        <div class="input-group"><label>Run Outs</label><input type="number" id="hist-runouts" value="0"></div>
-                    </div>
-
-                    <button type="button" class="btn-primary" style="background: #10b981; width: 100%; margin-top: 15px; font-size: 1.1rem; padding: 15px;" onclick="injectHistoricalMatch()">💾 Inject Historical Data to Cloud</button>
+                    <button onclick="submitScheduledFixture()" id="sch-submit-btn" class="w-full py-3 rounded-lg font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition">📅 Push Fixture to Cloud</button>
                 </div>
             </div>
-        </section>
+        </div>
 
-        <!-- MODULE 2: FIXTURE ENGINE & MASTER CANVAS -->
-        <section id="sec-fixtures" class="hub-section">
-            <div class="admin-form">
-                <h3 style="margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">2. Multi-Stage Fixture Builder</h3>
-                <p style="color:#94a3b8; font-size:0.85rem; margin-top:0;">Use the Helper Engines to auto-generate matches, then review and edit them in the Master Canvas.</p>
-                
-                <div class="sub-tab-nav" style="background:#1e293b; margin:0 0 20px 0; padding:15px 20px 0 20px; border-radius: 8px;">
-                    <button type="button" class="sub-tab-btn active" onclick="switchSubTab('tab-pools', this)">1. Group Stage Engine</button>
-                    <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-knockouts', this)">2. Knockout Engine</button>
-                    <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-canvas', this)">3. Master Fixture Canvas</button>
+        <!-- INJECTOR -->
+        <div id="injector-modal" class="dash-modal-overlay">
+            <div class="dash-modal-content bg-cardBg border border-amber-500 rounded-xl w-full max-w-xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-900 sticky top-0 z-10">
+                    <h2 class="text-xl font-bold text-white">📥 Inject Match Data</h2>
+                    <button onclick="closeDashModal('injector-modal')" class="text-slate-400 hover:text-red-400 text-2xl font-bold leading-none">&times;</button>
                 </div>
-
-                <!-- ENGINE 1: LEAGUES & DYNAMIC POOLS -->
-                <div id="tab-pools" class="sub-tab-pane active">
-                    <div style="background: rgba(56, 189, 248, 0.05); padding: 20px; border-radius: 8px; border: 1px dashed #38bdf8; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-                        <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Number of Pools:</label>
-                        <select id="pool-count-select" onchange="handlePoolSelection(this)" class="postings-select" style="width: auto;">
-                            <option value="1">1 Pool (Single League)</option>
-                            <option value="2">2 Pools</option>
-                            <option value="3">3 Pools</option>
-                            <option value="4">4 Pools</option>
-                            <option value="8">8 Pools</option>
-                            <option value="custom" style="color: #38bdf8; font-weight: bold;">⚙️ Custom Number...</option>
-                        </select>
-                        
-                        <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem; margin-left: 20px;">Play Each Other:</label>
-                        <select id="pool-round-select" class="postings-select" style="width: auto;">
-                            <option value="single">Once (Single Header)</option>
-                            <option value="double">Twice (Double Header)</option>
-                        </select>
-                        <button type="button" class="btn-primary" style="margin-left: auto;" onclick="generatePoolMatches()">⚙️ Generate Group Matches</button>
+                <div class="p-6 overflow-y-auto custom-scroll">
+                    <p class="text-slate-400 text-sm mb-6">Bypass the live engine and add a completed scorecard summary to a tournament.</p>
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-slate-400 mb-1">Tournament / Event</label>
+                        <input type="text" id="inj-tourney" class="form-input" placeholder="e.g. Legacy League 2023">
                     </div>
-
-                    <div class="pools-workspace">
-                        <div class="staging-sidebar">
-                            <h4 style="color: #3b82f6; margin-top: 0; font-size: 0.95rem;">Unassigned Teams</h4>
-                            <div id="staging-teams-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;"></div>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="p-4 bg-black/30 border border-slate-700 rounded-lg">
+                            <label class="block text-sm font-bold text-blue-400 mb-2">Team 1 (Bat First)</label>
+                            <input type="text" id="inj-t1-name" class="form-input mb-2 text-sm" placeholder="Name">
+                            <div class="flex gap-2">
+                                <input type="number" id="inj-t1-r" class="form-input text-sm" placeholder="Runs">
+                                <input type="number" id="inj-t1-w" class="form-input text-sm" placeholder="Wkts">
+                                <input type="text" id="inj-t1-o" class="form-input text-sm" placeholder="Overs">
+                            </div>
                         </div>
-                        <div>
-                            <h4 style="color: #10b981; margin: 0 0 10px 0; font-size: 0.95rem;">Active Pools</h4>
-                            <div id="pools-container-grid" class="pools-container-grid"></div>
+                        <div class="p-4 bg-black/30 border border-slate-700 rounded-lg">
+                            <label class="block text-sm font-bold text-emerald-400 mb-2">Team 2 (Chase)</label>
+                            <input type="text" id="inj-t2-name" class="form-input mb-2 text-sm" placeholder="Name">
+                            <div class="flex gap-2">
+                                <input type="number" id="inj-t2-r" class="form-input text-sm" placeholder="Runs">
+                                <input type="number" id="inj-t2-w" class="form-input text-sm" placeholder="Wkts">
+                                <input type="text" id="inj-t2-o" class="form-input text-sm" placeholder="Overs">
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- ENGINE 2: PLAYOFFS & KNOCKOUTS -->
-                <div id="tab-knockouts" class="sub-tab-pane">
-                    <div style="background: rgba(16, 185, 129, 0.05); padding: 20px; border-radius: 8px; border: 1px dashed #10b981; margin-bottom: 20px;">
-                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap:wrap;">
-                            <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Playoff Structure:</label>
-                            <select id="ko-template-select" class="postings-select" style="width: auto; flex:1; min-width:200px;">
-                                <option value="standard">📌 Standard Knockout Bracket (TBD Placeholders)</option>
-                                <option value="direct">🔥 Auto-Fill Bracket (Calculates Byes & Plugs Real Teams)</option>
-                                <option value="rolling">🔄 Rolling Knockout (Passes odd team to next round)</option>
-                                <option value="ipl">🏏 IPL Style (Qualifier 1, Eliminator, Qualifier 2, Final)</option>
-                                <option value="super">🏆 Super League (Super Six / Super Eight)</option>
-                            </select>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap:wrap;">
-                            <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Teams Involved:</label>
-                            <select id="ko-size-select" class="postings-select" style="width: auto;">
-                                <option value="2">Top 2 (Final Only)</option>
-                                <option value="4">Top 4 / Semi-Finals</option>
-                                <option value="8">Top 8 / Quarter-Finals</option>
-                                <option value="16">Top 16 / Round of 16</option>
-                            </select>
-                            <button type="button" class="btn-success" style="margin-left:auto;" onclick="generateKnockoutBracket()">⚙️ Generate Bracket</button>
-                        </div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-bold text-slate-400 mb-1">Match Result</label>
+                        <input type="text" id="inj-result" class="form-input" placeholder="e.g. Team A won by 20 runs">
                     </div>
-                    <p style="color:#94a3b8; font-size:0.85rem; font-style:italic;">Note: Generating matches will instantly push them into the Master Canvas where you can edit any TBD placeholders to real teams.</p>
-                </div>
-
-                <!-- THE MASTER CANVAS -->
-                <div id="tab-canvas" class="sub-tab-pane">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
-                        <p style="color: #94a3b8; font-size: 0.85rem; margin:0;">The Single Source of Truth. You can manually edit any team, placeholder, or match name below.</p>
-                        <button type="button" class="btn-outline" style="padding: 8px 15px; font-size:0.85rem;" onclick="addManualMatch()">+ Add Custom Match Row</button>
-                    </div>
-                    
-                    <div id="canvas-container">
-                        <div style="text-align: center; padding: 40px; color: #64748b;">
-                            <p style="font-size: 1.2rem; margin-bottom: 10px;">No Matches Generated Yet</p>
-                            <p style="font-size: 0.9rem;">Use the engines above to auto-generate matches, or add rows manually.</p>
-                        </div>
-                    </div>
-                    
-                    <button type="button" style="background: #f59e0b; width:100%; padding:15px; border:none; border-radius:6px; color:black; font-size: 1.1rem; font-weight:bold; margin-top:20px; cursor:pointer;" onclick="lockCanvasAndProceed()">Save Fixtures & Proceed to Squads ➡️</button>
-                </div>
-
-            </div>
-        </section>
-
-        <!-- MODULE 3: SQUAD VERIFICATION -->
-        <section id="sec-squads" class="hub-section">
-            <div class="admin-form">
-                <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px;">3. Verify & Select Squads</h3>
-                <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 0; margin-bottom: 15px;">Select the specific players from the Master DB who are allowed to play in this tournament.</p>
-                
-                <div style="margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
-                    <div class="input-group" style="flex:1; margin:0; min-width: 250px;">
-                        <label>Select Team to Review</label>
-                        <select id="squad-team-select" onchange="loadWizardSquad(this.value)" style="border-color: #3b82f6;">
-                            <option value="">Select a team...</option>
-                        </select>
-                    </div>
-                    <button type="button" class="btn-success" style="margin-top:20px;" onclick="openPlayerModal()">➕ Quick-Add New Player</button>
-                    <button type="button" class="btn-action" style="margin-top:20px; background:#f59e0b; color:black;" onclick="toggleBulkForm()">⚡ Bulk / Excel Upload</button>
-                </div>
-
-                <!-- BULK REGISTRATION GRID IN TOURNAMENT HUB -->
-                <div id="bulk-registration-panel" class="hidden" style="background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #f59e0b; margin-bottom: 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                        <div>
-                            <h3 style="color: #f59e0b; margin: 0 0 5px 0;">⚡ Bulk Squad Registration</h3>
-                            <p style="color: #94a3b8; font-size: 0.85rem; margin: 0;">Fill manually OR upload an Excel file.<br>
-                            <b>Excel Columns:</b> A: Name | B: Father | C: DOB | D: Role | E: Bat Style | F: Bowl Arm | G: Bowl Type | H: Reg No</p>
-                        </div>
-                        <div>
-                            <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
-                            <button type="button" class="btn-action" style="background: #10b981; border: none; padding: 10px 15px; color: white;" onclick="document.getElementById('excel-upload').click()">
-                                📁 Upload Excel (.xlsx)
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="custom-scroll" style="max-height: 450px; overflow-y: auto; overflow-x: auto; background: #0f172a; border-radius: 6px; padding: 10px;">
-                        <table style="width: 100%; border-collapse: collapse; text-align: left; min-width: 1200px;">
-                            <thead style="background: #0f172a; position: sticky; top: -10px; z-index: 10;">
-                                <tr>
-                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">#</th>
-                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Full Name *</th>
-                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Father's Name</th>
-                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">DOB</th>
-                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Playing Role</th>
-                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Batting Style</th>
-                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Bowling Arm</th>
-                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Bowling Type</th>
-                                    <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Reg No.</th>
-                                </tr>
-                            </thead>
-                            <tbody id="bulk-player-grid">
-                                <!-- JavaScript will inject rows here -->
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
-                        <button type="button" class="btn-action" style="background: #475569;" onclick="addBulkRows(5, true)">+ Add 5 Empty Rows</button>
-                        <button type="button" class="btn-action" style="background: #10b981; font-size: 1rem; padding: 12px 20px;" onclick="submitBulkSquad()">💾 Save & Add to Squad</button>
-                    </div>
-                </div>
-
-                <div id="wizard-player-slots-container">
-                    <div style="text-align: center; color: #475569; padding: 40px; font-style: italic;">Select a team above to view and assign players.</div>
-                </div>
-                
-                <div style="margin-top:25px; border-top: 1px solid #334155; padding-top:20px;">
-                    <button type="button" style="background: #3b82f6; width: 100%; padding: 15px; font-size: 1.1rem; font-weight: bold; border-radius: 6px; border: none; color: white; cursor:pointer;" onclick="finishSquadsAndProceed()">All Squads Verified - Proceed to Deploy ➡️</button>
+                    <button onclick="submitInjection()" id="inj-submit-btn" class="w-full py-3 rounded-lg font-bold text-white bg-amber-600 hover:bg-amber-500 transition">💾 Inject Match Permanently</button>
                 </div>
             </div>
-        </section>
-
-        <!-- MODULE 4: DEPLOYMENT -->
-        <section id="sec-deploy" class="hub-section">
-            <div class="admin-form" style="overflow-x: auto;">
-                <h3 style="margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 10px;">4. Official Postings & Deployment</h3>
-                <p style="color:#94a3b8; font-size:0.8rem; margin-bottom: 15px;">Review your finalized fixtures and PINs. Once confirmed, inject them into the live cloud database.</p>
-                
-                <table class="postings-grid">
-                    <thead>
-                        <tr><th style="width: 60%; border-right: 1px solid #1e293b;">Fixture Details</th><th style="width: 40%; text-align: center;">Cloud Status & PIN</th></tr>
-                    </thead>
-                    <tbody id="postings-body">
-                        <tr><td colspan="2" style="text-align: center; padding: 40px; color: #64748b; font-style: italic;">Build your fixtures in the Match Canvas to view postings.</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div id="deploy-action-card" class="card" style="border-color: #f59e0b; background: rgba(245, 158, 11, 0.05); text-align: center; padding: 40px;">
-                <h3 style="color: #f59e0b; font-size: 1.5rem; margin-top: 0;">Ready to go live?</h3>
-                <p style="color: #cbd5e1; max-width: 600px; margin: 0 auto 25px auto;">Review the PINs generated above. Publishing will secure the database and make these matches visible on the Fan Portal.</p>
-                <button type="button" id="btnDeploy" class="btn-primary" style="background: #f59e0b; font-size: 1.2rem; padding: 15px 30px;" onclick="saveMatchesToCloud()">🚀 CONFIRM & DEPLOY TO CLOUD</button>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- QUICK-ADD PLAYER MODAL -->
-    <div class="modal-overlay" id="quick-player-modal" onclick="closeAllModals(event)">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <button type="button" class="modal-close" onclick="closeAllModals()">&times;</button>
-            <h3 style="margin-top: 0; color: #10b981;">➕ Quick-Add Player</h3>
-            <p style="font-size: 0.8rem; color: #94a3b8;">Target Team: <strong id="quick-player-target-team" style="color:white;"></strong></p>
-            
-            <div class="input-group"><label>Full Name *</label><input type="text" id="quick-p-name" class="input-dark w-100"></div>
-            <div class="input-group"><label>Father's Name</label><input type="text" id="quick-p-father" class="input-dark w-100"></div>
-            <div class="input-group"><label>Date of Birth</label><input type="date" id="quick-p-dob" class="input-dark w-100" style="color-scheme: dark;"></div>
-            <div class="input-group"><label>Primary Role</label>
-                <select id="quick-p-role" class="input-dark w-100">
-                    <option>Batter</option><option>Bowler</option><option>All-Rounder</option><option>Wicketkeeper</option>
-                </select>
-            </div>
-            
-            <div class="grid-2">
-                <div class="input-group"><label>Batting Style</label>
-                    <select id="quick-p-bat" class="input-dark w-100">
-                        <option value="Right-hand bat">Right-hand bat</option><option value="Left-hand bat">Left-hand bat</option>
-                    </select>
-                </div>
-                <div class="input-group"><label>Bowling Arm</label>
-                    <select id="quick-p-barm" class="input-dark w-100">
-                        <option value="Right-arm">Right-arm</option><option value="Left-arm">Left-arm</option><option value="None">None</option>
-                    </select>
-                </div>
-            </div>
-            <div class="grid-2">
-                <div class="input-group"><label>Bowling Type</label>
-                    <select id="quick-p-btype" class="input-dark w-100">
-                        <option value="Fast">Fast</option><option value="Medium">Medium</option><option value="Off-spin">Off-spin</option><option value="Leg-spin">Leg-spin</option><option value="None">None</option>
-                    </select>
-                </div>
-                <div class="input-group"><label>Reg No.</label><input type="text" id="quick-p-reg" class="input-dark w-100" style="text-transform:uppercase;"></div>
-            </div>
-            
-            <button type="button" class="btn-success" style="width: 100%;" onclick="quickSavePlayer(this)">Save to Master & Add to Squad</button>
         </div>
     </div>
 
-    <!-- MAIN LOGIC ENGINE -->
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 2: THE ADVANCED TOURNAMENT BUILDER (OLD CODE 100% UNTOUCHED)         -->
+    <!-- ========================================================================= -->
+    <div id="view-advanced">
+        
+        <!-- 🔥 MOBILE OVERLAY -->
+        <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <!-- BRIDGE LINK: Switches back to the Quick Hub -->
+                <a href="#" onclick="toggleView('dashboard')" class="back-link">← Back to Quick Hub</a>
+                <h2 class="app-title">TOURNAMENT HUB</h2>
+                <p class="app-subtitle">Cloud Connected</p>
+            </div>
+            
+            <div class="nav-menu">
+                <div class="nav-group-title">Configuration</div>
+                <div class="nav-item active" onclick="switchTab('sec-settings', this)">⚙️ Setup & Teams</div>
+                
+                <!-- 🔥 SUPER ADMIN ONLY TAB -->
+                <div class="nav-item super-admin-only" id="nav-historical" onclick="switchTab('sec-historical', this)">⏳ Historical Data</div>
+
+                <div class="nav-group-title">Scheduling</div>
+                <div class="nav-item" id="nav-fixtures" onclick="switchTab('sec-fixtures', this)">📅 Fixture Engine</div>
+                
+                <div class="nav-group-title">Participants</div>
+                <div class="nav-item" id="nav-squads" onclick="switchTab('sec-squads', this)">👥 Roster Verification</div>
+                
+                <div class="nav-group-title">Launch</div>
+                <div class="nav-item" id="nav-deploy" onclick="switchTab('sec-deploy', this)">🚀 Deploy to Cloud</div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="content-area">
+            
+            <!-- 🔥 MOBILE HEADER (Only visible on phones) -->
+            <div class="mobile-header">
+                <div style="display: flex; align-items: center;">
+                    <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+                    <h2 id="mobile-app-title" style="margin: 0; color: #3b82f6; font-size: 1.1rem; letter-spacing: 1px; text-transform: uppercase;">Tournament Hub</h2>
+                </div>
+            </div>
+
+            <!-- MODULE 1: SETUP & TEAMS -->
+            <section id="sec-settings" class="hub-section active">
+                <div class="admin-form">
+                    
+                    <div style="background: rgba(59, 130, 246, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #3b82f6; display: flex; gap: 15px; align-items: center; flex-wrap:wrap;">
+                        <div style="flex: 1; min-width:200px;">
+                            <label style="font-size: 0.8rem; color: #38bdf8; margin-bottom: 5px; font-weight: bold; display:block;">Mode Selection</label>
+                            <select id="tournament-mode-select" onchange="toggleTournamentMode(this.value)" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #3b82f6; color: white; border-radius: 6px; outline:none;">
+                                <option value="new">➕ Create New Tournament</option>
+                                <option value="edit">✏️ Edit Existing Tournament</option>
+                            </select>
+                        </div>
+                        <div id="existing-tournament-wrapper" style="flex: 1; min-width:200px; display: none;">
+                            <label style="font-size: 0.8rem; color: #f59e0b; margin-bottom: 5px; font-weight: bold; display:block;">Select Tournament to Edit</label>
+                            <select id="existing-tournament-select" onchange="loadExistingTournamentData(this.value)" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #f59e0b; color: white; border-radius: 6px; outline:none;">
+                                <option value="">Loading tournaments...</option>
+                            </select>
+                        </div>
+                        <div id="tourney-status-badge" style="background: rgba(148, 163, 184, 0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid #94a3b8; color: #94a3b8; font-size: 0.85rem; font-weight: bold;">Unsaved</div>
+                    </div>
+
+                    <h3 style="margin-top: 0; margin-bottom: 15px; color:white; border-bottom: 1px solid #334155; padding-bottom: 10px;">1. Tournament Details & Teams</h3>
+                    
+                    <div class="tourney-grid">
+                        <div class="card" style="margin:0; height: fit-content;">
+                            <div class="input-group">
+                                <label>Tournament Name *</label>
+                                <input type="text" id="t-name" placeholder="e.g. Veda Premier League">
+                            </div>
+                            
+                            <div class="input-group">
+                                <label>Match Tier (Scouting Context) *</label>
+                                <select id="t-tier">
+                                    <option value="Local">Tier 2: Local / Club / Practice</option>
+                                    <option value="Inter-Division">Tier 1: Inter-Division / Elite</option>
+                                </select>
+                            </div>
+                            
+                            <div class="grid-2">
+                                <div class="input-group">
+                                    <label>Format *</label>
+                                    <select id="t-format">
+                                        <option value="T20">T20</option>
+                                        <option value="One Day">One Day</option>
+                                        <option value="Multi-Day">Multi-Day</option>
+                                        <option value="T10">T10</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label>Starting Date *</label>
+                                    <input type="date" id="t-date" style="color-scheme: dark;">
+                                </div>
+                            </div>
+                            <div class="input-group" style="margin-bottom:0;">
+                                <label>Points System (Per Win)</label>
+                                <input type="number" id="tWinPoints" value="2">
+                            </div>
+                        </div>
+
+                        <div class="card" style="margin:0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <label style="color:#94a3b8; font-weight:bold; font-size:0.8rem; text-transform:uppercase;">Select Teams</label>
+                                <span id="teamCountBadge" style="background:#10b981; color:#020617; padding:3px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold;">0 Selected</span>
+                            </div>
+                            
+                            <!-- 🔥 BOLD "CREATE NEW TEAM" RIGHT BELOW SELECT TEAMS HEADING -->
+                            <div style="display: flex; gap: 5px; margin-bottom: 15px;">
+                                <input type="text" id="newTeamName" placeholder="Create new team..." style="flex:1; padding:10px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:white; font-weight: bold; font-size: 0.95rem;">
+                                <button type="button" class="btn-success" style="padding: 10px 20px; font-size: 0.9rem;" onclick="createNewTeamNatively()">+ ADD</button>
+                            </div>
+
+                            <input type="text" id="teamSearch" placeholder="🔍 Search database teams..." style="width:100%; padding:8px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:white; margin-bottom: 10px;" onkeyup="renderTeamPanes()">
+                            
+                            <div class="team-dual-pane">
+                                <div class="team-list-box">
+                                    <div class="team-list-header">Available Teams</div>
+                                    <div class="custom-scroll" id="available-teams-list" style="height: 250px;">
+                                        <div style="text-align:center; padding:20px; color:#64748b;">Loading DB...</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="team-list-box" style="border-color: #10b981;">
+                                    <div class="team-list-header" style="background: #047857;">Selected Teams</div>
+                                    <div class="custom-scroll" id="selected-teams-list" style="height: 250px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid #334155; margin-top: 30px; padding-top: 20px;">
+                        <button type="button" id="btn-save-proceed" style="background: linear-gradient(90deg, #f59e0b, #ea580c); width: 100%; padding: 18px; font-size: 1.2rem; font-weight: bold; border-radius: 8px; border: none; color: white; cursor:pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4);" onclick="saveTournamentAndProceed()">Save Tournament & Proceed to Fixtures ➡</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 🔥 MODULE: HISTORICAL DATA INJECTOR (SUPER ADMIN ONLY) -->
+            <section id="sec-historical" class="hub-section">
+                <div class="admin-form">
+                    <h3 style="margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 10px;">⏳ Historical Match Injector</h3>
+                    <p style="color:#94a3b8; font-size:0.85rem; margin-bottom: 25px;">Enter past performances directly. This creates a hidden, completed match in the database that instantly merges into the player's Master Career Stats.</p>
+                    
+                    <div class="card" style="margin-bottom: 0;">
+                        <div class="grid-2">
+                            <div class="input-group">
+                                <label>Match Date *</label>
+                                <input type="date" id="hist-date" style="color-scheme: dark;">
+                            </div>
+                            <div class="input-group">
+                                <label>Player Name (Must match Master DB exactly) *</label>
+                                <input type="text" id="hist-player" placeholder="e.g. Rajat Patidar">
+                            </div>
+                        </div>
+
+                        <h4 style="color: #f59e0b; margin-top: 15px; margin-bottom: 10px; border-bottom: 1px dashed #334155; padding-bottom: 5px;">Batting Stats</h4>
+                        <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));">
+                            <div class="input-group"><label>Runs</label><input type="number" id="hist-runs" value="0"></div>
+                            <div class="input-group"><label>Balls Faced</label><input type="number" id="hist-bf" value="0"></div>
+                            <div class="input-group"><label>Fours</label><input type="number" id="hist-4s" value="0"></div>
+                            <div class="input-group"><label>Sixes</label><input type="number" id="hist-6s" value="0"></div>
+                            <div class="input-group">
+                                <label>Out?</label>
+                                <select id="hist-out">
+                                    <option value="true">Yes</option>
+                                    <option value="false">Not Out</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <h4 style="color: #10b981; margin-top: 10px; margin-bottom: 10px; border-bottom: 1px dashed #334155; padding-bottom: 5px;">Bowling Stats</h4>
+                        <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));">
+                            <div class="input-group"><label>Overs</label><input type="number" id="hist-o" value="0" step="0.1"></div>
+                            <div class="input-group"><label>Maidens</label><input type="number" id="hist-m" value="0"></div>
+                            <div class="input-group"><label>Runs Conceded</label><input type="number" id="hist-rc" value="0"></div>
+                            <div class="input-group"><label>Wickets</label><input type="number" id="hist-wkts" value="0"></div>
+                        </div>
+
+                        <h4 style="color: #8b5cf6; margin-top: 10px; margin-bottom: 10px; border-bottom: 1px dashed #334155; padding-bottom: 5px;">Fielding Stats</h4>
+                        <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));">
+                            <div class="input-group"><label>Catches</label><input type="number" id="hist-catches" value="0"></div>
+                            <div class="input-group"><label>Stumpings</label><input type="number" id="hist-stumpings" value="0"></div>
+                            <div class="input-group"><label>Run Outs</label><input type="number" id="hist-runouts" value="0"></div>
+                        </div>
+
+                        <button type="button" class="btn-primary" style="background: #10b981; width: 100%; margin-top: 15px; font-size: 1.1rem; padding: 15px;" onclick="injectHistoricalMatch()">💾 Inject Historical Data to Cloud</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MODULE 2: FIXTURE ENGINE & MASTER CANVAS -->
+            <section id="sec-fixtures" class="hub-section">
+                <div class="admin-form">
+                    <h3 style="margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">2. Multi-Stage Fixture Builder</h3>
+                    <p style="color:#94a3b8; font-size:0.85rem; margin-top:0;">Use the Helper Engines to auto-generate matches, then review and edit them in the Master Canvas.</p>
+                    
+                    <div class="sub-tab-nav" style="background:#1e293b; margin:0 0 20px 0; padding:15px 20px 0 20px; border-radius: 8px;">
+                        <button type="button" class="sub-tab-btn active" onclick="switchSubTab('tab-pools', this)">1. Group Stage Engine</button>
+                        <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-knockouts', this)">2. Knockout Engine</button>
+                        <button type="button" class="sub-tab-btn" onclick="switchSubTab('tab-canvas', this)">3. Master Fixture Canvas</button>
+                    </div>
+
+                    <!-- ENGINE 1: LEAGUES & DYNAMIC POOLS -->
+                    <div id="tab-pools" class="sub-tab-pane active">
+                        <div style="background: rgba(56, 189, 248, 0.05); padding: 20px; border-radius: 8px; border: 1px dashed #38bdf8; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                            <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Number of Pools:</label>
+                            <select id="pool-count-select" onchange="handlePoolSelection(this)" class="postings-select" style="width: auto;">
+                                <option value="1">1 Pool (Single League)</option>
+                                <option value="2">2 Pools</option>
+                                <option value="3">3 Pools</option>
+                                <option value="4">4 Pools</option>
+                                <option value="8">8 Pools</option>
+                                <option value="custom" style="color: #38bdf8; font-weight: bold;">⚙️ Custom Number...</option>
+                            </select>
+                            
+                            <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem; margin-left: 20px;">Play Each Other:</label>
+                            <select id="pool-round-select" class="postings-select" style="width: auto;">
+                                <option value="single">Once (Single Header)</option>
+                                <option value="double">Twice (Double Header)</option>
+                            </select>
+                            <button type="button" class="btn-primary" style="margin-left: auto;" onclick="generatePoolMatches()">⚙️ Generate Group Matches</button>
+                        </div>
+
+                        <div class="pools-workspace">
+                            <div class="staging-sidebar">
+                                <h4 style="color: #3b82f6; margin-top: 0; font-size: 0.95rem;">Unassigned Teams</h4>
+                                <div id="staging-teams-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;"></div>
+                            </div>
+                            <div>
+                                <h4 style="color: #10b981; margin: 0 0 10px 0; font-size: 0.95rem;">Active Pools</h4>
+                                <div id="pools-container-grid" class="pools-container-grid"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ENGINE 2: PLAYOFFS & KNOCKOUTS -->
+                    <div id="tab-knockouts" class="sub-tab-pane">
+                        <div style="background: rgba(16, 185, 129, 0.05); padding: 20px; border-radius: 8px; border: 1px dashed #10b981; margin-bottom: 20px;">
+                            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap:wrap;">
+                                <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Playoff Structure:</label>
+                                <select id="ko-template-select" class="postings-select" style="width: auto; flex:1; min-width:200px;">
+                                    <option value="standard">📌 Standard Knockout Bracket (TBD Placeholders)</option>
+                                    <option value="direct">🔥 Auto-Fill Bracket (Calculates Byes & Plugs Real Teams)</option>
+                                    <option value="rolling">🔄 Rolling Knockout (Passes odd team to next round)</option>
+                                    <option value="ipl">🏏 IPL Style (Qualifier 1, Eliminator, Qualifier 2, Final)</option>
+                                    <option value="super">🏆 Super League (Super Six / Super Eight)</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 15px; flex-wrap:wrap;">
+                                <label style="color: #f8fafc; font-weight: bold; font-size: 0.95rem;">Teams Involved:</label>
+                                <select id="ko-size-select" class="postings-select" style="width: auto;">
+                                    <option value="2">Top 2 (Final Only)</option>
+                                    <option value="4">Top 4 / Semi-Finals</option>
+                                    <option value="8">Top 8 / Quarter-Finals</option>
+                                    <option value="16">Top 16 / Round of 16</option>
+                                </select>
+                                <button type="button" class="btn-success" style="margin-left:auto;" onclick="generateKnockoutBracket()">⚙️ Generate Bracket</button>
+                            </div>
+                        </div>
+                        <p style="color:#94a3b8; font-size:0.85rem; font-style:italic;">Note: Generating matches will instantly push them into the Master Canvas where you can edit any TBD placeholders to real teams.</p>
+                    </div>
+
+                    <!-- THE MASTER CANVAS -->
+                    <div id="tab-canvas" class="sub-tab-pane">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+                            <p style="color: #94a3b8; font-size: 0.85rem; margin:0;">The Single Source of Truth. You can manually edit any team, placeholder, or match name below.</p>
+                            <button type="button" class="btn-outline" style="padding: 8px 15px; font-size:0.85rem;" onclick="addManualMatch()">+ Add Custom Match Row</button>
+                        </div>
+                        
+                        <div id="canvas-container">
+                            <div style="text-align: center; padding: 40px; color: #64748b;">
+                                <p style="font-size: 1.2rem; margin-bottom: 10px;">No Matches Generated Yet</p>
+                                <p style="font-size: 0.9rem;">Use the engines above to auto-generate matches, or add rows manually.</p>
+                            </div>
+                        </div>
+                        
+                        <button type="button" style="background: #f59e0b; width:100%; padding:15px; border:none; border-radius:6px; color:black; font-size: 1.1rem; font-weight:bold; margin-top:20px; cursor:pointer;" onclick="lockCanvasAndProceed()">Save Fixtures & Proceed to Squads ➡️</button>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- MODULE 3: SQUAD VERIFICATION -->
+            <section id="sec-squads" class="hub-section">
+                <div class="admin-form">
+                    <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 10px;">3. Verify & Select Squads</h3>
+                    <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 0; margin-bottom: 15px;">Select the specific players from the Master DB who are allowed to play in this tournament.</p>
+                    
+                    <div style="margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                        <div class="input-group" style="flex:1; margin:0; min-width: 250px;">
+                            <label>Select Team to Review</label>
+                            <select id="squad-team-select" onchange="loadWizardSquad(this.value)" style="border-color: #3b82f6;">
+                                <option value="">Select a team...</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn-success" style="margin-top:20px;" onclick="openPlayerModal()">➕ Quick-Add New Player</button>
+                        <button type="button" class="btn-action" style="margin-top:20px; background:#f59e0b; color:black;" onclick="toggleBulkForm()">⚡ Bulk / Excel Upload</button>
+                    </div>
+
+                    <!-- BULK REGISTRATION GRID IN TOURNAMENT HUB -->
+                    <div id="bulk-registration-panel" class="hidden" style="background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #f59e0b; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                            <div>
+                                <h3 style="color: #f59e0b; margin: 0 0 5px 0;">⚡ Bulk Squad Registration</h3>
+                                <p style="color: #94a3b8; font-size: 0.85rem; margin: 0;">Fill manually OR upload an Excel file.<br>
+                                <b>Excel Columns:</b> A: Name | B: Father | C: DOB | D: Role | E: Bat Style | F: Bowl Arm | G: Bowl Type | H: Reg No</p>
+                            </div>
+                            <div>
+                                <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
+                                <button type="button" class="btn-action" style="background: #10b981; border: none; padding: 10px 15px; color: white;" onclick="document.getElementById('excel-upload').click()">
+                                    📁 Upload Excel (.xlsx)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="custom-scroll" style="max-height: 450px; overflow-y: auto; overflow-x: auto; background: #0f172a; border-radius: 6px; padding: 10px;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left; min-width: 1200px;">
+                                <thead style="background: #0f172a; position: sticky; top: -10px; z-index: 10;">
+                                    <tr>
+                                        <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">#</th>
+                                        <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Full Name *</th>
+                                        <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Father's Name</th>
+                                        <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">DOB</th>
+                                        <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Playing Role</th>
+                                        <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Batting Style</th>
+                                        <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Bowling Arm</th>
+                                        <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Bowling Type</th>
+                                        <th style="padding: 10px; color: #cbd5e1; font-size: 0.8rem; border-bottom: 1px solid #334155;">Reg No.</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bulk-player-grid">
+                                    <!-- JavaScript will inject rows here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                            <button type="button" class="btn-action" style="background: #475569;" onclick="addBulkRows(5, true)">+ Add 5 Empty Rows</button>
+                            <button type="button" class="btn-action" style="background: #10b981; font-size: 1rem; padding: 12px 20px;" onclick="submitBulkSquad()">💾 Save & Add to Squad</button>
+                        </div>
+                    </div>
+
+                    <div id="wizard-player-slots-container">
+                        <div style="text-align: center; color: #475569; padding: 40px; font-style: italic;">Select a team above to view and assign players.</div>
+                    </div>
+                    
+                    <div style="margin-top:25px; border-top: 1px solid #334155; padding-top:20px;">
+                        <button type="button" style="background: #3b82f6; width: 100%; padding: 15px; font-size: 1.1rem; font-weight: bold; border-radius: 6px; border: none; color: white; cursor:pointer;" onclick="finishSquadsAndProceed()">All Squads Verified - Proceed to Deploy ➡️</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MODULE 4: DEPLOYMENT -->
+            <section id="sec-deploy" class="hub-section">
+                <div class="admin-form" style="overflow-x: auto;">
+                    <h3 style="margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 10px;">4. Official Postings & Deployment</h3>
+                    <p style="color:#94a3b8; font-size:0.8rem; margin-bottom: 15px;">Review your finalized fixtures and PINs. Once confirmed, inject them into the live cloud database.</p>
+                    
+                    <table class="postings-grid">
+                        <thead>
+                            <tr><th style="width: 60%; border-right: 1px solid #1e293b;">Fixture Details</th><th style="width: 40%; text-align: center;">Cloud Status & PIN</th></tr>
+                        </thead>
+                        <tbody id="postings-body">
+                            <tr><td colspan="2" style="text-align: center; padding: 40px; color: #64748b; font-style: italic;">Build your fixtures in the Match Canvas to view postings.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="deploy-action-card" class="card" style="border-color: #f59e0b; background: rgba(245, 158, 11, 0.05); text-align: center; padding: 40px;">
+                    <h3 style="color: #f59e0b; font-size: 1.5rem; margin-top: 0;">Ready to go live?</h3>
+                    <p style="color: #cbd5e1; max-width: 600px; margin: 0 auto 25px auto;">Review the PINs generated above. Publishing will secure the database and make these matches visible on the Fan Portal.</p>
+                    <button type="button" id="btnDeploy" class="btn-primary" style="background: #f59e0b; font-size: 1.2rem; padding: 15px 30px;" onclick="saveMatchesToCloud()">🚀 CONFIRM & DEPLOY TO CLOUD</button>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- QUICK-ADD PLAYER MODAL (Advanced) -->
+        <div class="modal-overlay" id="quick-player-modal" onclick="closeOldModals(event)">
+            <div class="modal-content" onclick="event.stopPropagation()">
+                <button type="button" class="modal-close" onclick="closeOldModals()">&times;</button>
+                <h3 style="margin-top: 0; color: #10b981;">➕ Quick-Add Player</h3>
+                <p style="font-size: 0.8rem; color: #94a3b8;">Target Team: <strong id="quick-player-target-team" style="color:white;"></strong></p>
+                
+                <div class="input-group"><label>Full Name *</label><input type="text" id="quick-p-name" class="input-dark w-100"></div>
+                <div class="input-group"><label>Father's Name</label><input type="text" id="quick-p-father" class="input-dark w-100"></div>
+                <div class="input-group"><label>Date of Birth</label><input type="date" id="quick-p-dob" class="input-dark w-100" style="color-scheme: dark;"></div>
+                <div class="input-group"><label>Primary Role</label>
+                    <select id="quick-p-role" class="input-dark w-100">
+                        <option>Batter</option><option>Bowler</option><option>All-Rounder</option><option>Wicketkeeper</option>
+                    </select>
+                </div>
+                
+                <div class="grid-2">
+                    <div class="input-group"><label>Batting Style</label>
+                        <select id="quick-p-bat" class="input-dark w-100">
+                            <option value="Right-hand bat">Right-hand bat</option><option value="Left-hand bat">Left-hand bat</option>
+                        </select>
+                    </div>
+                    <div class="input-group"><label>Bowling Arm</label>
+                        <select id="quick-p-barm" class="input-dark w-100">
+                            <option value="Right-arm">Right-arm</option><option value="Left-arm">Left-arm</option><option value="None">None</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="input-group"><label>Bowling Type</label>
+                        <select id="quick-p-btype" class="input-dark w-100">
+                            <option value="Fast">Fast</option><option value="Medium">Medium</option><option value="Off-spin">Off-spin</option><option value="Leg-spin">Leg-spin</option><option value="None">None</option>
+                        </select>
+                    </div>
+                    <div class="input-group"><label>Reg No.</label><input type="text" id="quick-p-reg" class="input-dark w-100" style="text-transform:uppercase;"></div>
+                </div>
+                
+                <button type="button" class="btn-success" style="width: 100%;" onclick="quickSavePlayer(this)">Save to Master & Add to Squad</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- JAVASCRIPT: MERGED LOGIC                                                  -->
+    <!-- ========================================================================= -->
     <script>
+        // 1. Supabase Initialization (Shared)
         const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
         const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // 2. View Switcher
+        function toggleView(view) {
+            if (view === 'advanced') {
+                document.getElementById('view-dashboard').style.display = 'none';
+                document.getElementById('view-advanced').style.display = 'flex';
+            } else {
+                document.getElementById('view-advanced').style.display = 'none';
+                document.getElementById('view-dashboard').style.display = 'block';
+                // Reload dashboard list to catch any new tournaments created in Advanced mode
+                loadTournamentsForList(); 
+            }
+        }
+
         // ==========================================
-        // 👑 SUPER ADMIN MASTER SWITCH
+        // 3. NEW DASHBOARD LOGIC
+        // ==========================================
+        let cachedDashTournaments = [];
+        let finalInviteText = "";
+        let finalMatchId = "";
+
+        function openDashModal(id) { 
+            document.getElementById(id).classList.add('active'); 
+            if(id === 'scheduler-modal' && cachedDashTournaments.length === 0) loadDashTournaments();
+        }
+        function closeDashModal(id) { document.getElementById(id).classList.remove('active'); }
+        
+        function autoSetOvers(format, targetId) {
+            let input = document.getElementById(targetId);
+            if (format === 'T20') input.value = 20;
+            else if (format === 'T10') input.value = 10;
+            else if (format === 'One Day') input.value = 50;
+        }
+
+        async function loadTournamentsForList() {
+            const container = document.getElementById('dash-tourney-list-container');
+            const { data, error } = await db.from('tournaments').select('tournament_id, name, format').order('created_at', {ascending: false}).limit(5);
+            
+            if (error || !data || data.length === 0) { 
+                container.innerHTML = '<div class="text-slate-500 italic">No recent tournaments found. Use the Advanced Builder to create one.</div>'; 
+                return; 
+            }
+
+            container.innerHTML = data.map(t => `
+                <div class="bg-cardBg border border-slate-700 rounded-lg p-4 flex justify-between items-center hover:bg-slate-800 transition">
+                    <div class="flex items-center gap-4">
+                        <span class="text-2xl">🏆</span>
+                        <div>
+                            <div class="font-bold text-slate-100 text-lg">${t.name}</div>
+                            <div class="text-xs text-slate-400 font-bold mt-1">${t.format}</div>
+                        </div>
+                    </div>
+                    <button onclick="toggleView('advanced')" class="text-sm font-bold text-slate-300 bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded border border-slate-600 transition">
+                        Manage
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function nextWizardStep(step) {
+            document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
+            document.getElementById('wiz-step-' + step).classList.add('active');
+            for(let i=1; i<=3; i++) {
+                let p = document.getElementById('wiz-prog-' + i);
+                if(i <= step) {
+                    p.classList.remove('bg-slate-700', 'text-slate-400');
+                    p.classList.add('bg-blue-500', 'text-white');
+                } else {
+                    p.classList.add('bg-slate-700', 'text-slate-400');
+                    p.classList.remove('bg-blue-500', 'text-white');
+                }
+            }
+        }
+
+        async function createWizardMatch() {
+            let t1 = document.getElementById('wiz-team1').value.trim();
+            let t2 = document.getElementById('wiz-team2').value.trim();
+            if(!t1 || !t2) { alert("Team names are required."); return; }
+
+            const btn = document.getElementById('wiz-submit-btn');
+            btn.innerText = "⏳ Creating..."; btn.disabled = true;
+
+            const matchId = 'M-' + crypto.randomUUID().split('-')[0].toUpperCase();
+            const scorerPin = Math.floor(1000 + Math.random() * 9000).toString();
+            const tName = document.getElementById('wiz-tname').value.trim() || "Independent Match";
+            const format = document.getElementById('wiz-format').value;
+            const overs = parseInt(document.getElementById('wiz-overs').value) || 20;
+
+            const fullStatePayload = {
+                tournament: tName,
+                matchName: `${t1} vs ${t2}`,
+                format: format,
+                match_status: "upcoming",
+                venue: document.getElementById('wiz-venue').value || "",
+                teams: {
+                    A: { name: t1, players: [] },
+                    B: { name: t2, players: [] }
+                },
+                matchSettings: { maxOvers: overs, bowlerQuota: Math.ceil(overs/5) },
+                current: { runs:0, wkts:0, balls:0, sIdx:null, nsIdx:null, bIdx:null, fow:[], overHistory:[], recentBalls:[], currentOverLog:[], extras:{w:0,nb:0,b:0,lb:0} },
+                inningsSummaries: []
+            };
+
+            const { error } = await db.from('matches').insert([{
+                match_id: matchId,
+                scorer_pin: scorerPin,
+                full_state: fullStatePayload,
+                created_at: new Date().toISOString()
+            }]);
+
+            btn.innerText = "🚀 CREATE MATCH"; btn.disabled = false;
+
+            if (error) { alert("Error creating match: " + error.message); return; }
+
+            finalMatchId = matchId;
+            const baseUrl = window.location.origin + window.location.pathname.replace('/admin/index.html', '');
+            const link = `${baseUrl}/scorer.html?match=${matchId}&pin=${scorerPin}`;
+            
+            finalInviteText = `🏏 You have been invited to score a match on Sportzstat!\n\nMatch: ${t1} vs ${t2}\nFormat: ${format} (${overs} Overs)\n\n🔗 Tap here to open the scorer:\n${link}\n\n🔐 Scorer PIN: ${scorerPin}`;
+            document.getElementById('wiz-full-invite-text').innerText = finalInviteText;
+
+            nextWizardStep(3);
+        }
+
+        function copyWizardInvite() { navigator.clipboard.writeText(finalInviteText).then(() => alert("✅ Invite copied to clipboard!")); }
+        function shareWizardWhatsApp() { window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(finalInviteText)}`, '_blank'); }
+        function openScorerSelf() {
+            const baseUrl = window.location.origin + window.location.pathname.replace('/admin/index.html', '');
+            window.location.href = `${baseUrl}/scorer.html?match=${finalMatchId}`;
+        }
+
+        async function loadDashTournaments() {
+            const select = document.getElementById('sch-tourney');
+            const { data, error } = await db.from('tournaments').select('tournament_id, name').order('created_at', {ascending: false});
+            if (error || !data) { select.innerHTML = '<option value="">Error loading tournaments</option>'; return; }
+            cachedDashTournaments = data;
+            select.innerHTML = '<option value="">-- Choose a Tournament --</option>' + data.map(t => `<option value="${t.tournament_id}|${t.name}">${t.name}</option>`).join('');
+        }
+
+        async function submitScheduledFixture() {
+            let tourneyVal = document.getElementById('sch-tourney').value;
+            let t1 = document.getElementById('sch-team1').value.trim();
+            let t2 = document.getElementById('sch-team2').value.trim();
+            if(!tourneyVal || !t1 || !t2) { alert("Tournament and both teams are required."); return; }
+
+            const btn = document.getElementById('sch-submit-btn');
+            btn.innerText = "⏳ Scheduling..."; btn.disabled = true;
+
+            const [tourneyId, tourneyName] = tourneyVal.split('|');
+            const matchId = 'M-' + crypto.randomUUID().split('-')[0].toUpperCase();
+            const format = document.getElementById('sch-format').value;
+            
+            const statePayload = {
+                tournament: tourneyName,
+                matchName: `${t1} vs ${t2}`,
+                format: format,
+                match_status: "upcoming",
+                teams: { A: { name: t1, players: [] }, B: { name: t2, players: [] } }
+            };
+
+            const { error } = await db.from('matches').insert([{
+                match_id: matchId,
+                tournament_id: tourneyId,
+                scorer_pin: Math.floor(1000 + Math.random() * 9000).toString(),
+                full_state: statePayload,
+                created_at: document.getElementById('sch-date').value ? new Date(document.getElementById('sch-date').value).toISOString() : new Date().toISOString()
+            }]);
+
+            btn.innerText = "📅 Push Fixture to Cloud"; btn.disabled = false;
+            if (error) alert("Error: " + error.message);
+            else { alert("✅ Fixture scheduled! It is now visible on the Fan Portal."); closeDashModal('scheduler-modal'); }
+        }
+
+        async function submitInjection() {
+            let tName = document.getElementById('inj-tourney').value || "Historical Archive";
+            let t1 = document.getElementById('inj-t1-name').value || "Team A";
+            let t2 = document.getElementById('inj-t2-name').value || "Team B";
+            let res = document.getElementById('inj-result').value || "Completed";
+
+            const btn = document.getElementById('inj-submit-btn');
+            btn.innerText = "⏳ Injecting..."; btn.disabled = true;
+
+            const matchId = 'HIST-' + crypto.randomUUID();
+
+            const payload = {
+                match_id: matchId,
+                tournament: tName,
+                result: res,
+                innings: [
+                    { team: t1, score: `${document.getElementById('inj-t1-r').value||0}/${document.getElementById('inj-t1-w').value||0}`, overs: document.getElementById('inj-t1-o').value||"0" },
+                    { team: t2, score: `${document.getElementById('inj-t2-r').value||0}/${document.getElementById('inj-t2-w').value||0}`, overs: document.getElementById('inj-t2-o').value||"0" }
+                ]
+            };
+
+            const fullState = { tournament: tName, format: "Historical", match_status: "completed", matchResult: res, team1: t1, team2: t2, fan_portal_summary: payload };
+
+            const { error: e1 } = await db.from('matches').insert([{ match_id: matchId, full_state: fullState }]);
+            const { error: e2 } = await db.from('completed_matches').insert([{ match_id: matchId, final_data: JSON.stringify({ fan_portal_summary: payload }) }]);
+
+            btn.innerText = "💾 Inject Match Permanently"; btn.disabled = false;
+            
+            if (e1 || e2) alert("Error injecting data.");
+            else { alert("✅ Historical Match Injected Successfully!"); closeDashModal('injector-modal'); }
+        }
+
+
+        // ==========================================
+        // 4. OLD ADVANCED BUILDER LOGIC (100% Untouched)
         // ==========================================
         const ENFORCE_STRICT_REGISTRATION = false; 
 
         let currentAdminId = null;
         let currentAdminAssociation = 'Independent';
-        let isSuperAdmin = false; // 🔥 Tracks Super Admin Status
-        let loadedTournamentHost = null; // 🔥 Preserves original admin's host when Super Admin edits
+        let isSuperAdmin = false; 
+        let loadedTournamentHost = null; 
 
         let currentTournamentId = null;
         let allDbTeams = [];        
@@ -571,7 +1083,12 @@
         function generateUniqueMatchID(prefix) { return `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`; }
         function generateUniquePin() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
+        // MERGED INITIALIZATION LISTENER
         document.addEventListener('DOMContentLoaded', async () => { 
+            // Init Dashboard
+            loadTournamentsForList();
+
+            // Init Advanced Builder
             await checkAdminSession();
             await fetchAllMasterTeams();
             await loadExistingTournamentsList();
@@ -608,7 +1125,7 @@
                 document.getElementById('mobile-app-title').innerText = `${currentAdminAssociation} HUB`;
             }
 
-            // 🔥 SUPER ADMIN VERIFICATION (Using your email or db role)
+            // 🔥 SUPER ADMIN VERIFICATION
             if (session.user.email === 'pushpendra51277@gmail.com' || (profileData && (profileData.role || '').toLowerCase() === 'superadmin')) {
                 isSuperAdmin = true;
                 document.querySelectorAll('.super-admin-only').forEach(el => el.classList.remove('super-admin-only'));
@@ -635,9 +1152,9 @@
         }
 
         function openModal(modalId) { document.getElementById(modalId).classList.add('active'); }
-        function closeAllModals(event) {
+        function closeOldModals(event) {
             if (event && event.target && event.target.classList && !event.target.classList.contains('modal-overlay') && !event.target.classList.contains('modal-close')) return;
-            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+            document.getElementById('quick-player-modal').classList.remove('active');
         }
 
         function syncActiveTeams() {
@@ -716,7 +1233,6 @@
             } catch(e) { alert("Error saving team to cloud."); document.getElementById('newTeamName').value = tName; }
         }
 
-        // 🔥 ROLE-BASED TOURNAMENT EDIT LIST: Super Admin sees all; Standard Admin sees only their own
         async function loadExistingTournamentsList() {
             const select = document.getElementById('existing-tournament-select');
             
@@ -775,7 +1291,6 @@
             const { data: tData, error: tErr } = await db.from('tournaments').select('*').eq('tournament_id', tournId).single();
             if (tErr || !tData) { alert("Error loading tournament details."); return; }
 
-            // 🔥 SECURITY CHECK: Block standard admins from loading someone else's tournament
             if (!isSuperAdmin && tData.admin_id !== currentAdminId) {
                 alert("❌ Access Denied: You can only edit tournaments created under your Admin account.");
                 document.getElementById('existing-tournament-select').value = "";
@@ -838,7 +1353,6 @@
             let tTier = document.getElementById('t-tier').value; 
             
             const mode = document.getElementById('tournament-mode-select').value;
-            // Preserve original admin's host association when Super Admin edits an existing tournament
             let tHost = (mode === 'edit' && loadedTournamentHost) ? loadedTournamentHost : currentAdminAssociation; 
             
             let configPayload = { winPoints: document.getElementById('tWinPoints').value, tier: tTier }; 
@@ -1268,7 +1782,7 @@
             tournamentSquadsCache[teamName] = previouslyCheckedIds;
             await loadWizardSquad(teamName);
 
-            closeAllModals(); 
+            closeOldModals(); 
             document.getElementById('quick-p-name').value = ''; 
             document.getElementById('quick-p-father').value = ''; 
             document.getElementById('quick-p-dob').value = '';
@@ -1575,7 +2089,6 @@
             let tHost = loadedTournamentHost ? loadedTournamentHost : currentAdminAssociation; 
             let tTier = document.getElementById('t-tier').value; 
 
-            // 🔥 1. Fetch current cloud state to check match statuses safely
             const { data: cloudMatches } = await db.from('matches').select('match_id, full_state').eq('tournament_id', currentTournamentId);
             let cloudMap = new Map();
             if (cloudMatches) {
@@ -1595,16 +2108,13 @@
                 let existingState = cloudMap.get(m.id);
 
                 if (existingState) {
-                    // 🛡️ MATCH ALREADY EXISTS ON CLOUD
                     let status = (existingState.match_status || 'upcoming').toLowerCase();
                     
-                    // ONLY update if it is UPCOMING (Safe to change TBD -> Real Team)
-                    // NEVER touch live or completed matches to protect historical stats!
                     if (status === 'upcoming') {
                         existingState.team1 = m.t1;
                         existingState.team2 = m.t2;
                         existingState.matchName = m.name;
-                        existingState.tournament = tName; // Updates in case you fixed a typo in tournament name
+                        existingState.tournament = tName; 
                         
                         await db.from('matches').update({
                             team_a_id: team1UUID,
@@ -1613,10 +2123,9 @@
                         }).eq('match_id', m.id);
                         updatesCount++;
                     } else {
-                        skippedCount++; // Safely ignored completed/live match
+                        skippedCount++; 
                     }
                 } else {
-                    // ✨ COMPLETELY NEW MATCH
                     let matchPayload = {
                         match_id: m.id,
                         tournament_id: currentTournamentId,
@@ -1643,6 +2152,7 @@
                 </p>
             `;
         }
+
         // ==========================================
         // ⏳ HISTORICAL DATA INJECTOR (SUPER ADMIN ONLY)
         // ==========================================
@@ -1660,20 +2170,17 @@
                 return; 
             }
 
-            // Parse Batting
             const r = parseInt(document.getElementById('hist-runs').value) || 0;
             const b = parseInt(document.getElementById('hist-bf').value) || 0;
             const f = parseInt(document.getElementById('hist-4s').value) || 0;
             const s = parseInt(document.getElementById('hist-6s').value) || 0;
             const isOut = document.getElementById('hist-out').value === "true";
 
-            // Parse Bowling
             const o = parseFloat(document.getElementById('hist-o').value) || 0;
             const m = parseInt(document.getElementById('hist-m').value) || 0;
             const rc = parseInt(document.getElementById('hist-rc').value) || 0;
             const w = parseInt(document.getElementById('hist-wkts').value) || 0;
 
-            // Parse Fielding
             const catches = parseInt(document.getElementById('hist-catches').value) || 0;
             const stumpings = parseInt(document.getElementById('hist-stumpings').value) || 0;
             const runouts = parseInt(document.getElementById('hist-runouts').value) || 0;
@@ -1693,21 +2200,8 @@
                     {
                         batTeam: "Legacy Team",
                         bowlTeam: "Opponent",
-                        batters: [
-                            {
-                                name: pName,
-                                r: r, b: b, f: f, s: s,
-                                out: isOut,
-                                hasBatted: true
-                            }
-                        ],
-                        bowlers: [
-                            {
-                                name: pName,
-                                o: o, m: m, rc: rc, w: w,
-                                catches: catches, stumpings: stumpings, runouts: runouts
-                            }
-                        ]
+                        batters: [ { name: pName, r: r, b: b, f: f, s: s, out: isOut, hasBatted: true } ],
+                        bowlers: [ { name: pName, o: o, m: m, rc: rc, w: w, catches: catches, stumpings: stumpings, runouts: runouts } ]
                     }
                 ]
             };
