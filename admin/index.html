@@ -965,8 +965,10 @@
             if (error) { alert("Error creating match: " + error.message); return; }
 
             finalMatchId = matchId;
-            const baseUrl = window.location.origin + window.location.pathname.replace('/admin/index.html', '');
-            const link = `${baseUrl}/scorer.html?match=${matchId}&pin=${scorerPin}`;
+            
+            // 🔥 CORRECTED: Pointing directly to 'scorer/live.html'
+            const baseUrl = window.location.href.substring(0, window.location.href.indexOf('/admin'));
+            const link = `${baseUrl}/scorer/live.html?match=${matchId}&pin=${scorerPin}`;
             
             finalInviteText = `🏏 You have been invited to score a match on Sportzstat!\n\nMatch: ${t1} vs ${t2}\nFormat: ${format} (${overs} Overs)\n\n🔗 Tap here to open the scorer:\n${link}\n\n🔐 Scorer PIN: ${scorerPin}`;
             document.getElementById('wiz-full-invite-text').innerText = finalInviteText;
@@ -976,9 +978,11 @@
 
         function copyWizardInvite() { navigator.clipboard.writeText(finalInviteText).then(() => alert("✅ Invite copied to clipboard!")); }
         function shareWizardWhatsApp() { window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(finalInviteText)}`, '_blank'); }
+        
         function openScorerSelf() {
-            const baseUrl = window.location.origin + window.location.pathname.replace('/admin/index.html', '');
-            window.location.href = `${baseUrl}/scorer.html?match=${finalMatchId}`;
+            // 🔥 CORRECTED: Pointing directly to 'scorer/live.html'
+            const baseUrl = window.location.href.substring(0, window.location.href.indexOf('/admin'));
+            window.location.href = `${baseUrl}/scorer/live.html?match=${finalMatchId}`;
         }
 
         async function loadDashTournaments() {
