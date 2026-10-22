@@ -116,18 +116,6 @@
         .postings-grid th { background: #1e293b; color: #94a3b8; padding: 15px 20px; text-align: left; }
         .postings-grid td { padding: 20px; border-bottom: 1px solid #1e293b; background: #0f172a; vertical-align: middle;}
 
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: 0.2s; }
-        .modal-overlay.active { opacity: 1; pointer-events: auto; }
-        .modal-content { background: #0f172a; border: 1px solid #38bdf8; border-radius: 12px; padding: 25px; width: 400px; max-width: 90%; text-align: left; transform: translateY(20px); transition: 0.3s; box-shadow: 0 15px 30px rgba(0,0,0,0.7); position: relative;}
-        .modal-overlay.active .modal-content { transform: translateY(0); }
-        .modal-close { background: transparent; border: none; color: #94a3b8; font-size: 1.5rem; position: absolute; top: 10px; right: 15px; cursor: pointer; }
-        .modal-close:hover { color: #ef4444; }
-
-        .hidden { display: none !important; }
-        .input-dark { background: #0f172a; color: white; border: 1px solid #475569; border-radius: 4px; padding: 6px; outline: none; }
-        .input-dark:focus { border-color: #38bdf8; }
-        .w-100 { width: 100%; }
-
         .super-admin-only { display: none !important; }
 
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 15; opacity: 0; transition: opacity 0.3s; }
@@ -237,7 +225,6 @@
                     <h3 class="text-xl font-bold text-white flex items-center gap-2">
                         📋 Recent Tournaments
                     </h3>
-                    <!-- THE BRIDGE BUTTON: Switches view to old HTML without reloading -->
                     <button onclick="toggleView('advanced')" class="text-sm font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/50 px-4 py-2 rounded transition-colors flex items-center gap-2">
                         ⚙️ Advanced Tournament Builder ➔
                     </button>
@@ -250,6 +237,7 @@
         </main>
 
         <!-- DASHBOARD MODALS -->
+        
         <!-- WIZARD -->
         <div id="wizard-modal" class="dash-modal-overlay">
             <div class="dash-modal-content bg-cardBg border border-blue-500 rounded-xl w-full max-w-2xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
@@ -341,7 +329,7 @@
                 </div>
                 
                 <!-- Wrapper for easy Success State swapping -->
-                <div id="sch-modal-content-wrap" class="p-6 overflow-y-auto custom-scroll">
+                <div id="sch-modal-content-wrap" class="p-6 overflow-y-auto custom-scroll flex-grow">
                     <p class="text-slate-400 text-sm mb-4">Quickly schedule upcoming matches. New teams are added to the database automatically.</p>
                     
                     <!-- Toggle Buttons -->
@@ -392,6 +380,88 @@
                     </div>
 
                     <button onclick="submitScheduledFixtures()" id="sch-submit-btn" class="w-full py-3 rounded-lg font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition shadow-lg mt-4">📅 Push Fixture(s) to Cloud</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW: SQUAD MANAGER (Quick Hub) -->
+        <div id="dash-squad-modal" class="dash-modal-overlay">
+            <div class="dash-modal-content bg-cardBg border border-blue-500 rounded-xl w-full max-w-4xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-900 sticky top-0 z-10">
+                    <h2 class="text-xl font-bold text-white">👥 Manage Team Squads</h2>
+                    <button onclick="closeDashModal('dash-squad-modal')" class="text-slate-400 hover:text-red-400 text-2xl font-bold leading-none">&times;</button>
+                </div>
+                
+                <div class="p-6 overflow-y-auto custom-scroll flex-grow">
+                    <p class="text-slate-400 text-sm mb-6">Select a team from your recent fixtures to assign players to this tournament. New players added here are automatically saved to your master database.</p>
+                    
+                    <!-- Team Dropdown -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-bold text-slate-400 mb-1">Select Team to Manage</label>
+                        <select id="dash-squad-team-select" class="form-input border-blue-500" onchange="handleDashTeamSelect()">
+                            <option value="">Loading teams...</option>
+                        </select>
+                    </div>
+
+                    <!-- Quick Add Form -->
+                    <div class="bg-black/30 border border-slate-700 p-4 rounded-lg mb-6">
+                        <h4 class="text-sm font-bold text-emerald-400 mb-3">⚡ Quick-Add New Player</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
+                            <div class="md:col-span-2">
+                                <input type="text" id="dash-p-name" class="form-input text-sm py-2" placeholder="Full Name *">
+                            </div>
+                            <div>
+                                <select id="dash-p-role" class="form-input text-sm py-2">
+                                    <option value="Batter">Batter</option>
+                                    <option value="Bowler">Bowler</option>
+                                    <option value="All-Rounder">All-Rounder</option>
+                                    <option value="Wicket-Keeper">Wicket-Keeper</option>
+                                </select>
+                            </div>
+                            <div>
+                                <select id="dash-p-bat" class="form-input text-sm py-2">
+                                    <option value="Right-hand bat">RH Bat</option>
+                                    <option value="Left-hand bat">LH Bat</option>
+                                </select>
+                            </div>
+                            <div>
+                                <select id="dash-p-bowlarm" class="form-input text-sm py-2">
+                                    <option value="Right-arm">Right Arm</option>
+                                    <option value="Left-arm">Left Arm</option>
+                                    <option value="None">None</option>
+                                </select>
+                            </div>
+                            <div>
+                                <select id="dash-p-bowltype" class="form-input text-sm py-2">
+                                    <option value="Fast">Fast</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Off-spin">Spin</option>
+                                    <option value="None">None</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button id="dash-quick-add-btn" onclick="quickAddDashPlayer()" class="w-full mt-3 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded transition text-sm">
+                            + Save Player to Database & Add to Squad
+                        </button>
+                    </div>
+
+                    <!-- Checkbox List -->
+                    <div>
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="text-sm font-bold text-white">Active Tournament Squad</h4>
+                            <span class="text-xs text-slate-400 italic">Checked players are in the squad</span>
+                        </div>
+                        
+                        <div id="dash-squad-list" class="bg-slate-900 border border-slate-800 p-4 rounded-lg min-h-[150px]">
+                            <div class="text-slate-500 italic text-center p-4">Select a team to view players.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="p-6 border-t border-slate-700 bg-slate-900 sticky bottom-0 z-10 flex gap-4">
+                    <button onclick="closeDashModal('dash-squad-modal')" class="flex-1 py-3 rounded-lg font-bold text-slate-300 bg-slate-800 hover:bg-slate-700 transition">Close</button>
+                    <button id="dash-sync-squad-btn" onclick="syncDashSquad()" class="flex-[2] py-3 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-500 transition shadow-lg">💾 Save Squad Changes</button>
                 </div>
             </div>
         </div>
@@ -477,7 +547,6 @@
 
         <!-- MAIN CONTENT AREA -->
         <main class="content-area">
-            
             <!-- 🔥 MOBILE HEADER (Only visible on phones) -->
             <div class="mobile-header">
                 <div style="display: flex; align-items: center;">
@@ -515,7 +584,6 @@
                                 <label>Tournament Name *</label>
                                 <input type="text" id="t-name" placeholder="e.g. Veda Premier League">
                             </div>
-                            
                             <div class="input-group">
                                 <label>Match Tier (Scouting Context) *</label>
                                 <select id="t-tier">
@@ -523,7 +591,6 @@
                                     <option value="Inter-Division">Tier 1: Inter-Division / Elite</option>
                                 </select>
                             </div>
-                            
                             <div class="grid-2">
                                 <div class="input-group">
                                     <label>Format *</label>
@@ -551,7 +618,6 @@
                                 <span id="teamCountBadge" style="background:#10b981; color:#020617; padding:3px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold;">0 Selected</span>
                             </div>
                             
-                            <!-- BOLD "CREATE NEW TEAM" RIGHT BELOW SELECT TEAMS HEADING -->
                             <div style="display: flex; gap: 5px; margin-bottom: 15px;">
                                 <input type="text" id="newTeamName" placeholder="Create new team..." style="flex:1; padding:10px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:white; font-weight: bold; font-size: 0.95rem;">
                                 <button type="button" class="btn-success" style="padding: 10px 20px; font-size: 0.9rem;" onclick="createNewTeamNatively()">+ ADD</button>
@@ -566,7 +632,6 @@
                                         <div style="text-align:center; padding:20px; color:#64748b;">Loading DB...</div>
                                     </div>
                                 </div>
-                                
                                 <div class="team-list-box" style="border-color: #10b981;">
                                     <div class="team-list-header" style="background: #047857;">Selected Teams</div>
                                     <div class="custom-scroll" id="selected-teams-list" style="height: 250px;"></div>
@@ -881,7 +946,6 @@
             } else {
                 document.getElementById('view-advanced').style.display = 'none';
                 document.getElementById('view-dashboard').style.display = 'block';
-                // Reload dashboard list to catch any new tournaments created in Advanced mode
                 loadTournamentsForList(); 
             }
         }
@@ -892,9 +956,7 @@
         let cachedDashTournaments = [];
         let finalInviteText = "";
         let finalMatchId = "";
-
-        // CACHE STORES {team_id, name}
-        let cachedDashTeams = []; 
+        let cachedDashTeams = []; // {team_id, name}
 
         async function loadDashTeams() {
             const { data } = await db.from('teams').select('team_id, name');
@@ -918,7 +980,6 @@
                 resetSchedulerModal();
             }
         }
-
         function closeDashModal(id) { document.getElementById(id).classList.remove('active'); }
         
         function autoSetOvers(format, targetId) {
@@ -1093,7 +1154,7 @@
                     uniqueTeamsInBatch.add(t2);
                 }
 
-                // 1. Auto-create new teams AND FETCH UUIDS
+                // 1. Auto-create new teams in Supabase
                 let newTeamsToDB = [];
                 uniqueTeamsInBatch.forEach(tName => {
                     if (!cachedDashTeams.some(ct => ct.name.toLowerCase() === tName.toLowerCase())) {
@@ -1110,7 +1171,6 @@
                     }
                 }
 
-                // 2. Tournament Context
                 btn.innerText = "⏳ Scheduling Fixtures...";
                 if (currentSchMode === 'existing') {
                     let tourneyVal = document.getElementById('sch-tourney').value;
@@ -1138,7 +1198,6 @@
                     if (tData && tData.length > 0) finalTourneyId = tData[0].tournament_id;
                 }
 
-                // 3. Setup Matches Array
                 for(let row of rows) {
                     let t1 = row.querySelector('.sch-t1').value.trim();
                     let t2 = row.querySelector('.sch-t2').value.trim();
@@ -1190,28 +1249,15 @@
                     <p class="text-slate-300 text-sm mb-8">${matchCount} match(es) successfully created for <br><b class="text-white">${tourneyName}</b>.</p>
                     
                     <div class="flex flex-col gap-3">
-                        <button onclick="bridgeToAdvancedSquads('${tourneyId}')" class="py-4 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-500 transition shadow-[0_0_15px_rgba(59,130,246,0.4)]">
-                            👥 Add Players to Squads Now ➔
+                        <button onclick="openDashSquadManager('${tourneyId}')" class="py-4 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-500 transition shadow-[0_0_15px_rgba(59,130,246,0.4)]">
+                            👥 Manage Team Squads ➔
                         </button>
                         <button onclick="closeDashModal('scheduler-modal')" class="py-3 rounded-lg font-bold text-slate-300 bg-slate-700 hover:bg-slate-600 transition">
-                            Close
+                            Back to Dashboard
                         </button>
                     </div>
                 </div>
             `;
-        }
-
-        function bridgeToAdvancedSquads(tourneyId) {
-            closeDashModal('scheduler-modal');
-            toggleView('advanced');
-            loadExistingTournamentData(tourneyId).then(() => {
-                switchTab('sec-squads', document.getElementById('nav-squads'));
-                document.getElementById('tournament-mode-select').value = 'edit';
-                toggleTournamentMode('edit');
-                setTimeout(() => {
-                    document.getElementById('existing-tournament-select').value = tourneyId;
-                }, 500);
-            });
         }
 
         function resetSchedulerModal() {
@@ -1221,6 +1267,163 @@
             } else {
                 document.getElementById('sch-fixtures-container').innerHTML = ''; 
                 addSchFixtureRow(); 
+            }
+        }
+
+        // --- NEW DASHBOARD SQUAD MANAGER LOGIC ---
+        let dashCurrentTourneyId = null;
+        let dashTourneyTeams = []; 
+        let currentDashTeamId = null;
+        let currentDashTeamName = null;
+        let currentDashSquadIds = []; 
+
+        async function openDashSquadManager(tourneyId) {
+            closeDashModal('scheduler-modal');
+            document.getElementById('dash-squad-modal').classList.add('active');
+            document.getElementById('dash-squad-team-select').innerHTML = '<option value="">Loading teams...</option>';
+            document.getElementById('dash-squad-list').innerHTML = '';
+            
+            dashCurrentTourneyId = tourneyId;
+            
+            // Extract teams directly from matches
+            const { data: matches } = await db.from('matches').select('team_a_id, team_b_id, full_state').eq('tournament_id', tourneyId);
+            
+            let tMap = new Map();
+            if(matches) {
+                matches.forEach(m => {
+                    let fs = m.full_state || {};
+                    if(m.team_a_id && fs.team1) tMap.set(m.team_a_id, fs.team1);
+                    if(m.team_b_id && fs.team2) tMap.set(m.team_b_id, fs.team2);
+                });
+            }
+            
+            dashTourneyTeams = Array.from(tMap, ([team_id, name]) => ({ team_id, name }));
+            
+            let selectHtml = '<option value="">-- Select a Team --</option>';
+            dashTourneyTeams.forEach(t => {
+                selectHtml += `<option value="${t.team_id}|${t.name}">${t.name}</option>`;
+            });
+            document.getElementById('dash-squad-team-select').innerHTML = selectHtml;
+        }
+
+        async function handleDashTeamSelect() {
+            const val = document.getElementById('dash-squad-team-select').value;
+            const listDiv = document.getElementById('dash-squad-list');
+            if(!val) {
+                listDiv.innerHTML = '<div class="text-slate-500 italic text-center p-4">Select a team to view players.</div>';
+                currentDashTeamId = null;
+                currentDashTeamName = null;
+                return;
+            }
+            
+            [currentDashTeamId, currentDashTeamName] = val.split('|');
+            listDiv.innerHTML = '<div class="text-slate-400 text-center p-4">Loading players...</div>';
+            
+            // Get master roster
+            const { data: rosterData, error: rErr } = await db.from('team_rosters').select('player_id, players(full_name, playing_role)').eq('team_name', currentDashTeamName);
+            
+            // Get current tournament squad
+            const { data: squadData } = await db.from('tournament_squads').select('player_id').eq('tournament_id', dashCurrentTourneyId).eq('team_id', currentDashTeamId);
+            currentDashSquadIds = squadData ? squadData.map(s => s.player_id) : [];
+            
+            if (rErr || !rosterData || rosterData.length === 0) {
+                listDiv.innerHTML = `<div class="bg-red-900/20 border border-red-500 p-4 rounded text-red-400 text-sm">No players found for <b>${currentDashTeamName}</b>. Use the Quick-Add form above to add players to the database!</div>`;
+                return;
+            }
+
+            let html = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">';
+            rosterData.forEach(r => {
+                if(r.players) {
+                    let isChecked = currentDashSquadIds.includes(r.player_id) ? "checked" : "";
+                    html += `
+                    <label class="flex items-center gap-3 bg-slate-800 p-3 rounded cursor-pointer hover:bg-slate-700 transition border border-slate-700 hover:border-blue-500">
+                        <input type="checkbox" class="dash-squad-chk w-5 h-5 accent-blue-500" value="${r.player_id}" ${isChecked}>
+                        <div>
+                            <div class="text-white font-bold text-sm">${r.players.full_name}</div>
+                            <div class="text-xs text-emerald-400">${r.players.playing_role || 'Player'}</div>
+                        </div>
+                    </label>`;
+                }
+            });
+            html += '</div>';
+            listDiv.innerHTML = html;
+        }
+
+        async function quickAddDashPlayer() {
+            if (!currentDashTeamId || !currentDashTeamName) {
+                alert("Please select a team from the dropdown first!");
+                return;
+            }
+
+            const name = document.getElementById('dash-p-name').value.trim();
+            const role = document.getElementById('dash-p-role').value;
+            const bat = document.getElementById('dash-p-bat').value;
+            const bowlArm = document.getElementById('dash-p-bowlarm').value;
+            const bowlType = document.getElementById('dash-p-bowltype').value;
+
+            if (!name) { alert("Player Name is required."); return; }
+
+            const btn = document.getElementById('dash-quick-add-btn');
+            const oldText = btn.innerText;
+            btn.innerText = "⏳ Saving..."; btn.disabled = true;
+
+            try {
+                const { data: existing } = await db.from('players').select('player_id').ilike('full_name', name);
+                let playerIdToUse;
+
+                if (existing && existing.length > 0) {
+                    playerIdToUse = existing[0].player_id;
+                } else {
+                    const { data: newP, error } = await db.from('players').insert([{ 
+                        full_name: name, playing_role: role, batting_style: bat, bowling_arm: bowlArm, bowling_type: bowlType 
+                    }]).select();
+                    if (error) throw error;
+                    playerIdToUse = newP[0].player_id;
+                }
+
+                await db.from('team_rosters').upsert([{ team_name: currentDashTeamName, player_id: playerIdToUse }], {onConflict: 'team_name, player_id'});
+                await db.from('tournament_squads').upsert([{ tournament_id: dashCurrentTourneyId, team_id: currentDashTeamId, player_id: playerIdToUse }], {onConflict: 'tournament_id, team_id, player_id'});
+
+                document.getElementById('dash-p-name').value = '';
+                await handleDashTeamSelect(); // Refresh the checkbox list
+
+            } catch (e) {
+                alert("Error adding player: " + e.message);
+            } finally {
+                btn.innerText = oldText; btn.disabled = false;
+            }
+        }
+
+        async function syncDashSquad() {
+            if (!currentDashTeamId || !currentDashTeamName) { alert("Please select a team first."); return; }
+
+            const checkboxes = document.querySelectorAll('.dash-squad-chk');
+            let selectedIds = [];
+            checkboxes.forEach(chk => { if(chk.checked) selectedIds.push(chk.value); });
+
+            if(selectedIds.length === 0) { alert("Please select at least one player to sync."); return; }
+
+            const btn = document.getElementById('dash-sync-squad-btn');
+            btn.innerText = "⏳ Syncing..."; btn.disabled = true;
+
+            try {
+                await db.from('tournament_squads').delete().eq('tournament_id', dashCurrentTourneyId).eq('team_id', currentDashTeamId);
+
+                let payload = selectedIds.map(pid => ({
+                    tournament_id: dashCurrentTourneyId,
+                    team_id: currentDashTeamId,
+                    player_id: pid
+                }));
+
+                const { error } = await db.from('tournament_squads').insert(payload);
+                if (error) throw error;
+
+                btn.innerText = "✅ Saved!";
+                setTimeout(() => { btn.innerText = "💾 Save Squad Changes"; btn.disabled = false; }, 2000);
+
+            } catch(e) {
+                alert("Error syncing squad: " + e.message);
+                btn.innerText = "💾 Save Squad Changes"; btn.disabled = false;
             }
         }
 
@@ -1285,12 +1488,8 @@
         function generateUniqueMatchID(prefix) { return `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`; }
         function generateUniquePin() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
-        // MERGED INITIALIZATION LISTENER
         document.addEventListener('DOMContentLoaded', async () => { 
-            // Init Dashboard
             loadTournamentsForList();
-
-            // Init Advanced Builder
             await checkAdminSession();
             await fetchAllMasterTeams();
             await loadExistingTournamentsList();
@@ -1299,7 +1498,6 @@
             addBulkRows(15); 
         });
 
-        // 🔥 MOBILE SIDEBAR TOGGLE
         function toggleSidebar() {
             document.querySelector('.sidebar').classList.toggle('open');
             document.querySelector('.sidebar-overlay').classList.toggle('active');
@@ -1307,40 +1505,26 @@
 
         async function checkAdminSession() {
             const { data: { session }, error: sessionError } = await db.auth.getSession();
-            
-            if (sessionError || !session) {
-                console.warn("No active session found. Running in offline/testing mode.");
-                return;
-            }
-
+            if (sessionError || !session) return;
             currentAdminId = session.user.id;
 
-            const { data: profileData, error: profileError } = await db
-                .from('profiles')
-                .select('association, role')
-                .eq('id', currentAdminId)
-                .single();
-
+            const { data: profileData, error: profileError } = await db.from('profiles').select('association, role').eq('id', currentAdminId).single();
             if (!profileError && profileData && profileData.association) {
                 currentAdminAssociation = profileData.association;
                 document.querySelector('.app-title').innerText = `${currentAdminAssociation} TOURNAMENT HUB`;
                 document.getElementById('mobile-app-title').innerText = `${currentAdminAssociation} HUB`;
             }
-
-            // 🔥 SUPER ADMIN VERIFICATION
             if (session.user.email === 'pushpendra51277@gmail.com' || (profileData && (profileData.role || '').toLowerCase() === 'superadmin')) {
                 isSuperAdmin = true;
                 document.querySelectorAll('.super-admin-only').forEach(el => el.classList.remove('super-admin-only'));
             }
         }
 
-        // 🔥 MOBILE FRIENDLY SWITCH TAB
         function switchTab(targetId, navElement) {
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             navElement.classList.add('active');
             document.querySelectorAll('.hub-section').forEach(sec => sec.classList.remove('active'));
             document.getElementById(targetId).classList.add('active');
-            
             if (window.innerWidth <= 768) {
                 document.querySelector('.sidebar').classList.remove('open');
                 document.querySelector('.sidebar-overlay').classList.remove('active');
@@ -1362,20 +1546,15 @@
         function syncActiveTeams() {
             let activeNames = selectedTourneyTeams.map(t => t.name);
             Object.keys(poolsData).forEach(p => { poolsData[p] = poolsData[p].filter(t => activeNames.includes(t)); });
-            
             const select = document.getElementById('squad-team-select');
             select.innerHTML = '<option value="">Select a team to verify squad...</option>' + activeNames.map(team => `<option value="${team}">${team}</option>`).join('');
-
             renderPoolsWorkspace();
             renderCanvas(); 
         }
 
         async function fetchAllMasterTeams() {
             const { data, error } = await db.from('teams').select('*').order('name', { ascending: true });
-            if (!error && data) {
-                allDbTeams = data;
-                renderTeamPanes();
-            }
+            if (!error && data) { allDbTeams = data; renderTeamPanes(); }
         }
 
         function renderTeamPanes() {
@@ -1437,24 +1616,12 @@
 
         async function loadExistingTournamentsList() {
             const select = document.getElementById('existing-tournament-select');
-            
-            if (!currentAdminId && !isSuperAdmin) {
-                select.innerHTML = '<option value="">Please log in to view your tournaments</option>';
-                return;
-            }
-
+            if (!currentAdminId && !isSuperAdmin) { select.innerHTML = '<option value="">Please log in to view your tournaments</option>'; return; }
             let query = db.from('tournaments').select('tournament_id, name, format, admin_id, host').order('created_at', { ascending: false });
-            
-            if (!isSuperAdmin) {
-                query = query.eq('admin_id', currentAdminId);
-            }
+            if (!isSuperAdmin) query = query.eq('admin_id', currentAdminId);
 
             const { data, error } = await query;
-            if (error || !data || data.length === 0) { 
-                select.innerHTML = '<option value="">No tournaments found under your account</option>'; 
-                return; 
-            }
-
+            if (error || !data || data.length === 0) { select.innerHTML = '<option value="">No tournaments found under your account</option>'; return; }
             select.innerHTML = '<option value="">-- Choose tournament to edit --</option>' + data.map(t => {
                 let hostTag = (isSuperAdmin && t.host) ? ` [${t.host}]` : '';
                 return `<option value="${t.tournament_id}">${t.name} (${t.format})${hostTag}</option>`;
@@ -1466,25 +1633,13 @@
             let badge = document.getElementById('tourney-status-badge');
             
             if (mode === 'edit') {
-                wrapper.style.display = 'block'; 
-                currentTournamentId = null; 
-                loadedTournamentHost = null;
+                wrapper.style.display = 'block'; currentTournamentId = null; loadedTournamentHost = null;
             } else {
-                wrapper.style.display = 'none'; 
-                currentTournamentId = null; 
-                loadedTournamentHost = null;
-                selectedTourneyTeams = [];
-                masterFixtures = []; 
-                document.getElementById('t-name').value = '';
-                document.getElementById('t-date').value = '';
-                document.getElementById('t-tier').value = 'Local';
-                renderTeamPanes();
-                initPoolsWorkspace("1");
-                renderCanvas();
-                if(badge) {
-                    badge.innerText = "Unsaved";
-                    badge.style = "background: rgba(148, 163, 184, 0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid #94a3b8; color: #94a3b8; font-size: 0.85rem; font-weight: bold;";
-                }
+                wrapper.style.display = 'none'; currentTournamentId = null; loadedTournamentHost = null;
+                selectedTourneyTeams = []; masterFixtures = []; 
+                document.getElementById('t-name').value = ''; document.getElementById('t-date').value = ''; document.getElementById('t-tier').value = 'Local';
+                renderTeamPanes(); initPoolsWorkspace("1"); renderCanvas();
+                if(badge) { badge.innerText = "Unsaved"; badge.style = "background: rgba(148, 163, 184, 0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid #94a3b8; color: #94a3b8; font-size: 0.85rem; font-weight: bold;"; }
             }
         }
 
@@ -1495,13 +1650,11 @@
 
             if (!isSuperAdmin && tData.admin_id !== currentAdminId) {
                 alert("❌ Access Denied: You can only edit tournaments created under your Admin account.");
-                document.getElementById('existing-tournament-select').value = "";
-                return;
+                document.getElementById('existing-tournament-select').value = ""; return;
             }
 
             currentTournamentId = tournId;
             loadedTournamentHost = tData.host || null;
-
             document.getElementById('t-name').value = tData.name || '';
             document.getElementById('t-format').value = tData.format || 'T20';
             document.getElementById('t-date').value = tData.start_date ? tData.start_date.split('T')[0] : '';
@@ -1538,17 +1691,12 @@
             }
 
             selectedTourneyTeams = allDbTeams.filter(t => linkedTeamNames.has(t.name));
-            renderTeamPanes();
-            initPoolsWorkspace("1");
-            syncActiveTeams();
+            renderTeamPanes(); initPoolsWorkspace("1"); syncActiveTeams();
             alert(`✅ Loaded tournament "${tData.name}". \n\n${selectedTourneyTeams.length} Teams and ${masterFixtures.length} Matches were pulled from the cloud!`);
         }
 
         async function saveTournamentAndProceed() {
-            let btn = document.getElementById('btn-save-proceed');
-            let originalText = btn.innerText;
-            btn.innerText = "⏳ Saving Tournament...";
-            
+            let btn = document.getElementById('btn-save-proceed'); let originalText = btn.innerText; btn.innerText = "⏳ Saving...";
             let tName = document.getElementById('t-name').value.trim();
             let tFormat = document.getElementById('t-format').value;
             let tDate = document.getElementById('t-date').value;
@@ -1556,53 +1704,29 @@
             
             const mode = document.getElementById('tournament-mode-select').value;
             let tHost = (mode === 'edit' && loadedTournamentHost) ? loadedTournamentHost : currentAdminAssociation; 
-            
             let configPayload = { winPoints: document.getElementById('tWinPoints').value, tier: tTier }; 
 
-            if (!tName || !tDate) { 
-                alert("Name and Starting Date are required."); 
-                btn.innerText = originalText;
-                return; 
-            }
-            if (selectedTourneyTeams.length < 2) { 
-                alert("Select at least 2 teams."); 
-                btn.innerText = originalText;
-                return; 
-            }
+            if (!tName || !tDate) { alert("Name and Starting Date are required."); btn.innerText = originalText; return; }
+            if (selectedTourneyTeams.length < 2) { alert("Select at least 2 teams."); btn.innerText = originalText; return; }
 
-            let tError = null;
-            
             try {
                 if (mode === 'edit' && currentTournamentId) {
-                    const { error } = await db.from('tournaments').update({ name: tName, format: tFormat, start_date: tDate, host: tHost, config: configPayload }).eq('tournament_id', currentTournamentId);
-                    tError = error;
+                    await db.from('tournaments').update({ name: tName, format: tFormat, start_date: tDate, host: tHost, config: configPayload }).eq('tournament_id', currentTournamentId);
                 } else {
-                    const { data: tData, error } = await db.from('tournaments').insert([{ name: tName, format: tFormat, start_date: tDate, host: tHost, admin_id: currentAdminId, config: configPayload }]).select();
-                    tError = error; if (tData && tData.length > 0) currentTournamentId = tData[0].tournament_id;
+                    const { data: tData } = await db.from('tournaments').insert([{ name: tName, format: tFormat, start_date: tDate, host: tHost, admin_id: currentAdminId, config: configPayload }]).select();
+                    if (tData && tData.length > 0) currentTournamentId = tData[0].tournament_id;
                     await loadExistingTournamentsList();
                 }
 
-                if (tError) throw tError;
-
                 let badge = document.getElementById('tourney-status-badge');
-                if (badge) {
-                    badge.innerText = "Saved: Draft Mode";
-                    badge.style.background = "rgba(16, 185, 129, 0.1)"; 
-                    badge.style.borderColor = "#10b981"; 
-                    badge.style.color = "#10b981";
-                }
+                if (badge) { badge.innerText = "Saved: Draft Mode"; badge.style.background = "rgba(16, 185, 129, 0.1)"; badge.style.color = "#10b981"; }
                 
                 btn.innerText = originalText;
-                let navItem = document.getElementById('nav-fixtures');
-                switchTab('sec-fixtures', navItem);
+                switchTab('sec-fixtures', document.getElementById('nav-fixtures'));
                 
-            } catch (err) {
-                alert("Error saving tournament: " + err.message);
-                btn.innerText = originalText;
-            }
+            } catch (err) { alert("Error saving tournament: " + err.message); btn.innerText = originalText; }
         }
 
-        // --- POOL WORKSPACE ---
         function handlePoolSelection(selectEl) {
             if (selectEl.value === 'custom') {
                 let customCount = prompt("How many pools do you need? (Enter a number)");
@@ -1620,262 +1744,116 @@
         }
 
         function initPoolsWorkspace(countVal) { 
-            poolCount = parseInt(countVal) || 1;
-            if(poolCount < 1) poolCount = 1;
-            
-            let previouslyAssigned = [];
-            Object.keys(poolsData).forEach(pKey => { 
-                previouslyAssigned = previouslyAssigned.concat(poolsData[pKey]); 
-            });
-
-            poolsData = {};
-            let allActiveNames = selectedTourneyTeams.map(t => t.name);
-
-            if(poolCount === 1) { 
-                poolsData["Single Pool / League"] = [...allActiveNames]; 
-            } else { 
+            poolCount = parseInt(countVal) || 1; if(poolCount < 1) poolCount = 1;
+            poolsData = {}; let allActiveNames = selectedTourneyTeams.map(t => t.name);
+            if(poolCount === 1) { poolsData["Single Pool / League"] = [...allActiveNames]; } else { 
                 poolsData["Unassigned"] = [...allActiveNames];
-                for(let i=0; i<poolCount; i++) { 
-                    let pName = i < 26 ? String.fromCharCode(65 + i) : (i + 1);
-                    poolsData["Pool " + pName] = []; 
-                }
+                for(let i=0; i<poolCount; i++) { let pName = i < 26 ? String.fromCharCode(65 + i) : (i + 1); poolsData["Pool " + pName] = []; }
             }
             renderPoolsWorkspace(); 
         }
         
         function renderPoolsWorkspace() {
-            let assigned = [].concat(...Object.values(poolsData)); 
-            let activeNames = selectedTourneyTeams.map(t => t.name);
-            
+            let assigned = [].concat(...Object.values(poolsData)); let activeNames = selectedTourneyTeams.map(t => t.name);
             let unassigned = activeNames.filter(t => !assigned.includes(t));
-            if (poolsData["Unassigned"]) {
-                unassigned.forEach(t => { if (!poolsData["Unassigned"].includes(t)) poolsData["Unassigned"].push(t); });
-            }
+            if (poolsData["Unassigned"]) { unassigned.forEach(t => { if (!poolsData["Unassigned"].includes(t)) poolsData["Unassigned"].push(t); }); }
             
             let unassignedHtml = "";
             if (poolCount > 1 && poolsData["Unassigned"]) {
                  unassignedHtml = poolsData["Unassigned"].length > 0 
                     ? poolsData["Unassigned"].map(t => `
                         <div style="background:#0f172a; padding:8px; border-radius:4px; margin-bottom:5px; font-weight:bold; display:flex; justify-content:space-between; align-items:center;">
-                            ${t} 
-                            <select style="background:#1e293b; color:white; border-radius:4px; padding:2px; outline:none;" onchange="assignTeam('${t.replace(/'/g, "\\'")}', this.value)">
-                                <option value="">Move...</option>
-                                ${Object.keys(poolsData).filter(p => p !== "Unassigned").map(p => `<option value="${p}">${p}</option>`).join('')}
-                            </select>
-                        </div>
-                      `).join('') 
+                            ${t} <select style="background:#1e293b; color:white; border-radius:4px; padding:2px; outline:none;" onchange="assignTeam('${t.replace(/'/g, "\\'")}', this.value)">
+                                <option value="">Move...</option>${Object.keys(poolsData).filter(p => p !== "Unassigned").map(p => `<option value="${p}">${p}</option>`).join('')}
+                            </select></div>`).join('') 
                     : '<div style="color:#64748b; font-size:0.8rem; font-style:italic;">All teams assigned to pools.</div>';
-                 
                  document.getElementById('staging-teams-list').innerHTML = unassignedHtml;
-            } else {
-                 document.getElementById('staging-teams-list').innerHTML = '<div style="color:#64748b; font-size:0.8rem; font-style:italic;">All teams auto-assigned to Single Pool.</div>';
-            }
+            } else { document.getElementById('staging-teams-list').innerHTML = '<div style="color:#64748b; font-size:0.8rem; font-style:italic;">All teams auto-assigned to Single Pool.</div>'; }
             
             let poolsHtml = Object.keys(poolsData).filter(pName => pName !== "Unassigned").map(pName => `
-                <div class="pool-card">
-                    <b style="color:#f59e0b;">${pName}</b> <span style="float:right; color:#64748b; font-size:0.8rem;">${poolsData[pName].length} Teams</span>
-                    <div class="pool-teams-box">
-                        ${poolsData[pName].length > 0 
-                            ? poolsData[pName].map(t => `
-                                <div class="team-pill">
-                                    ${t} <span style="cursor:pointer; margin-left:5px;" onclick="removeTeamFromPool('${pName}', '${t.replace(/'/g, "\\'")}')">×</span>
-                                </div>
-                              `).join('')
-                            : '<div style="color:#64748b; font-size:0.8rem; font-style:italic;">Empty Pool</div>'
-                        }
-                    </div>
-                </div>
+                <div class="pool-card"><b style="color:#f59e0b;">${pName}</b> <span style="float:right; color:#64748b; font-size:0.8rem;">${poolsData[pName].length} Teams</span>
+                    <div class="pool-teams-box">${poolsData[pName].length > 0 ? poolsData[pName].map(t => `<div class="team-pill">${t} <span style="cursor:pointer; margin-left:5px;" onclick="removeTeamFromPool('${pName}', '${t.replace(/'/g, "\\'")}')">×</span></div>`).join('') : '<div style="color:#64748b; font-size:0.8rem; font-style:italic;">Empty Pool</div>'}</div></div>
             `).join('');
-            
             document.getElementById('pools-container-grid').innerHTML = poolsHtml;
         }
         
-        function assignTeam(t, p) { 
-            if(p) { 
-                poolsData["Unassigned"] = poolsData["Unassigned"].filter(x => x !== t);
-                poolsData[p].push(t); 
-                renderPoolsWorkspace(); 
-            } 
-        }
+        function assignTeam(t, p) { if(p) { poolsData["Unassigned"] = poolsData["Unassigned"].filter(x => x !== t); poolsData[p].push(t); renderPoolsWorkspace(); } }
+        function removeTeamFromPool(p, t) { poolsData[p] = poolsData[p].filter(x => x !== t); if(poolCount > 1) { if(!poolsData["Unassigned"]) poolsData["Unassigned"] = []; poolsData["Unassigned"].push(t); } else { poolsData["Single Pool / League"].push(t); } renderPoolsWorkspace(); }
         
-        function removeTeamFromPool(p, t) { 
-            poolsData[p] = poolsData[p].filter(x => x !== t); 
-            if(poolCount > 1) {
-                if(!poolsData["Unassigned"]) poolsData["Unassigned"] = [];
-                poolsData["Unassigned"].push(t);
-            } else {
-                poolsData["Single Pool / League"].push(t); 
-            }
-            renderPoolsWorkspace(); 
-        }
-        
-        // --- FIXTURE GENERATORS ---
         function generatePoolMatches() {
-            let mode = document.getElementById('pool-round-select').value;
-            let count = 0;
+            let mode = document.getElementById('pool-round-select').value; let count = 0;
             Object.keys(poolsData).forEach(poolName => { 
                 if(poolName === "Unassigned") return;
                 let teams = poolsData[poolName]; 
                 for(let i=0; i<teams.length; i++) { 
                     for(let j=i+1; j<teams.length; j++) { 
                         let mName = (poolName === "Single Pool / League") ? `League Match` : `${poolName} Match`;
-                        masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: teams[i], t2: teams[j], pin: generateUniquePin(), isLive: false }); 
-                        count++;
-                        if(mode === 'double') {
-                            masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName + ` (Reverse)`, t1: teams[j], t2: teams[i], pin: generateUniquePin(), isLive: false }); 
-                            count++;
-                        }
+                        masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: teams[i], t2: teams[j], pin: generateUniquePin(), isLive: false }); count++;
+                        if(mode === 'double') { masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName + ` (Reverse)`, t1: teams[j], t2: teams[i], pin: generateUniquePin(), isLive: false }); count++; }
                     } 
                 } 
             });
-            
             if(count === 0) { alert("No teams in active pools to generate matches."); return; }
-            alert(`Generated ${count} Group Matches! Moved to Master Canvas.`);
-            document.querySelectorAll('.sub-tab-btn')[2].click(); 
-            renderCanvas();
+            alert(`Generated ${count} Group Matches! Moved to Master Canvas.`); document.querySelectorAll('.sub-tab-btn')[2].click(); renderCanvas();
         }
 
         function generateKnockoutBracket() {
-            let template = document.getElementById('ko-template-select').value;
-            let size = parseInt(document.getElementById('ko-size-select').value); 
-            let count = 0;
-            let activeNames = selectedTourneyTeams.map(t => t.name);
+            let template = document.getElementById('ko-template-select').value; let size = parseInt(document.getElementById('ko-size-select').value); 
+            let count = 0; let activeNames = selectedTourneyTeams.map(t => t.name);
 
             if (template === 'standard') {
                 if (size >= 16) { for(let i=1; i<=8; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Round of 16 - Match ${i}`, t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); }
                 if (size >= 8) { for(let i=1; i<=4; i++) masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Quarter-Final ${i}`, t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); }
                 if (size >= 4) { masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 1", t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Semi-Final 2", t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); }
-                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); 
-                alert(`Generated Standard Placeholder Matches! Moved to Master Canvas.`);
-            
+                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); alert(`Generated Standard Placeholder Matches! Moved to Master Canvas.`);
             } else if (template === 'direct') {
-                let totalTeams = activeNames.length;
-                if(totalTeams < 2) { alert("Not enough teams for a direct knockout."); return; }
-                
-                let nextPow2 = Math.pow(2, Math.ceil(Math.log2(totalTeams)));
-                if (nextPow2 === 1) nextPow2 = 2; 
-                
-                let numByes = nextPow2 - totalTeams;
-                let numR1Matches = (totalTeams - numByes) / 2;
-                
-                let matchIdx = 0;
-                let roundTeams = []; 
-                let teamsGettingByes = [];
-
+                let totalTeams = activeNames.length; if(totalTeams < 2) { alert("Not enough teams for a direct knockout."); return; }
+                let nextPow2 = Math.pow(2, Math.ceil(Math.log2(totalTeams))); if (nextPow2 === 1) nextPow2 = 2; 
+                let numByes = nextPow2 - totalTeams; let numR1Matches = (totalTeams - numByes) / 2;
+                let matchIdx = 0; let roundTeams = []; let teamsGettingByes = [];
                 let r1RoundName = (nextPow2 === 16) ? "Round of 16" : (nextPow2 === 8) ? "Quarter-Final" : (nextPow2 === 4) ? "Semi-Final" : (nextPow2 === 2) ? "Final" : `Round of ${nextPow2}`;
                 
-                for(let i=0; i<numByes; i++) {
-                    roundTeams.push(activeNames[matchIdx]); 
-                    teamsGettingByes.push(activeNames[matchIdx]);
-                    matchIdx++;
-                }
-                
-                for(let i=0; i<numR1Matches; i++) {
-                    let mName = (r1RoundName === "Final") ? "Final" : `${r1RoundName} - Match ${i+1}`;
-                    masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: activeNames[matchIdx++], t2: activeNames[matchIdx++], pin: generateUniquePin(), isLive: false });
-                    count++;
-                    roundTeams.push(`Winner of ${mName}`);
-                }
+                for(let i=0; i<numByes; i++) { roundTeams.push(activeNames[matchIdx]); teamsGettingByes.push(activeNames[matchIdx]); matchIdx++; }
+                for(let i=0; i<numR1Matches; i++) { let mName = (r1RoundName === "Final") ? "Final" : `${r1RoundName} - Match ${i+1}`; masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: activeNames[matchIdx++], t2: activeNames[matchIdx++], pin: generateUniquePin(), isLive: false }); count++; roundTeams.push(`Winner of ${mName}`); }
                 
                 let teamsInRound = roundTeams.length;
                 while (teamsInRound >= 2) {
-                    let nextRoundTeams = [];
-                    let matchesThisRound = teamsInRound / 2;
-                    let rName = (matchesThisRound === 4) ? "Quarter-Final" : (matchesThisRound === 2) ? "Semi-Final" : (matchesThisRound === 1) ? "Final" : `Round of ${teamsInRound*2}`;
-                    
-                    for(let i=0; i<matchesThisRound; i++) {
-                        let mName = (matchesThisRound === 1) ? "Final" : `${rName} - Match ${i+1}`;
-                        masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: roundTeams[i*2], t2: roundTeams[i*2+1], pin: generateUniquePin(), isLive: false });
-                        count++;
-                        nextRoundTeams.push(`Winner of ${mName}`);
-                    }
-                    roundTeams = nextRoundTeams;
-                    teamsInRound = roundTeams.length;
+                    let nextRoundTeams = []; let matchesThisRound = teamsInRound / 2; let rName = (matchesThisRound === 4) ? "Quarter-Final" : (matchesThisRound === 2) ? "Semi-Final" : (matchesThisRound === 1) ? "Final" : `Round of ${teamsInRound*2}`;
+                    for(let i=0; i<matchesThisRound; i++) { let mName = (matchesThisRound === 1) ? "Final" : `${rName} - Match ${i+1}`; masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: roundTeams[i*2], t2: roundTeams[i*2+1], pin: generateUniquePin(), isLive: false }); count++; nextRoundTeams.push(`Winner of ${mName}`); }
+                    roundTeams = nextRoundTeams; teamsInRound = roundTeams.length;
                 }
-
-                let msg = `Generated ${count} Standard Bracket Matches!`;
-                if(numByes > 0) msg += `\n\n🚨 NOTE: To mathematically balance the bracket, ${numByes} team(s) received a BYE into the second round:\n${teamsGettingByes.join(', ')}`;
-                alert(msg + "\n\nMoved to Master Canvas.");
-            
+                let msg = `Generated ${count} Standard Bracket Matches!`; if(numByes > 0) msg += `\n\n🚨 NOTE: To mathematically balance the bracket, ${numByes} team(s) received a BYE into the second round:\n${teamsGettingByes.join(', ')}`; alert(msg + "\n\nMoved to Master Canvas.");
             } else if (template === 'rolling') {
-                let totalTeams = activeNames.length;
-                if(totalTeams < 2) { alert("Not enough teams for a rolling knockout."); return; }
-
-                let roundNum = 1;
-                let currentRoundTeams = [...activeNames];
-                let nextRoundPlaceholders = [];
-                
+                let totalTeams = activeNames.length; if(totalTeams < 2) { alert("Not enough teams for a rolling knockout."); return; }
+                let roundNum = 1; let currentRoundTeams = [...activeNames]; let nextRoundPlaceholders = [];
                 while(currentRoundTeams.length > 1) {
-                    let rName = "Round " + roundNum;
-                    if(currentRoundTeams.length === 2) rName = "Final";
-                    else if(currentRoundTeams.length <= 4 && currentRoundTeams.length > 2) rName = "Semi-Final";
-                    else if(currentRoundTeams.length <= 8 && currentRoundTeams.length > 4) rName = "Quarter-Final";
-
-                    let matchesThisRound = Math.floor(currentRoundTeams.length / 2);
-                    let hasBye = currentRoundTeams.length % 2 !== 0;
-
-                    for(let i=0; i<matchesThisRound; i++) {
-                        let t1 = currentRoundTeams[i*2];
-                        let t2 = currentRoundTeams[i*2 + 1];
-                        let mName = (rName === "Final") ? "Final" : `${rName} - Match ${i+1}`;
-                        masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: t1, t2: t2, pin: generateUniquePin(), isLive: false });
-                        count++;
-                        nextRoundPlaceholders.push(`Winner of ${mName}`);
-                    }
-
-                    if(hasBye) {
-                        let byeTeam = currentRoundTeams[currentRoundTeams.length - 1];
-                        nextRoundPlaceholders.unshift(byeTeam);
-                    }
-
-                    currentRoundTeams = [...nextRoundPlaceholders];
-                    nextRoundPlaceholders = [];
-                    roundNum++;
+                    let rName = "Round " + roundNum; if(currentRoundTeams.length === 2) rName = "Final"; else if(currentRoundTeams.length <= 4 && currentRoundTeams.length > 2) rName = "Semi-Final"; else if(currentRoundTeams.length <= 8 && currentRoundTeams.length > 4) rName = "Quarter-Final";
+                    let matchesThisRound = Math.floor(currentRoundTeams.length / 2); let hasBye = currentRoundTeams.length % 2 !== 0;
+                    for(let i=0; i<matchesThisRound; i++) { let t1 = currentRoundTeams[i*2]; let t2 = currentRoundTeams[i*2 + 1]; let mName = (rName === "Final") ? "Final" : `${rName} - Match ${i+1}`; masterFixtures.push({ id: generateUniqueMatchID("M"), name: mName, t1: t1, t2: t2, pin: generateUniquePin(), isLive: false }); count++; nextRoundPlaceholders.push(`Winner of ${mName}`); }
+                    if(hasBye) { let byeTeam = currentRoundTeams[currentRoundTeams.length - 1]; nextRoundPlaceholders.unshift(byeTeam); }
+                    currentRoundTeams = [...nextRoundPlaceholders]; nextRoundPlaceholders = []; roundNum++;
                 }
                 alert(`Generated ${count} Rolling Knockout Matches!\n\nOdd teams automatically received byes and were carried forward.\nMoved to Master Canvas.`);
-            
             } else if (template === 'ipl') {
                 masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Qualifier 1", t1: "Rank 1", t2: "Rank 2", pin: generateUniquePin(), isLive: false });
                 masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Eliminator", t1: "Rank 3", t2: "Rank 4", pin: generateUniquePin(), isLive: false });
                 masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Qualifier 2", t1: "Loser of Qualifier 1", t2: "Winner of Eliminator", pin: generateUniquePin(), isLive: false });
-                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "Winner of Qualifier 1", t2: "Winner of Qualifier 2", pin: generateUniquePin(), isLive: false });
-                alert(`Generated 4 IPL Playoff Matches! Moved to Master Canvas.`);
-            
+                masterFixtures.push({ id: generateUniqueMatchID("M"), name: "Final", t1: "Winner of Qualifier 1", t2: "Winner of Qualifier 2", pin: generateUniquePin(), isLive: false }); alert(`Generated 4 IPL Playoff Matches! Moved to Master Canvas.`);
             } else if (template === 'super') {
-                for(let i=1; i<=size; i++) { masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Super League Match`, t1: `Super Rank ${i}`, t2: "TBD", pin: generateUniquePin(), isLive: false }); }
-                alert(`Generated Super League Matches! Moved to Master Canvas.`);
+                for(let i=1; i<=size; i++) { masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Super League Match`, t1: `Super Rank ${i}`, t2: "TBD", pin: generateUniquePin(), isLive: false }); } alert(`Generated Super League Matches! Moved to Master Canvas.`);
             }
-
-            document.querySelectorAll('.sub-tab-btn')[2].click(); 
-            renderCanvas();
+            document.querySelectorAll('.sub-tab-btn')[2].click(); renderCanvas();
         }
 
-        // --- MASTER CANVAS ---
         function addManualMatch() { masterFixtures.push({ id: generateUniqueMatchID("M"), name: `Custom Match`, t1: "TBD", t2: "TBD", pin: generateUniquePin(), isLive: false }); renderCanvas(); }
-        
-        function handleTeamSelect(index, side, value) {
-            let match = masterFixtures[index];
-            if (side === 't1') { match.t1 = value; } else { match.t2 = value; }
-        }
+        function handleTeamSelect(index, side, value) { let match = masterFixtures[index]; if (side === 't1') { match.t1 = value; } else { match.t2 = value; } }
 
         function renderCanvas() {
             let container = document.getElementById('canvas-container');
-            if (masterFixtures.length === 0) {
-                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;"><p style="font-size: 1.2rem; margin-bottom: 10px;">No Matches Generated Yet</p><p style="font-size: 0.9rem;">Use the engines above to auto-generate matches, or add rows manually.</p></div>';
-                updateFinalLockedMatches(); return;
-            }
+            if (masterFixtures.length === 0) { container.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;"><p style="font-size: 1.2rem; margin-bottom: 10px;">No Matches Generated Yet</p><p style="font-size: 0.9rem;">Use the engines above to auto-generate matches, or add rows manually.</p></div>'; updateFinalLockedMatches(); return; }
 
-            let poolRanks = [];
-            Object.keys(poolsData).forEach(p => { 
-                if(p !== "Single Pool / League" && p !== "Unassigned") { poolRanks.push(`${p} - Rank 1`); poolRanks.push(`${p} - Rank 2`); poolRanks.push(`${p} - Rank 3`); }
-            });
-            
-            let dependencyPlaceholders = [];
-            masterFixtures.forEach(m => {
-                dependencyPlaceholders.push(`Winner of ${m.name}`);
-                dependencyPlaceholders.push(`Loser of ${m.name}`);
-            });
-
+            let poolRanks = []; Object.keys(poolsData).forEach(p => { if(p !== "Single Pool / League" && p !== "Unassigned") { poolRanks.push(`${p} - Rank 1`); poolRanks.push(`${p} - Rank 2`); poolRanks.push(`${p} - Rank 3`); } });
+            let dependencyPlaceholders = []; masterFixtures.forEach(m => { dependencyPlaceholders.push(`Winner of ${m.name}`); dependencyPlaceholders.push(`Loser of ${m.name}`); });
             let activeNames = selectedTourneyTeams.map(t => t.name);
             let allOptsArray = [
                 `<optgroup label="Real Teams">`, ...activeNames.map(t => `<option value="${t}">${t}</option>`), `</optgroup>`,
@@ -1887,7 +1865,6 @@
             container.innerHTML = masterFixtures.map((m, i) => {
                 let safeOpt1 = opts; if (m.t1 && !opts.includes(`value="${m.t1}"`)) safeOpt1 += `<option value="${m.t1}">${m.t1}</option>`;
                 let safeOpt2 = opts; if (m.t2 && !opts.includes(`value="${m.t2}"`)) safeOpt2 += `<option value="${m.t2}">${m.t2}</option>`;
-
                 return `
                 <div class="canvas-row">
                     <div style="flex:1; min-width:250px; text-align:left;">
@@ -1903,32 +1880,20 @@
                     </div>
                 </div>`
             }).join('');
-            
             updateFinalLockedMatches();
         }
 
         function deleteCanvasMatch(index) { masterFixtures.splice(index, 1); renderCanvas(); }
-        
-        function lockCanvasAndProceed() { 
-            updateFinalLockedMatches(); 
-            let navItem = document.getElementById('nav-squads');
-            switchTab('sec-squads', navItem); 
-        }
+        function lockCanvasAndProceed() { updateFinalLockedMatches(); let navItem = document.getElementById('nav-squads'); switchTab('sec-squads', navItem); }
 
-        // ==========================================
-        // 🔥 SQUADS & BULK REGISTRATION LOGIC
-        // ==========================================
-        
         function updateSquadSelectCount(safeTeamClass) {
-            let count = document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).length;
-            document.getElementById('squad-select-count').innerText = `${count} Selected`;
+            let count = document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).length; document.getElementById('squad-select-count').innerText = `${count} Selected`;
         }
 
         function openPlayerModal() {
             const targetTeam = document.getElementById('squad-team-select').value;
             if(!targetTeam) { alert("Please select a Team to Review from the dropdown first!"); return; }
-            document.getElementById('quick-player-target-team').innerText = targetTeam;
-            openModal('quick-player-modal');
+            document.getElementById('quick-player-target-team').innerText = targetTeam; openModal('quick-player-modal');
         }
 
         async function quickSavePlayer(btn) {
@@ -1956,40 +1921,24 @@
             const { data: existing } = await query;
             let playerIdToUse;
 
-            if (existing && existing.length > 0) {
-                playerIdToUse = existing[0].player_id;
-            } else {
-                const { data: newP, error } = await db.from('players').insert([{ 
-                    full_name: name, father_name: father, dob: dob, 
-                    playing_role: role, batting_style: bStyle, bowling_arm: bArm, bowling_type: bType, reg_no: regNo || null 
-                }]).select();
-                
+            if (existing && existing.length > 0) { playerIdToUse = existing[0].player_id; } else {
+                const { data: newP, error } = await db.from('players').insert([{ full_name: name, father_name: father, dob: dob, playing_role: role, batting_style: bStyle, bowling_arm: bArm, bowling_type: bType, reg_no: regNo || null }]).select();
                 if (error) { alert("Player Insert Error: " + error.message); btn.innerText = "Save to Master & Add to Squad"; btn.disabled = false; return; }
                 playerIdToUse = newP[0].player_id;
             }
 
             let tObj = selectedTourneyTeams.find(t => t.name === teamName);
-            
             await db.from('team_rosters').upsert([{ team_name: teamName, player_id: playerIdToUse }], {onConflict: 'team_name, player_id'});
             
-            if(currentTournamentId) {
-                await db.from('tournament_squads').upsert([{ tournament_id: currentTournamentId, team_id: tObj.team_id, player_id: playerIdToUse }], {onConflict: 'tournament_id, team_id, player_id'});
-            }
+            if(currentTournamentId) { await db.from('tournament_squads').upsert([{ tournament_id: currentTournamentId, team_id: tObj.team_id, player_id: playerIdToUse }], {onConflict: 'tournament_id, team_id, player_id'}); }
 
             let safeTeamClass = teamName.replace(/\s+/g, '_');
-            let previouslyCheckedIds = [];
-            document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).forEach(chk => previouslyCheckedIds.push(chk.value));
+            let previouslyCheckedIds = []; document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).forEach(chk => previouslyCheckedIds.push(chk.value));
             
-            previouslyCheckedIds.push(playerIdToUse);
-            tournamentSquadsCache[teamName] = previouslyCheckedIds;
-            await loadWizardSquad(teamName);
+            previouslyCheckedIds.push(playerIdToUse); tournamentSquadsCache[teamName] = previouslyCheckedIds; await loadWizardSquad(teamName);
 
             closeOldModals(); 
-            document.getElementById('quick-p-name').value = ''; 
-            document.getElementById('quick-p-father').value = ''; 
-            document.getElementById('quick-p-dob').value = '';
-            document.getElementById('quick-p-reg').value = '';
-            
+            document.getElementById('quick-p-name').value = ''; document.getElementById('quick-p-father').value = ''; document.getElementById('quick-p-dob').value = ''; document.getElementById('quick-p-reg').value = '';
             btn.innerText = "Save to Master & Add to Squad"; btn.disabled = false;
         }
 
@@ -2000,268 +1949,126 @@
             
             const { data, error } = await db.from('team_rosters').select('player_id, players(full_name, playing_role)').eq('team_name', teamName);
             if (error || !data || data.length === 0) {
-                container.innerHTML = `<div style="color: #fca5a5; padding: 15px; border: 1px dashed #ef4444; border-radius: 6px;">No players found for "${teamName}". Please use the <strong style="color:white;">+ Quick-Add New Player</strong> button above to start building this team's roster!</div>`;
-                return;
+                container.innerHTML = `<div style="color: #fca5a5; padding: 15px; border: 1px dashed #ef4444; border-radius: 6px;">No players found for "${teamName}". Please use the <strong style="color:white;">+ Quick-Add New Player</strong> button above to start building this team's roster!</div>`; return;
             }
 
             let safeTeamClass = teamName.replace(/\s+/g, '_');
             let html = `<h4 style="color:#10b981; margin-bottom:5px;">Select Tournament Squad <span id="squad-select-count" style="background:#0f172a; color:#38bdf8; border:1px solid #38bdf8; padding:3px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold; float:right;">0 Selected</span></h4><p style="font-size:0.8rem; color:#94a3b8; margin-bottom:15px; margin-top:0;">Uncheck players from the Master DB who are NOT participating in this specific tournament.</p><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:left;">`;
-            
             let count = 1;
             data.forEach(row => {
                 if(row.players) {
-                    let isChecked = "checked";
-                    if(tournamentSquadsCache[teamName] && !tournamentSquadsCache[teamName].includes(row.player_id)) isChecked = "";
+                    let isChecked = "checked"; if(tournamentSquadsCache[teamName] && !tournamentSquadsCache[teamName].includes(row.player_id)) isChecked = "";
                     html += `<label class="team-checkbox-item" style="margin-bottom:0;"><input type="checkbox" class="squad-chk-${safeTeamClass}" value="${row.player_id}" ${isChecked} onchange="updateSquadSelectCount('${safeTeamClass}')" style="width: 18px; height: 18px; margin-right: 15px; cursor: pointer;"><span style="color: white; font-weight: bold; font-size: 0.95rem;">${count}. ${row.players.full_name} <span style="font-size:0.75rem; color:#f59e0b; font-weight:normal;">(${row.players.playing_role || 'Player'})</span></span></label>`;
                     count++;
                 }
             });
-            html += `</div>`;
-            html += `<button type="button" style="background:#10b981; width:100%; padding:12px; margin-top:20px; border:none; border-radius:6px; color:white; font-weight:bold; cursor:pointer;" onclick="syncSquadToTournament(event, '${teamName.replace(/'/g, "\\'")}', '${safeTeamClass}')">🔄 Sync & Save Squad to Live Tournament</button>`;
+            html += `</div><button type="button" style="background:#10b981; width:100%; padding:12px; margin-top:20px; border:none; border-radius:6px; color:white; font-weight:bold; cursor:pointer;" onclick="syncSquadToTournament(event, '${teamName.replace(/'/g, "\\'")}', '${safeTeamClass}')">🔄 Sync & Save Squad to Live Tournament</button>`;
             container.innerHTML = html; updateSquadSelectCount(safeTeamClass); 
         }
 
         async function syncSquadToTournament(event, teamName, safeTeamClass) {
             if(!currentTournamentId) { alert("Tournament not saved yet."); return; }
-            let tObj = selectedTourneyTeams.find(t => t.name === teamName);
-            if(!tObj) return;
+            let tObj = selectedTourneyTeams.find(t => t.name === teamName); if(!tObj) return;
             
             let selectedIds = []; document.querySelectorAll(`.squad-chk-${safeTeamClass}:checked`).forEach(chk => selectedIds.push(chk.value));
-            tournamentSquadsCache[teamName] = selectedIds;
-            if(selectedIds.length === 0) { alert("Please select at least one player to sync."); return; }
+            tournamentSquadsCache[teamName] = selectedIds; if(selectedIds.length === 0) { alert("Please select at least one player to sync."); return; }
             
             const btn = event.target; const originalText = btn.innerText; btn.innerText = "⏳ Syncing...";
             
             await db.from('tournament_squads').delete().eq('tournament_id', currentTournamentId).eq('team_id', tObj.team_id);
-            
             let payload = selectedIds.map(pid => ({ tournament_id: currentTournamentId, team_id: tObj.team_id, player_id: pid }));
             const { error } = await db.from('tournament_squads').insert(payload);
             
-            if(error) { alert("Error syncing squad: " + error.message); btn.innerText = originalText; } 
-            else { alert(`✅ Successfully synced ${selectedIds.length} players to the live tournament!`); btn.innerText = "✅ Synced Successfully!"; setTimeout(() => btn.innerText = originalText, 3000); }
+            if(error) { alert("Error syncing squad: " + error.message); btn.innerText = originalText; } else { alert(`✅ Successfully synced ${selectedIds.length} players to the live tournament!`); btn.innerText = "✅ Synced Successfully!"; setTimeout(() => btn.innerText = originalText, 3000); }
         }
 
-        // --- BULK EXCEL LOGIC ---
         function toggleBulkForm() { document.getElementById('bulk-registration-panel').classList.toggle('hidden'); }
 
         function addBulkRows(count, append = false, dataArray = []) {
             const tbody = document.getElementById('bulk-player-grid');
             if (!append) tbody.innerHTML = ''; 
-            
-            const currentRows = tbody.children.length;
-            const rowsToGenerate = Math.max(count, dataArray.length);
-            
+            const currentRows = tbody.children.length; const rowsToGenerate = Math.max(count, dataArray.length);
             for (let i = 0; i < rowsToGenerate; i++) {
-                let rowNum = currentRows + i + 1;
-                let d = dataArray[i] || [];
-                
-                let nameVal = d[0] || '';
-                let fnameVal = d[1] || '';
-                let dobVal = formatExcelDate(d[2]);
-                let roleVal = d[3] || 'Batter';
-                let batStyleVal = d[4] || 'Right-hand bat';
-                let bowlArmVal = d[5] || 'None';
-                let bowlTypeVal = d[6] || 'None';
-                let regVal = d[7] || '';
-
-                let tr = document.createElement('tr');
-                tr.style.borderBottom = "1px solid #334155";
-                
+                let rowNum = currentRows + i + 1; let d = dataArray[i] || [];
+                let nameVal = d[0] || ''; let fnameVal = d[1] || ''; let dobVal = formatExcelDate(d[2]); let roleVal = d[3] || 'Batter'; let batStyleVal = d[4] || 'Right-hand bat'; let bowlArmVal = d[5] || 'None'; let bowlTypeVal = d[6] || 'None'; let regVal = d[7] || '';
+                let tr = document.createElement('tr'); tr.style.borderBottom = "1px solid #334155";
                 tr.innerHTML = `
-                    <td style="padding: 6px; color: #64748b;">${rowNum}</td>
-                    <td style="padding: 6px;"><input type="text" class="bp-name input-dark w-100" value="${nameVal}" placeholder="Name" style="margin:bottom:0; font-size:0.8rem;"></td>
+                    <td style="padding: 6px; color: #64748b;">${rowNum}</td><td style="padding: 6px;"><input type="text" class="bp-name input-dark w-100" value="${nameVal}" placeholder="Name" style="margin:bottom:0; font-size:0.8rem;"></td>
                     <td style="padding: 6px;"><input type="text" class="bp-fname input-dark w-100" value="${fnameVal}" placeholder="Father" style="margin:bottom:0; font-size:0.8rem;"></td>
                     <td style="padding: 6px;"><input type="date" class="bp-dob input-dark w-100" value="${dobVal}" style="margin:bottom:0; font-size:0.8rem; color-scheme: dark;"></td>
-                    <td style="padding: 6px;">
-                        <select class="bp-role input-dark w-100" style="margin:bottom:0; font-size:0.8rem;">
-                            <option value="Batter" ${roleVal.toLowerCase().includes('bat') ? 'selected' : ''}>Batter</option>
-                            <option value="Bowler" ${roleVal.toLowerCase().includes('bowl') ? 'selected' : ''}>Bowler</option>
-                            <option value="All-Rounder" ${roleVal.toLowerCase().includes('all') ? 'selected' : ''}>All-Rounder</option>
-                            <option value="Wicket-Keeper" ${roleVal.toLowerCase().includes('wk') || roleVal.toLowerCase().includes('keep') ? 'selected' : ''}>Wicket-Keeper</option>
-                        </select>
-                    </td>
-                    <td style="padding: 6px;">
-                        <select class="bp-bat input-dark w-100" style="margin:bottom:0; font-size:0.8rem;">
-                            <option value="Right-hand bat" ${batStyleVal.toLowerCase().includes('right') ? 'selected' : ''}>Right-hand bat</option>
-                            <option value="Left-hand bat" ${batStyleVal.toLowerCase().includes('left') ? 'selected' : ''}>Left-hand bat</option>
-                        </select>
-                    </td>
-                    <td style="padding: 6px;">
-                        <select class="bp-barm input-dark w-100" style="margin:bottom:0; font-size:0.8rem;">
-                            <option value="Right-arm" ${bowlArmVal.toLowerCase().includes('right') ? 'selected' : ''}>Right-arm</option>
-                            <option value="Left-arm" ${bowlArmVal.toLowerCase().includes('left') ? 'selected' : ''}>Left-arm</option>
-                            <option value="None" ${bowlArmVal.toLowerCase().includes('none') ? 'selected' : ''}>None</option>
-                        </select>
-                    </td>
-                    <td style="padding: 6px;">
-                        <select class="bp-btype input-dark w-100" style="margin:bottom:0; font-size:0.8rem;">
-                            <option value="Fast" ${bowlTypeVal.toLowerCase() === 'fast' ? 'selected' : ''}>Fast</option>
-                            <option value="Fast-Medium" ${bowlTypeVal.toLowerCase().includes('fast-med') ? 'selected' : ''}>Fast-Medium</option>
-                            <option value="Medium" ${bowlTypeVal.toLowerCase() === 'medium' ? 'selected' : ''}>Medium</option>
-                            <option value="Off-spin" ${bowlTypeVal.toLowerCase().includes('off') ? 'selected' : ''}>Off-spin</option>
-                            <option value="Leg-spin" ${bowlTypeVal.toLowerCase().includes('leg') ? 'selected' : ''}>Leg-spin</option>
-                            <option value="Orthodox" ${bowlTypeVal.toLowerCase().includes('ortho') ? 'selected' : ''}>Orthodox</option>
-                            <option value="Wrist-spin" ${bowlTypeVal.toLowerCase().includes('wrist') ? 'selected' : ''}>Wrist-spin</option>
-                            <option value="None" ${bowlTypeVal.toLowerCase().includes('none') ? 'selected' : ''}>None</option>
-                        </select>
-                    </td>
+                    <td style="padding: 6px;"><select class="bp-role input-dark w-100" style="margin:bottom:0; font-size:0.8rem;"><option value="Batter" ${roleVal.toLowerCase().includes('bat') ? 'selected' : ''}>Batter</option><option value="Bowler" ${roleVal.toLowerCase().includes('bowl') ? 'selected' : ''}>Bowler</option><option value="All-Rounder" ${roleVal.toLowerCase().includes('all') ? 'selected' : ''}>All-Rounder</option><option value="Wicket-Keeper" ${roleVal.toLowerCase().includes('wk') || roleVal.toLowerCase().includes('keep') ? 'selected' : ''}>Wicket-Keeper</option></select></td>
+                    <td style="padding: 6px;"><select class="bp-bat input-dark w-100" style="margin:bottom:0; font-size:0.8rem;"><option value="Right-hand bat" ${batStyleVal.toLowerCase().includes('right') ? 'selected' : ''}>Right-hand bat</option><option value="Left-hand bat" ${batStyleVal.toLowerCase().includes('left') ? 'selected' : ''}>Left-hand bat</option></select></td>
+                    <td style="padding: 6px;"><select class="bp-barm input-dark w-100" style="margin:bottom:0; font-size:0.8rem;"><option value="Right-arm" ${bowlArmVal.toLowerCase().includes('right') ? 'selected' : ''}>Right-arm</option><option value="Left-arm" ${bowlArmVal.toLowerCase().includes('left') ? 'selected' : ''}>Left-arm</option><option value="None" ${bowlArmVal.toLowerCase().includes('none') ? 'selected' : ''}>None</option></select></td>
+                    <td style="padding: 6px;"><select class="bp-btype input-dark w-100" style="margin:bottom:0; font-size:0.8rem;"><option value="Fast" ${bowlTypeVal.toLowerCase() === 'fast' ? 'selected' : ''}>Fast</option><option value="Fast-Medium" ${bowlTypeVal.toLowerCase().includes('fast-med') ? 'selected' : ''}>Fast-Medium</option><option value="Medium" ${bowlTypeVal.toLowerCase() === 'medium' ? 'selected' : ''}>Medium</option><option value="Off-spin" ${bowlTypeVal.toLowerCase().includes('off') ? 'selected' : ''}>Off-spin</option><option value="Leg-spin" ${bowlTypeVal.toLowerCase().includes('leg') ? 'selected' : ''}>Leg-spin</option><option value="Orthodox" ${bowlTypeVal.toLowerCase().includes('ortho') ? 'selected' : ''}>Orthodox</option><option value="Wrist-spin" ${bowlTypeVal.toLowerCase().includes('wrist') ? 'selected' : ''}>Wrist-spin</option><option value="None" ${bowlTypeVal.toLowerCase().includes('none') ? 'selected' : ''}>None</option></select></td>
                     <td style="padding: 6px;"><input type="text" class="bp-reg input-dark w-100" value="${regVal}" placeholder="Opt. ID" style="margin:bottom:0; font-size:0.8rem; text-transform:uppercase;"></td>
-                `;
-                tbody.appendChild(tr);
+                `; tbody.appendChild(tr);
             }
         }
 
         function formatExcelDate(val) {
             if (!val) return '';
-            if (typeof val === 'number') {
-                let dateObj = new Date(Math.round((val - 25569) * 86400 * 1000));
-                return dateObj.toISOString().split('T')[0];
-            }
-            if (typeof val === 'string') {
-                let d = new Date(val);
-                if (!isNaN(d)) return d.toISOString().split('T')[0];
-            }
-            return val;
+            if (typeof val === 'number') { let dateObj = new Date(Math.round((val - 25569) * 86400 * 1000)); return dateObj.toISOString().split('T')[0]; }
+            if (typeof val === 'string') { let d = new Date(val); if (!isNaN(d)) return d.toISOString().split('T')[0]; } return val;
         }
 
         function handleExcelUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
+            const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                
-                const jsonArr = XLSX.utils.sheet_to_json(worksheet, {header: 1});
-                let cleanData = jsonArr.filter(row => row.length > 0);
-                
-                let firstRowStr = cleanData[0].join(' ').toLowerCase();
-                if (firstRowStr.includes('name') || firstRowStr.includes('dob')) {
-                    cleanData.shift(); 
-                }
-
-                addBulkRows(Math.max(15, cleanData.length), false, cleanData);
-                document.getElementById('excel-upload').value = ""; 
-            };
-            reader.readAsArrayBuffer(file);
+                const data = new Uint8Array(e.target.result); const workbook = XLSX.read(data, {type: 'array'});
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonArr = XLSX.utils.sheet_to_json(worksheet, {header: 1}); let cleanData = jsonArr.filter(row => row.length > 0);
+                if (cleanData[0].join(' ').toLowerCase().includes('name') || cleanData[0].join(' ').toLowerCase().includes('dob')) cleanData.shift(); 
+                addBulkRows(Math.max(15, cleanData.length), false, cleanData); document.getElementById('excel-upload').value = ""; 
+            }; reader.readAsArrayBuffer(file);
         }
 
         async function submitBulkSquad() {
-            const teamName = document.getElementById('squad-team-select').value;
-            if (!teamName) { alert("Please select a team from the dropdown to review first."); return; }
-            
+            const teamName = document.getElementById('squad-team-select').value; if (!teamName) { alert("Please select a team from the dropdown to review first."); return; }
             if(!currentTournamentId) { alert("Please make sure you have saved the tournament settings in Tab 1 first."); return; }
-            
-            let tObj = selectedTourneyTeams.find(t => t.name === teamName);
-            if (!tObj) { alert("Team not found in tournament selection."); return; }
+            let tObj = selectedTourneyTeams.find(t => t.name === teamName); if (!tObj) { alert("Team not found in tournament selection."); return; }
 
-            const rows = document.querySelectorAll('#bulk-player-grid tr');
-            const isStrict = ENFORCE_STRICT_REGISTRATION; 
-            
-            let payload = [];
-            let hasErrors = false;
+            const rows = document.querySelectorAll('#bulk-player-grid tr'); const isStrict = ENFORCE_STRICT_REGISTRATION; 
+            let payload = []; let hasErrors = false;
 
             rows.forEach((row, index) => {
-                let name = row.querySelector('.bp-name').value.trim();
-                let fname = row.querySelector('.bp-fname').value.trim();
-                let dob = row.querySelector('.bp-dob').value;
-                let role = row.querySelector('.bp-role').value;
-                let bStyle = row.querySelector('.bp-bat').value;
-                let bArm = row.querySelector('.bp-barm').value;
-                let bType = row.querySelector('.bp-btype').value;
-                let regNo = row.querySelector('.bp-reg').value.trim();
+                let name = row.querySelector('.bp-name').value.trim(); let fname = row.querySelector('.bp-fname').value.trim(); let dob = row.querySelector('.bp-dob').value;
+                let role = row.querySelector('.bp-role').value; let bStyle = row.querySelector('.bp-bat').value; let bArm = row.querySelector('.bp-barm').value;
+                let bType = row.querySelector('.bp-btype').value; let regNo = row.querySelector('.bp-reg').value.trim();
 
                 if (name !== "" || fname !== "" || dob !== "") {
-                    
-                    if (!name) {
-                        alert(`Row ${index + 1} Error: Full Name is always required.`);
-                        row.style.backgroundColor = "rgba(239, 68, 68, 0.2)"; 
-                        hasErrors = true;
-                        return;
-                    }
-
-                    if (isStrict && (!fname || !dob)) {
-                        alert(`Row ${index + 1} Error: Strict Mode is ON. Father's Name and DOB are mandatory.`);
-                        row.style.backgroundColor = "rgba(239, 68, 68, 0.2)"; 
-                        hasErrors = true;
-                        return;
-                    }
-                    
+                    if (!name) { alert(`Row ${index + 1} Error: Full Name is always required.`); row.style.backgroundColor = "rgba(239, 68, 68, 0.2)"; hasErrors = true; return; }
+                    if (isStrict && (!fname || !dob)) { alert(`Row ${index + 1} Error: Strict Mode is ON. Father's Name and DOB are mandatory.`); row.style.backgroundColor = "rgba(239, 68, 68, 0.2)"; hasErrors = true; return; }
                     row.style.backgroundColor = "transparent"; 
-
-                    payload.push({
-                        full_name: name,
-                        father_name: fname,
-                        dob: dob,
-                        playing_role: role,
-                        batting_style: bStyle,
-                        bowling_arm: bArm,
-                        bowling_type: bType,
-                        reg_no: regNo || null
-                    });
-                } else {
-                    row.style.backgroundColor = "transparent"; 
-                }
+                    payload.push({ full_name: name, father_name: fname, dob: dob, playing_role: role, batting_style: bStyle, bowling_arm: bArm, bowling_type: bType, reg_no: regNo || null });
+                } else { row.style.backgroundColor = "transparent"; }
             });
 
-            if (hasErrors) return; 
-            if (payload.length === 0) { alert("Please completely fill out at least one player row."); return; }
+            if (hasErrors) return; if (payload.length === 0) { alert("Please completely fill out at least one player row."); return; }
 
-            // 1. Upload to Master Database
             const { data: newPlayers, error } = await db.from('players').insert(payload).select('player_id');
             if (error) { alert("Error saving squad: " + error.message); return; }
 
-            // 2. Link them directly to the active team roster
-            const rosterLinks = newPlayers.map(p => ({
-                team_name: teamName,
-                player_id: p.player_id
-            }));
-            
+            const rosterLinks = newPlayers.map(p => ({ team_name: teamName, player_id: p.player_id }));
             const { error: linkError } = await db.from('team_rosters').upsert(rosterLinks, {onConflict: 'team_name, player_id'});
-            
-            if (linkError) { 
-                alert("Players saved globally, but failed to link to master team roster: " + linkError.message); 
-            }
+            if (linkError) { alert("Players saved globally, but failed to link to master team roster: " + linkError.message); }
 
-            // 3. Link directly to this Tournament Squad automatically
-            const tournamentLinks = newPlayers.map(p => ({
-                tournament_id: currentTournamentId,
-                team_id: tObj.team_id,
-                player_id: p.player_id
-            }));
+            const tournamentLinks = newPlayers.map(p => ({ tournament_id: currentTournamentId, team_id: tObj.team_id, player_id: p.player_id }));
             await db.from('tournament_squads').upsert(tournamentLinks, {onConflict: 'tournament_id, team_id, player_id'});
 
             let safeTeamClass = teamName.replace(/\s+/g, '_');
-            let previouslyCheckedIds = [];
-            if(tournamentSquadsCache[teamName]) previouslyCheckedIds = tournamentSquadsCache[teamName];
-            
-            newPlayers.forEach(p => previouslyCheckedIds.push(p.player_id));
-            tournamentSquadsCache[teamName] = previouslyCheckedIds;
+            let previouslyCheckedIds = []; if(tournamentSquadsCache[teamName]) previouslyCheckedIds = tournamentSquadsCache[teamName];
+            newPlayers.forEach(p => previouslyCheckedIds.push(p.player_id)); tournamentSquadsCache[teamName] = previouslyCheckedIds;
 
             alert(`✅ Successfully registered ${payload.length} players to the cloud and linked them to ${teamName} in this tournament!`);
-            addBulkRows(15, false);
-            toggleBulkForm();
-            loadWizardSquad(teamName);
+            addBulkRows(15, false); toggleBulkForm(); loadWizardSquad(teamName);
         }
 
-        function finishSquadsAndProceed() { 
-            updateFinalLockedMatches(); 
-            let navItem = document.getElementById('nav-deploy');
-            switchTab('sec-deploy', navItem); 
-        }
+        function finishSquadsAndProceed() { updateFinalLockedMatches(); let navItem = document.getElementById('nav-deploy'); switchTab('sec-deploy', navItem); }
 
         function updateFinalLockedMatches() {
-            let tName = document.getElementById('t-name').value || "Unnamed Tournament"; 
-            let container = document.getElementById('postings-body');
-            
-            if(masterFixtures.length === 0) {
-                 container.innerHTML = `<tr><td colspan="2" style="text-align: center; padding: 30px; color: #94a3b8;">Build your fixtures in the Master Canvas to view postings.</td></tr>`;
-                 return;
-            }
-            
+            let tName = document.getElementById('t-name').value || "Unnamed Tournament"; let container = document.getElementById('postings-body');
+            if(masterFixtures.length === 0) { container.innerHTML = `<tr><td colspan="2" style="text-align: center; padding: 30px; color: #94a3b8;">Build your fixtures in the Master Canvas to view postings.</td></tr>`; return; }
             container.innerHTML = masterFixtures.map((m, i) => `
                 <tr>
                     <td style="font-weight: bold; color: #38bdf8; font-size: 1.1rem; border-right: 1px solid #1e293b;">
@@ -2272,9 +2079,7 @@
                     <td style="text-align: center;">
                         <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 5px;">Scorer PIN</div>
                         <div style="font-size: 1.5rem; font-weight: bold; color: #f59e0b; letter-spacing: 3px;">${m.pin}</div>
-                        <div style="margin-top: 8px;">
-                            ${m.isLive ? '<span style="background:#10b981; color:#020617; padding:3px 8px; border-radius:12px; font-size:0.7rem; font-weight:bold;">✅ LIVE ON CLOUD</span>' : '<span style="background:#475569; color:white; padding:3px 8px; border-radius:12px; font-size:0.7rem; font-weight:bold;">⏳ PENDING DEPLOY</span>'}
-                        </div>
+                        <div style="margin-top: 8px;">${m.isLive ? '<span style="background:#10b981; color:#020617; padding:3px 8px; border-radius:12px; font-size:0.7rem; font-weight:bold;">✅ LIVE ON CLOUD</span>' : '<span style="background:#475569; color:white; padding:3px 8px; border-radius:12px; font-size:0.7rem; font-weight:bold;">⏳ PENDING DEPLOY</span>'}</div>
                     </td>
                 </tr>`).join('');
         }
@@ -2282,152 +2087,58 @@
        async function saveMatchesToCloud() {
             if(!currentTournamentId) { alert("Tournament ID missing. Ensure Basic Settings are saved first."); return; }
             if(masterFixtures.length === 0) { alert("No matches found to deploy."); return; }
+            const btn = document.getElementById('btnDeploy'); btn.innerText = "⏳ Checking Cloud & Injecting Fixtures...";
 
-            const btn = document.getElementById('btnDeploy');
-            btn.innerText = "⏳ Checking Cloud & Injecting Fixtures...";
-
-            let tName = document.getElementById('t-name').value;
-            let tFormat = document.getElementById('t-format').value;
-            let tHost = loadedTournamentHost ? loadedTournamentHost : currentAdminAssociation; 
-            let tTier = document.getElementById('t-tier').value; 
+            let tName = document.getElementById('t-name').value; let tFormat = document.getElementById('t-format').value;
+            let tHost = loadedTournamentHost ? loadedTournamentHost : currentAdminAssociation; let tTier = document.getElementById('t-tier').value; 
 
             const { data: cloudMatches } = await db.from('matches').select('match_id, full_state').eq('tournament_id', currentTournamentId);
-            let cloudMap = new Map();
-            if (cloudMatches) {
-                cloudMatches.forEach(cm => cloudMap.set(cm.match_id, cm.full_state));
-            }
+            let cloudMap = new Map(); if (cloudMatches) { cloudMatches.forEach(cm => cloudMap.set(cm.match_id, cm.full_state)); }
 
-            let updatesCount = 0;
-            let insertsCount = 0;
-            let skippedCount = 0;
+            let updatesCount = 0; let insertsCount = 0; let skippedCount = 0;
 
             for (let m of masterFixtures) {
-                let t1Obj = selectedTourneyTeams.find(t => t.name === m.t1);
-                let t2Obj = selectedTourneyTeams.find(t => t.name === m.t2);
-                let team1UUID = t1Obj ? t1Obj.team_id : null; 
-                let team2UUID = t2Obj ? t2Obj.team_id : null;
-
+                let t1Obj = selectedTourneyTeams.find(t => t.name === m.t1); let t2Obj = selectedTourneyTeams.find(t => t.name === m.t2);
+                let team1UUID = t1Obj ? t1Obj.team_id : null; let team2UUID = t2Obj ? t2Obj.team_id : null;
                 let existingState = cloudMap.get(m.id);
 
                 if (existingState) {
                     let status = (existingState.match_status || 'upcoming').toLowerCase();
-                    
                     if (status === 'upcoming') {
-                        existingState.team1 = m.t1;
-                        existingState.team2 = m.t2;
-                        existingState.matchName = m.name;
-                        existingState.tournament = tName; 
-                        
-                        await db.from('matches').update({
-                            team_a_id: team1UUID,
-                            team_b_id: team2UUID,
-                            full_state: existingState
-                        }).eq('match_id', m.id);
-                        updatesCount++;
-                    } else {
-                        skippedCount++; 
-                    }
+                        existingState.team1 = m.t1; existingState.team2 = m.t2; existingState.matchName = m.name; existingState.tournament = tName; 
+                        await db.from('matches').update({ team_a_id: team1UUID, team_b_id: team2UUID, full_state: existingState }).eq('match_id', m.id); updatesCount++;
+                    } else { skippedCount++; }
                 } else {
-                    let matchPayload = {
-                        match_id: m.id,
-                        tournament_id: currentTournamentId,
-                        team_a_id: team1UUID,
-                        team_b_id: team2UUID,
-                        scorer_pin: m.pin,
-                        full_state: { tournament: tName, format: tFormat, host: tHost, tier: tTier, team1: m.t1, team2: m.t2, matchName: m.name, match_status: 'upcoming' }
-                    };
-                    await db.from('matches').insert([matchPayload]);
-                    insertsCount++;
-                    m.isLive = true; 
+                    let matchPayload = { match_id: m.id, tournament_id: currentTournamentId, team_a_id: team1UUID, team_b_id: team2UUID, scorer_pin: m.pin, full_state: { tournament: tName, format: tFormat, host: tHost, tier: tTier, team1: m.t1, team2: m.t2, matchName: m.name, match_status: 'upcoming' } };
+                    await db.from('matches').insert([matchPayload]); insertsCount++; m.isLive = true; 
                 }
             }
-            
-            updateFinalLockedMatches();
-            renderCanvas(); 
-            
-            document.getElementById('deploy-action-card').innerHTML = `
-                <h3 style="color: #10b981; font-size: 1.5rem; margin-top: 0;">✅ Successfully Deployed & Synced!</h3>
-                <p style="color: #cbd5e1; max-width: 600px; margin: 0 auto;">
-                    <b>${insertsCount}</b> new matches added.<br>
-                    <b>${updatesCount}</b> upcoming matches updated.<br>
-                    <b style="color:#f59e0b;">${skippedCount}</b> active/completed matches safely bypassed to protect stats.
-                </p>
-            `;
+            updateFinalLockedMatches(); renderCanvas(); 
+            document.getElementById('deploy-action-card').innerHTML = `<h3 style="color: #10b981; font-size: 1.5rem; margin-top: 0;">✅ Successfully Deployed & Synced!</h3><p style="color: #cbd5e1; max-width: 600px; margin: 0 auto;"><b>${insertsCount}</b> new matches added.<br><b>${updatesCount}</b> upcoming matches updated.<br><b style="color:#f59e0b;">${skippedCount}</b> active/completed matches safely bypassed to protect stats.</p>`;
         }
 
-        // ==========================================
-        // ⏳ HISTORICAL DATA INJECTOR (SUPER ADMIN ONLY)
-        // ==========================================
         async function injectHistoricalMatchAdvanced() {
-            if (!isSuperAdmin) {
-                alert("Access Denied: You must be a Super Admin to inject historical legacy records.");
-                return;
-            }
+            if (!isSuperAdmin) { alert("Access Denied: You must be a Super Admin to inject historical legacy records."); return; }
+            const pName = document.getElementById('hist-player').value.trim(); const dateStr = document.getElementById('hist-date').value;
+            if (!pName || !dateStr) { alert("Player Name and Match Date are strictly required."); return; }
 
-            const pName = document.getElementById('hist-player').value.trim();
-            const dateStr = document.getElementById('hist-date').value;
-            
-            if (!pName || !dateStr) { 
-                alert("Player Name and Match Date are strictly required."); 
-                return; 
-            }
+            const r = parseInt(document.getElementById('hist-runs').value) || 0; const b = parseInt(document.getElementById('hist-bf').value) || 0;
+            const f = parseInt(document.getElementById('hist-4s').value) || 0; const s = parseInt(document.getElementById('hist-6s').value) || 0;
+            const isOut = document.getElementById('hist-out').value === "true"; const o = parseFloat(document.getElementById('hist-o').value) || 0;
+            const m = parseInt(document.getElementById('hist-m').value) || 0; const rc = parseInt(document.getElementById('hist-rc').value) || 0;
+            const w = parseInt(document.getElementById('hist-wkts').value) || 0; const catches = parseInt(document.getElementById('hist-catches').value) || 0;
+            const stumpings = parseInt(document.getElementById('hist-stumpings').value) || 0; const runouts = parseInt(document.getElementById('hist-runouts').value) || 0;
 
-            const r = parseInt(document.getElementById('hist-runs').value) || 0;
-            const b = parseInt(document.getElementById('hist-bf').value) || 0;
-            const f = parseInt(document.getElementById('hist-4s').value) || 0;
-            const s = parseInt(document.getElementById('hist-6s').value) || 0;
-            const isOut = document.getElementById('hist-out').value === "true";
+            if (r === 0 && b === 0 && o === 0 && catches === 0 && stumpings === 0 && runouts === 0) { if(!confirm("All stats are currently zero. Are you sure you want to upload a blank match?")) return; }
 
-            const o = parseFloat(document.getElementById('hist-o').value) || 0;
-            const m = parseInt(document.getElementById('hist-m').value) || 0;
-            const rc = parseInt(document.getElementById('hist-rc').value) || 0;
-            const w = parseInt(document.getElementById('hist-wkts').value) || 0;
-
-            const catches = parseInt(document.getElementById('hist-catches').value) || 0;
-            const stumpings = parseInt(document.getElementById('hist-stumpings').value) || 0;
-            const runouts = parseInt(document.getElementById('hist-runouts').value) || 0;
-
-            if (r === 0 && b === 0 && o === 0 && catches === 0 && stumpings === 0 && runouts === 0) {
-                if(!confirm("All stats are currently zero. Are you sure you want to upload a blank match?")) return;
-            }
-
-            const historicalPayload = {
-                matchName: "Historical Entry",
-                match_status: "completed",
-                format: "Historical",
-                tournament: "Legacy Database",
-                host: currentAdminAssociation || "Independent",
-                tier: "Local",
-                inningsSummaries: [
-                    {
-                        batTeam: "Legacy Team",
-                        bowlTeam: "Opponent",
-                        batters: [ { name: pName, r: r, b: b, f: f, s: s, out: isOut, hasBatted: true } ],
-                        bowlers: [ { name: pName, o: o, m: m, rc: rc, w: w, catches: catches, stumpings: stumpings, runouts: runouts } ]
-                    }
-                ]
-            };
-
+            const historicalPayload = { matchName: "Historical Entry", match_status: "completed", format: "Historical", tournament: "Legacy Database", host: currentAdminAssociation || "Independent", tier: "Local", inningsSummaries: [ { batTeam: "Legacy Team", bowlTeam: "Opponent", batters: [ { name: pName, r: r, b: b, f: f, s: s, out: isOut, hasBatted: true } ], bowlers: [ { name: pName, o: o, m: m, rc: rc, w: w, catches: catches, stumpings: stumpings, runouts: runouts } ] } ] };
             const fakeMatchId = `HIST-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 
-            const { error } = await db.from('matches').insert([{
-                match_id: fakeMatchId,
-                scorer_pin: "HIST",
-                full_state: historicalPayload,
-                created_at: new Date(dateStr).toISOString()
-            }]);
-
-            if (error) {
-                alert("Error injecting historical data: " + error.message);
-            } else {
+            const { error } = await db.from('matches').insert([{ match_id: fakeMatchId, scorer_pin: "HIST", full_state: historicalPayload, created_at: new Date(dateStr).toISOString() }]);
+            if (error) { alert("Error injecting historical data: " + error.message); } else {
                 alert(`✅ Historical stats for ${pName} injected successfully! They will now automatically appear in the Analytics Hub.`);
-                
-                ['hist-runs', 'hist-bf', 'hist-4s', 'hist-6s', 'hist-o', 'hist-m', 'hist-rc', 'hist-wkts', 'hist-catches', 'hist-stumpings', 'hist-runouts'].forEach(id => {
-                    document.getElementById(id).value = "0";
-                });
-                document.getElementById('hist-out').value = "true";
-                document.getElementById('hist-player').value = "";
-                document.getElementById('hist-player').focus(); 
+                ['hist-runs', 'hist-bf', 'hist-4s', 'hist-6s', 'hist-o', 'hist-m', 'hist-rc', 'hist-wkts', 'hist-catches', 'hist-stumpings', 'hist-runouts'].forEach(id => { document.getElementById(id).value = "0"; });
+                document.getElementById('hist-out').value = "true"; document.getElementById('hist-player').value = ""; document.getElementById('hist-player').focus(); 
             }
         }
     </script>
