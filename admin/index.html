@@ -209,7 +209,7 @@
                         <h3 class="text-lg font-bold text-emerald-400 uppercase tracking-wide">Schedule Fixture</h3>
                     </div>
                     <p class="text-slate-400 text-sm flex-grow mb-6 leading-relaxed">
-                        Add an upcoming match to an existing tournament without disrupting current live games.
+                        Add an upcoming match or create a new tournament on the fly.
                     </p>
                     <button class="w-full py-3 rounded-lg font-bold text-white shadow-lg bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 transition-all">
                         QUICK SCHEDULE ➔
@@ -332,7 +332,7 @@
             </div>
         </div>
 
-      <!-- SCHEDULER -->
+        <!-- SCHEDULER -->
         <div id="scheduler-modal" class="dash-modal-overlay">
             <div class="dash-modal-content bg-cardBg border border-emerald-500 rounded-xl w-full max-w-lg shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
                 <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-900 sticky top-0 z-10">
@@ -342,7 +342,7 @@
                 <div class="p-6 overflow-y-auto custom-scroll">
                     <p class="text-slate-400 text-sm mb-4">Schedule an upcoming match. It will appear on the Fan Portal instantly.</p>
                     
-                    <!-- 🔥 NEW: Toggle Buttons -->
+                    <!-- Toggle Buttons -->
                     <div class="flex gap-2 mb-6 bg-slate-800 p-1 rounded-lg">
                         <button id="btn-sch-mode-existing" onclick="toggleSchMode('existing')" class="flex-1 py-2 text-sm font-bold rounded-md bg-emerald-600 text-white transition-colors">Add to Existing</button>
                         <button id="btn-sch-mode-new" onclick="toggleSchMode('new')" class="flex-1 py-2 text-sm font-bold rounded-md bg-transparent text-slate-400 hover:text-white transition-colors">Create New</button>
@@ -456,7 +456,7 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <!-- BRIDGE LINK: Switches back to the Quick Hub -->
-                <a href="#" onclick="toggleView('dashboard')" class="back-link">← Back to Quick Hub</a>
+                <a onclick="toggleView('dashboard')" class="back-link">← Back to Quick Hub</a>
                 <h2 class="app-title">TOURNAMENT HUB</h2>
                 <p class="app-subtitle">Cloud Connected</p>
             </div>
@@ -555,7 +555,7 @@
                                 <span id="teamCountBadge" style="background:#10b981; color:#020617; padding:3px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold;">0 Selected</span>
                             </div>
                             
-                            <!-- 🔥 BOLD "CREATE NEW TEAM" RIGHT BELOW SELECT TEAMS HEADING -->
+                            <!-- BOLD "CREATE NEW TEAM" RIGHT BELOW SELECT TEAMS HEADING -->
                             <div style="display: flex; gap: 5px; margin-bottom: 15px;">
                                 <input type="text" id="newTeamName" placeholder="Create new team..." style="flex:1; padding:10px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:white; font-weight: bold; font-size: 0.95rem;">
                                 <button type="button" class="btn-success" style="padding: 10px 20px; font-size: 0.9rem;" onclick="createNewTeamNatively()">+ ADD</button>
@@ -585,7 +585,7 @@
                 </div>
             </section>
 
-            <!-- 🔥 MODULE: HISTORICAL DATA INJECTOR (SUPER ADMIN ONLY) -->
+            <!-- MODULE: HISTORICAL DATA INJECTOR (SUPER ADMIN ONLY) -->
             <section id="sec-historical" class="hub-section">
                 <div class="admin-form">
                     <h3 style="margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 10px;">⏳ Historical Match Injector</h3>
@@ -633,7 +633,7 @@
                             <div class="input-group"><label>Run Outs</label><input type="number" id="hist-runouts" value="0"></div>
                         </div>
 
-                        <button type="button" class="btn-primary" style="background: #10b981; width: 100%; margin-top: 15px; font-size: 1.1rem; padding: 15px;" onclick="injectHistoricalMatch()">💾 Inject Historical Data to Cloud</button>
+                        <button type="button" class="btn-primary" style="background: #10b981; width: 100%; margin-top: 15px; font-size: 1.1rem; padding: 15px;" onclick="injectHistoricalMatchAdvanced()">💾 Inject Historical Data to Cloud</button>
                     </div>
                 </div>
             </section>
@@ -991,8 +991,6 @@
             if (error) { alert("Error creating match: " + error.message); return; }
 
             finalMatchId = matchId;
-            
-            // 🔥 CORRECTED: Pointing directly to 'scorer/live.html'
             const baseUrl = window.location.href.substring(0, window.location.href.indexOf('/admin'));
             const link = `${baseUrl}/scorer/live.html?match=${matchId}&pin=${scorerPin}`;
             
@@ -1004,11 +1002,31 @@
 
         function copyWizardInvite() { navigator.clipboard.writeText(finalInviteText).then(() => alert("✅ Invite copied to clipboard!")); }
         function shareWizardWhatsApp() { window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(finalInviteText)}`, '_blank'); }
-        
         function openScorerSelf() {
-            // 🔥 CORRECTED: Pointing directly to 'scorer/live.html'
             const baseUrl = window.location.href.substring(0, window.location.href.indexOf('/admin'));
             window.location.href = `${baseUrl}/scorer/live.html?match=${finalMatchId}`;
+        }
+
+        // --- SCHEDULER LOGIC ---
+        let currentSchMode = 'existing';
+
+        function toggleSchMode(mode) {
+            currentSchMode = mode;
+            if (mode === 'existing') {
+                document.getElementById('btn-sch-mode-existing').classList.replace('bg-transparent', 'bg-emerald-600');
+                document.getElementById('btn-sch-mode-existing').classList.replace('text-slate-400', 'text-white');
+                document.getElementById('btn-sch-mode-new').classList.replace('bg-emerald-600', 'bg-transparent');
+                document.getElementById('btn-sch-mode-new').classList.replace('text-white', 'text-slate-400');
+                document.getElementById('sch-existing-sec').classList.remove('hidden');
+                document.getElementById('sch-new-sec').classList.add('hidden');
+            } else {
+                document.getElementById('btn-sch-mode-new').classList.replace('bg-transparent', 'bg-emerald-600');
+                document.getElementById('btn-sch-mode-new').classList.replace('text-slate-400', 'text-white');
+                document.getElementById('btn-sch-mode-existing').classList.replace('bg-emerald-600', 'bg-transparent');
+                document.getElementById('btn-sch-mode-existing').classList.replace('text-white', 'text-slate-400');
+                document.getElementById('sch-new-sec').classList.remove('hidden');
+                document.getElementById('sch-existing-sec').classList.add('hidden');
+            }
         }
 
         async function loadDashTournaments() {
@@ -1020,39 +1038,82 @@
         }
 
         async function submitScheduledFixture() {
-            let tourneyVal = document.getElementById('sch-tourney').value;
             let t1 = document.getElementById('sch-team1').value.trim();
             let t2 = document.getElementById('sch-team2').value.trim();
-            if(!tourneyVal || !t1 || !t2) { alert("Tournament and both teams are required."); return; }
+            let format = document.getElementById('sch-format').value;
+            let dateVal = document.getElementById('sch-date').value || new Date().toISOString().split('T')[0];
+
+            if(!t1 || !t2) { alert("Both team names are required to schedule a fixture."); return; }
 
             const btn = document.getElementById('sch-submit-btn');
-            btn.innerText = "⏳ Scheduling..."; btn.disabled = true;
+            btn.innerText = "⏳ Processing..."; btn.disabled = true;
 
-            const [tourneyId, tourneyName] = tourneyVal.split('|');
-            const matchId = 'M-' + crypto.randomUUID().split('-')[0].toUpperCase();
-            const format = document.getElementById('sch-format').value;
-            
-            const statePayload = {
-                tournament: tourneyName,
-                matchName: `${t1} vs ${t2}`,
-                format: format,
-                match_status: "upcoming",
-                teams: { A: { name: t1, players: [] }, B: { name: t2, players: [] } }
-            };
+            let finalTourneyId = null;
+            let finalTourneyName = "";
 
-            const { error } = await db.from('matches').insert([{
-                match_id: matchId,
-                tournament_id: tourneyId,
-                scorer_pin: Math.floor(1000 + Math.random() * 9000).toString(),
-                full_state: statePayload,
-                created_at: document.getElementById('sch-date').value ? new Date(document.getElementById('sch-date').value).toISOString() : new Date().toISOString()
-            }]);
+            try {
+                if (currentSchMode === 'existing') {
+                    let tourneyVal = document.getElementById('sch-tourney').value;
+                    if(!tourneyVal) throw new Error("Please select an existing tournament.");
+                    [finalTourneyId, finalTourneyName] = tourneyVal.split('|');
+                } else {
+                    finalTourneyName = document.getElementById('sch-new-tname').value.trim();
+                    let tTier = document.getElementById('sch-new-tier').value;
+                    if(!finalTourneyName) throw new Error("New Tournament Name is required.");
 
-            btn.innerText = "📅 Push Fixture to Cloud"; btn.disabled = false;
-            if (error) alert("Error: " + error.message);
-            else { alert("✅ Fixture scheduled! It is now visible on the Fan Portal."); closeDashModal('scheduler-modal'); }
+                    let tHost = typeof currentAdminAssociation !== 'undefined' ? currentAdminAssociation : 'Independent';
+                    let adminId = typeof currentAdminId !== 'undefined' ? currentAdminId : null;
+
+                    const { data: tData, error: tError } = await db.from('tournaments').insert([{
+                        name: finalTourneyName,
+                        format: format,
+                        start_date: dateVal,
+                        host: tHost,
+                        admin_id: adminId,
+                        config: { winPoints: 2, tier: tTier }
+                    }]).select();
+
+                    if (tError) throw tError;
+                    if (tData && tData.length > 0) {
+                        finalTourneyId = tData[0].tournament_id;
+                    }
+                }
+
+                const matchId = 'M-' + crypto.randomUUID().split('-')[0].toUpperCase();
+                
+                const statePayload = {
+                    tournament: finalTourneyName,
+                    matchName: `${t1} vs ${t2}`,
+                    format: format,
+                    match_status: "upcoming",
+                    teams: { A: { name: t1, players: [] }, B: { name: t2, players: [] } }
+                };
+
+                const { error: mError } = await db.from('matches').insert([{
+                    match_id: matchId,
+                    tournament_id: finalTourneyId,
+                    scorer_pin: Math.floor(1000 + Math.random() * 9000).toString(),
+                    full_state: statePayload,
+                    created_at: new Date(dateVal).toISOString()
+                }]);
+
+                if (mError) throw mError;
+
+                alert(`✅ Fixture successfully scheduled under ${finalTourneyName}!`);
+                closeDashModal('scheduler-modal');
+                
+                loadTournamentsForList();
+                loadDashTournaments();
+
+            } catch(e) {
+                alert("Error: " + e.message);
+            } finally {
+                btn.innerText = "📅 Push Fixture to Cloud"; 
+                btn.disabled = false;
+            }
         }
 
+        // --- INJECTOR LOGIC ---
         async function submitInjection() {
             let tName = document.getElementById('inj-tourney').value || "Historical Archive";
             let t1 = document.getElementById('inj-t1-name').value || "Team A";
@@ -2186,7 +2247,7 @@
         // ==========================================
         // ⏳ HISTORICAL DATA INJECTOR (SUPER ADMIN ONLY)
         // ==========================================
-        async function injectHistoricalMatch() {
+        async function injectHistoricalMatchAdvanced() {
             if (!isSuperAdmin) {
                 alert("Access Denied: You must be a Super Admin to inject historical legacy records.");
                 return;
