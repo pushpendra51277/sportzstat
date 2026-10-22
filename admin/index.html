@@ -892,13 +892,14 @@
         let cachedDashTournaments = [];
         let finalInviteText = "";
         let finalMatchId = "";
-        let cachedDashTeams = []; // 🔥 CACHE NOW STORES {team_id, name}
 
-        // Setup the datalist for Team Autocomplete
+        // CACHE STORES {team_id, name}
+        let cachedDashTeams = []; 
+
         async function loadDashTeams() {
             const { data } = await db.from('teams').select('team_id, name');
             if (data) {
-                cachedDashTeams = data; // Store full objects
+                cachedDashTeams = data; 
                 let datalist = document.getElementById('dash-teams-datalist');
                 if (!datalist) {
                     datalist = document.createElement('datalist');
@@ -913,7 +914,7 @@
             document.getElementById(id).classList.add('active'); 
             if(id === 'scheduler-modal') {
                 if (cachedDashTournaments.length === 0) loadDashTournaments();
-                if (cachedDashTeams.length === 0) loadDashTeams(); // Load teams for autocomplete
+                if (cachedDashTeams.length === 0) loadDashTeams();
                 resetSchedulerModal();
             }
         }
@@ -1025,6 +1026,8 @@
         }
 
         // --- SCHEDULER & AUTO-TEAM CREATION LOGIC ---
+        let currentSchMode = 'existing';
+
         function toggleSchMode(mode) {
             currentSchMode = mode;
             if (mode === 'existing') {
@@ -1090,10 +1093,9 @@
                     uniqueTeamsInBatch.add(t2);
                 }
 
-                // 🔥 1. Auto-create new teams AND FETCH UUIDS
+                // 1. Auto-create new teams AND FETCH UUIDS
                 let newTeamsToDB = [];
                 uniqueTeamsInBatch.forEach(tName => {
-                    // Check if team name already exists in cache (case insensitive)
                     if (!cachedDashTeams.some(ct => ct.name.toLowerCase() === tName.toLowerCase())) {
                         newTeamsToDB.push({ name: tName });
                     }
@@ -1103,9 +1105,8 @@
                     btn.innerText = "⏳ Saving New Teams...";
                     const { data: insertedTeams, error: err } = await db.from('teams').insert(newTeamsToDB).select('team_id, name');
                     if (!err && insertedTeams) {
-                        // Append newly inserted teams (with UUIDs) to cache so we can find them below
                         cachedDashTeams = cachedDashTeams.concat(insertedTeams);
-                        loadDashTeams(); // Refresh datalist HTML in background
+                        loadDashTeams(); 
                     }
                 }
 
@@ -1143,7 +1144,6 @@
                     let t2 = row.querySelector('.sch-t2').value.trim();
                     let dateVal = row.querySelector('.sch-date').value || new Date().toISOString().split('T')[0];
 
-                    // 🔥 MATCH UP THE TEAM IDS PROPERLY
                     let t1Obj = cachedDashTeams.find(ct => ct.name.toLowerCase() === t1.toLowerCase());
                     let t2Obj = cachedDashTeams.find(ct => ct.name.toLowerCase() === t2.toLowerCase());
                     let team1Id = t1Obj ? t1Obj.team_id : null;
@@ -1153,8 +1153,8 @@
                     matchesToInsert.push({
                         match_id: matchId,
                         tournament_id: finalTourneyId,
-                        team_a_id: team1Id, // Perfect relational linkage
-                        team_b_id: team2Id, // Perfect relational linkage
+                        team_a_id: team1Id,
+                        team_b_id: team2Id,
                         scorer_pin: Math.floor(1000 + Math.random() * 9000).toString(),
                         full_state: {
                             tournament: finalTourneyName,
@@ -1170,7 +1170,6 @@
                 const { error: mError } = await db.from('matches').insert(matchesToInsert);
                 if (mError) throw mError;
 
-                // Show Success Screen with Bridge to Squads
                 showSchedulerSuccessState(matchesToInsert.length, finalTourneyName, finalTourneyId);
                 
                 loadTournamentsForList();
@@ -2434,4 +2433,3 @@
     </script>
 </body>
 </html>
-```<FollowUp>Deploy this file to verify the team autocompletion works. Is there any other module of the old system you want me to simplify next?</FollowUp>
