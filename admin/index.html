@@ -892,15 +892,32 @@
         let cachedDashTournaments = [];
         let finalInviteText = "";
         let finalMatchId = "";
+        let cachedDashTeams = []; // 🔥 CACHE NOW STORES {team_id, name}
+
+        // Setup the datalist for Team Autocomplete
+        async function loadDashTeams() {
+            const { data } = await db.from('teams').select('team_id, name');
+            if (data) {
+                cachedDashTeams = data; // Store full objects
+                let datalist = document.getElementById('dash-teams-datalist');
+                if (!datalist) {
+                    datalist = document.createElement('datalist');
+                    datalist.id = 'dash-teams-datalist';
+                    document.body.appendChild(datalist);
+                }
+                datalist.innerHTML = data.map(t => `<option value="${t.name}">`).join('');
+            }
+        }
 
         function openDashModal(id) { 
             document.getElementById(id).classList.add('active'); 
             if(id === 'scheduler-modal') {
                 if (cachedDashTournaments.length === 0) loadDashTournaments();
-                if (cachedDashTeams.length === 0) loadDashTeams();
+                if (cachedDashTeams.length === 0) loadDashTeams(); // Load teams for autocomplete
                 resetSchedulerModal();
             }
         }
+
         function closeDashModal(id) { document.getElementById(id).classList.remove('active'); }
         
         function autoSetOvers(format, targetId) {
@@ -1008,23 +1025,6 @@
         }
 
         // --- SCHEDULER & AUTO-TEAM CREATION LOGIC ---
-        let currentSchMode = 'existing';
-        let cachedDashTeams = [];
-
-        async function loadDashTeams() {
-            const { data } = await db.from('teams').select('name');
-            if (data) {
-                cachedDashTeams = data.map(t => t.name);
-                let datalist = document.getElementById('dash-teams-datalist');
-                if (!datalist) {
-                    datalist = document.createElement('datalist');
-                    datalist.id = 'dash-teams-datalist';
-                    document.body.appendChild(datalist);
-                }
-                datalist.innerHTML = data.map(t => `<option value="${t.name}">`).join('');
-            }
-        }
-
         function toggleSchMode(mode) {
             currentSchMode = mode;
             if (mode === 'existing') {
@@ -1090,20 +1090,26 @@
                     uniqueTeamsInBatch.add(t2);
                 }
 
-                // 1. Auto-create new teams in Supabase if they don't exist
+                // 🔥 1. Auto-create new teams AND FETCH UUIDS
                 let newTeamsToDB = [];
                 uniqueTeamsInBatch.forEach(tName => {
-                    if (!cachedDashTeams.some(ct => ct.toLowerCase() === tName.toLowerCase())) {
+                    // Check if team name already exists in cache (case insensitive)
+                    if (!cachedDashTeams.some(ct => ct.name.toLowerCase() === tName.toLowerCase())) {
                         newTeamsToDB.push({ name: tName });
-                        cachedDashTeams.push(tName);
                     }
                 });
 
                 if (newTeamsToDB.length > 0) {
-                    await db.from('teams').insert(newTeamsToDB);
-                    loadDashTeams(); // Refresh datalist cache
+                    btn.innerText = "⏳ Saving New Teams...";
+                    const { data: insertedTeams, error: err } = await db.from('teams').insert(newTeamsToDB).select('team_id, name');
+                    if (!err && insertedTeams) {
+                        // Append newly inserted teams (with UUIDs) to cache so we can find them below
+                        cachedDashTeams = cachedDashTeams.concat(insertedTeams);
+                        loadDashTeams(); // Refresh datalist HTML in background
+                    }
                 }
 
+                // 2. Tournament Context
                 btn.innerText = "⏳ Scheduling Fixtures...";
                 if (currentSchMode === 'existing') {
                     let tourneyVal = document.getElementById('sch-tourney').value;
@@ -1131,15 +1137,24 @@
                     if (tData && tData.length > 0) finalTourneyId = tData[0].tournament_id;
                 }
 
+                // 3. Setup Matches Array
                 for(let row of rows) {
                     let t1 = row.querySelector('.sch-t1').value.trim();
                     let t2 = row.querySelector('.sch-t2').value.trim();
                     let dateVal = row.querySelector('.sch-date').value || new Date().toISOString().split('T')[0];
 
+                    // 🔥 MATCH UP THE TEAM IDS PROPERLY
+                    let t1Obj = cachedDashTeams.find(ct => ct.name.toLowerCase() === t1.toLowerCase());
+                    let t2Obj = cachedDashTeams.find(ct => ct.name.toLowerCase() === t2.toLowerCase());
+                    let team1Id = t1Obj ? t1Obj.team_id : null;
+                    let team2Id = t2Obj ? t2Obj.team_id : null;
+
                     const matchId = 'M-' + crypto.randomUUID().split('-')[0].toUpperCase();
                     matchesToInsert.push({
                         match_id: matchId,
                         tournament_id: finalTourneyId,
+                        team_a_id: team1Id, // Perfect relational linkage
+                        team_b_id: team2Id, // Perfect relational linkage
                         scorer_pin: Math.floor(1000 + Math.random() * 9000).toString(),
                         full_state: {
                             tournament: finalTourneyName,
@@ -2083,7 +2098,7 @@
                         <select class="bp-btype input-dark w-100" style="margin:bottom:0; font-size:0.8rem;">
                             <option value="Fast" ${bowlTypeVal.toLowerCase() === 'fast' ? 'selected' : ''}>Fast</option>
                             <option value="Fast-Medium" ${bowlTypeVal.toLowerCase().includes('fast-med') ? 'selected' : ''}>Fast-Medium</option>
-                            <option value="Medium" ${bowlTypeVal.toLowerCase().includes('medium') ? 'selected' : ''}>Medium</option>
+                            <option value="Medium" ${bowlTypeVal.toLowerCase() === 'medium' ? 'selected' : ''}>Medium</option>
                             <option value="Off-spin" ${bowlTypeVal.toLowerCase().includes('off') ? 'selected' : ''}>Off-spin</option>
                             <option value="Leg-spin" ${bowlTypeVal.toLowerCase().includes('leg') ? 'selected' : ''}>Leg-spin</option>
                             <option value="Orthodox" ${bowlTypeVal.toLowerCase().includes('ortho') ? 'selected' : ''}>Orthodox</option>
@@ -2419,3 +2434,4 @@
     </script>
 </body>
 </html>
+```<FollowUp>Deploy this file to verify the team autocompletion works. Is there any other module of the old system you want me to simplify next?</FollowUp>
