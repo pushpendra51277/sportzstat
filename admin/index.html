@@ -99,10 +99,11 @@
                 </div>
 
                 <!-- CARD 2: Schedule Fixture / Builder -->
+                <!-- 🔥 TEXT UPDATED HERE -->
                 <div onclick="openDashModal('scheduler-modal')" class="bg-cardBg border border-slate-700 rounded-xl p-6 hover:border-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.15)] transition cursor-pointer flex flex-col group">
                     <div class="flex items-center gap-3 mb-3">
                         <span class="text-3xl bg-emerald-500/20 p-3 rounded-lg group-hover:scale-110 transition-transform">📅</span>
-                        <h3 class="text-lg font-bold text-emerald-400 uppercase tracking-wide">Tournament Builder</h3>
+                        <h3 class="text-lg font-bold text-emerald-400 uppercase tracking-wide">Create / Edit Tournament</h3>
                     </div>
                     <p class="text-slate-400 text-sm flex-grow mb-6 leading-relaxed">
                         Create a brand new tournament, or schedule dynamic matches into an existing one.
@@ -117,9 +118,6 @@
             <div>
                 <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4 flex-wrap gap-4">
                     <h3 class="text-xl font-bold text-white flex items-center gap-2">📋 Your Tournaments</h3>
-                    <button onclick="openDashModal('injector-modal')" class="text-sm font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/50 px-4 py-2 rounded transition-colors flex items-center gap-2">
-                        📥 Inject Legacy Match
-                    </button>
                 </div>
                 
                 <div id="dash-tourney-list-container" class="flex flex-col gap-3 mb-10">
@@ -404,48 +402,6 @@
             </div>
         </div>
 
-        <!-- INJECTOR (Historical) -->
-        <div id="injector-modal" class="dash-modal-overlay">
-            <div class="dash-modal-content bg-cardBg border border-amber-500 rounded-xl w-full max-w-xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
-                <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-900 sticky top-0 z-10">
-                    <h2 class="text-xl font-bold text-white">📥 Inject Match Data</h2>
-                    <button onclick="closeDashModal('injector-modal')" class="text-slate-400 hover:text-red-400 text-2xl font-bold leading-none">&times;</button>
-                </div>
-                <div class="p-6 overflow-y-auto custom-scroll">
-                    <p class="text-slate-400 text-sm mb-6">Bypass the live engine and add a completed scorecard summary to a tournament.</p>
-                    <div class="mb-4">
-                        <label class="block text-sm font-bold text-slate-400 mb-1">Tournament / Event</label>
-                        <input type="text" id="inj-tourney" class="form-input" placeholder="e.g. Legacy League 2023">
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div class="p-4 bg-black/30 border border-slate-700 rounded-lg">
-                            <label class="block text-sm font-bold text-blue-400 mb-2">Team 1 (Bat First)</label>
-                            <input type="text" id="inj-t1-name" list="dash-teams-datalist" class="form-input mb-2 text-sm" placeholder="Name">
-                            <div class="flex gap-2">
-                                <input type="number" id="inj-t1-r" class="form-input text-sm" placeholder="Runs">
-                                <input type="number" id="inj-t1-w" class="form-input text-sm" placeholder="Wkts">
-                                <input type="text" id="inj-t1-o" class="form-input text-sm" placeholder="Overs">
-                            </div>
-                        </div>
-                        <div class="p-4 bg-black/30 border border-slate-700 rounded-lg">
-                            <label class="block text-sm font-bold text-emerald-400 mb-2">Team 2 (Chase)</label>
-                            <input type="text" id="inj-t2-name" list="dash-teams-datalist" class="form-input mb-2 text-sm" placeholder="Name">
-                            <div class="flex gap-2">
-                                <input type="number" id="inj-t2-r" class="form-input text-sm" placeholder="Runs">
-                                <input type="number" id="inj-t2-w" class="form-input text-sm" placeholder="Wkts">
-                                <input type="text" id="inj-t2-o" class="form-input text-sm" placeholder="Overs">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-6">
-                        <label class="block text-sm font-bold text-slate-400 mb-1">Match Result</label>
-                        <input type="text" id="inj-result" class="form-input" placeholder="e.g. Team A won by 20 runs">
-                    </div>
-                    <button onclick="submitInjection()" id="inj-submit-btn" class="w-full py-3 rounded-lg font-bold text-white bg-amber-600 hover:bg-amber-500 transition">💾 Inject Match Permanently</button>
-                </div>
-            </div>
-        </div>
-
     </div>
 
     <!-- ========================================================================= -->
@@ -515,7 +471,6 @@
             }
         }
         
-        // 🔥 FIX: Cleanly close modals and reset success screens without reloading the whole page
         function closeDashModal(id) { 
             document.getElementById(id).classList.remove('active'); 
             if(id === 'scheduler-modal') {
@@ -588,46 +543,19 @@
 
             const matchId = 'M-' + crypto.randomUUID().split('-')[0].toUpperCase();
             const scorerPin = Math.floor(1000 + Math.random() * 9000).toString();
-            const tName = document.getElementById('wiz-tname').value.trim() || "Independent Match";
             const format = document.getElementById('wiz-format').value;
             const overs = parseInt(document.getElementById('wiz-overs').value) || 20;
-            const venue = document.getElementById('wiz-venue').value || "";
-
-            // Auto-create missing teams
-            let uniqueTeams = new Set([t1, t2]);
-            let newTeamsToDB = [];
-            uniqueTeams.forEach(tName => {
-                if (!cachedDashTeams.some(ct => ct.name.toLowerCase() === tName.toLowerCase())) {
-                    newTeamsToDB.push({ name: tName });
-                }
-            });
-            if (newTeamsToDB.length > 0) {
-                const { data: insertedTeams } = await db.from('teams').insert(newTeamsToDB).select('team_id, name');
-                if (insertedTeams) { cachedDashTeams = cachedDashTeams.concat(insertedTeams); loadDashTeams(); }
-            }
-
-            let t1Obj = cachedDashTeams.find(ct => ct.name.toLowerCase() === t1.toLowerCase());
-            let t2Obj = cachedDashTeams.find(ct => ct.name.toLowerCase() === t2.toLowerCase());
-
-            const fullStatePayload = {
-                tournament: tName,
-                matchName: `${t1} vs ${t2}`,
-                format: format,
-                match_status: "upcoming",
-                venue: venue,
-                team1: t1, team2: t2,
-                teams: { A: { name: t1, players: [] }, B: { name: t2, players: [] } },
-                matchSettings: { maxOvers: overs, bowlerQuota: Math.ceil(overs/5) },
-                current: { runs:0, wkts:0, balls:0, sIdx:null, nsIdx:null, bIdx:null, fow:[], overHistory:[], recentBalls:[], currentOverLog:[], extras:{w:0,nb:0,b:0,lb:0} },
-                inningsSummaries: []
-            };
 
             const { error } = await db.from('matches').insert([{
                 match_id: matchId,
                 scorer_pin: scorerPin,
-                team_a_id: t1Obj ? t1Obj.team_id : null,
-                team_b_id: t2Obj ? t2Obj.team_id : null,
-                full_state: fullStatePayload,
+                full_state: {
+                    tournament: document.getElementById('wiz-tname').value.trim() || "Independent Match",
+                    matchName: `${t1} vs ${t2}`,
+                    format: format,
+                    match_status: "upcoming",
+                    teams: { A: { name: t1, players: [] }, B: { name: t2, players: [] } }
+                },
                 created_at: new Date().toISOString()
             }]);
 
@@ -641,13 +569,6 @@
             
             document.getElementById('wiz-full-invite-text').innerText = `🏏 Match: ${t1} vs ${t2}\n🔗 ${link}\n🔐 PIN: ${scorerPin}`;
             nextWizardStep(3);
-        }
-
-        function copyWizardInvite() { navigator.clipboard.writeText(finalInviteText).then(() => alert("✅ Invite copied to clipboard!")); }
-        function shareWizardWhatsApp() { window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(finalInviteText)}`, '_blank'); }
-        function openScorerSelf() {
-            const baseUrl = window.location.href.substring(0, window.location.href.indexOf('/admin'));
-            window.location.href = `${baseUrl}/scorer/live.html?match=${finalMatchId}`;
         }
 
         // --- SCHEDULER LOGIC ---
@@ -1085,37 +1006,6 @@
                 }
                 btn.innerText = "✅ Saved Successfully!"; setTimeout(() => { btn.innerText = "💾 Save Squad Changes"; btn.disabled = false; }, 2000);
             } catch(e) { alert("Error syncing squad: " + e.message); btn.innerText = "💾 Save Squad Changes"; btn.disabled = false; }
-        }
-
-        // --- INJECTOR LOGIC ---
-        async function submitInjection() {
-            let tName = document.getElementById('inj-tourney').value || "Historical Archive";
-            let t1 = document.getElementById('inj-t1-name').value || "Team A";
-            let t2 = document.getElementById('inj-t2-name').value || "Team B";
-            let res = document.getElementById('inj-result').value || "Completed";
-
-            const btn = document.getElementById('inj-submit-btn');
-            btn.innerText = "⏳ Injecting..."; btn.disabled = true;
-
-            const matchId = 'HIST-' + crypto.randomUUID();
-
-            const payload = {
-                match_id: matchId, tournament: tName, result: res,
-                innings: [
-                    { team: t1, score: `${document.getElementById('inj-t1-r').value||0}/${document.getElementById('inj-t1-w').value||0}`, overs: document.getElementById('inj-t1-o').value||"0" },
-                    { team: t2, score: `${document.getElementById('inj-t2-r').value||0}/${document.getElementById('inj-t2-w').value||0}`, overs: document.getElementById('inj-t2-o').value||"0" }
-                ]
-            };
-
-            const fullState = { tournament: tName, format: "Historical", match_status: "completed", matchResult: res, team1: t1, team2: t2, fan_portal_summary: payload };
-
-            const { error: e1 } = await db.from('matches').insert([{ match_id: matchId, full_state: fullState }]);
-            const { error: e2 } = await db.from('completed_matches').insert([{ match_id: matchId, final_data: JSON.stringify({ fan_portal_summary: payload }) }]);
-
-            btn.innerText = "💾 Inject Match Permanently"; btn.disabled = false;
-            
-            if (e1 || e2) alert("Error injecting data.");
-            else { alert("✅ Historical Match Injected Successfully!"); closeDashModal('injector-modal'); }
         }
     </script>
 </body>
