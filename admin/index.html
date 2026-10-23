@@ -54,6 +54,7 @@
         /* OLD ADVANCED TOURNAMENT BUILDER STYLES     */
         /* ========================================== */
         #view-advanced { display: none; height: 100vh; overflow: hidden; width: 100%; flex-direction: row; background: #020617; }
+        
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         .sidebar { width: 280px; background: #0f172a; border-right: 1px solid #1e293b; display: flex; flex-direction: column; flex-shrink: 0; z-index: 20; transition: transform 0.3s ease; }
         .sidebar-header { padding: 25px 20px; border-bottom: 1px solid #1e293b; }
@@ -201,7 +202,7 @@
                 </div>
                 
                 <div id="dash-tourney-list-container" class="flex flex-col gap-3 mb-10">
-                    <div class="text-slate-500 italic">Loading your tournaments...</div>
+                    <div class="text-slate-500 italic text-center py-4">Loading your tournaments...</div>
                 </div>
 
                 <!-- LEGACY BRIDGE -->
@@ -381,7 +382,9 @@
                             <div>
                                 <label class="block text-sm font-bold text-slate-400 mb-1">Format</label>
                                 <select id="edit-t-format" class="form-input">
-                                    <option value="T20">T20</option><option value="One Day">One Day</option><option value="T10">T10</option>
+                                    <option value="T20">T20</option>
+                                    <option value="One Day">One Day</option>
+                                    <option value="T10">T10</option>
                                 </select>
                             </div>
                             <div>
@@ -421,38 +424,66 @@
                         </div>
                     </div>
 
-                    <!-- TAB 3: SQUADS -->
+                    <!-- TAB 3: SQUADS (Simply redirects to the new Squad Manager) -->
                     <div id="edit-tab-squads" class="edit-tab-content">
-                        <p class="text-slate-400 text-sm mb-4">Select a team from the dropdown to assign players to this tournament.</p>
+                        <!-- Loaded dynamically via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW: SQUAD MANAGER (Quick Hub) -->
+        <div id="dash-squad-modal" class="dash-modal-overlay">
+            <div class="dash-modal-content bg-cardBg border border-blue-500 rounded-xl w-full max-w-4xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-900 sticky top-0 z-10">
+                    <h2 class="text-xl font-bold text-white">👥 Manage Team Squads</h2>
+                    <button onclick="closeDashModal('dash-squad-modal')" class="text-slate-400 hover:text-red-400 text-2xl font-bold leading-none">&times;</button>
+                </div>
+                
+                <div class="p-6 overflow-y-auto custom-scroll flex-grow">
+                    <p class="text-slate-400 text-sm mb-6">Select a team from your recent fixtures to assign players to this tournament. New players added here are automatically saved to your master database.</p>
+                    
+                    <!-- Team Dropdown -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-bold text-slate-400 mb-1">Select Team to Manage</label>
+                        <select id="dash-squad-team-select" class="form-input border-blue-500" onchange="handleDashTeamSelect()">
+                            <option value="">Loading teams...</option>
+                        </select>
+                    </div>
+
+                    <!-- 🔥 NEW: Dynamic Bulk Add Players Form -->
+                    <div class="bg-black/30 border border-slate-700 p-4 rounded-lg mb-6">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="text-sm font-bold text-emerald-400">⚡ Quick-Add New Players</h4>
+                            <button onclick="addDashPlayerRow()" class="text-xs font-bold bg-slate-700 hover:bg-slate-600 text-white py-1 px-3 rounded transition-colors">+ Add Row</button>
+                        </div>
                         
-                        <div class="mb-6">
-                            <label class="block text-sm font-bold text-slate-400 mb-1">Select Team to Manage</label>
-                            <select id="dash-squad-team-select" class="form-input border-blue-500" onchange="handleDashTeamSelect()">
-                                <option value="">Loading teams...</option>
-                            </select>
+                        <div id="dash-new-players-container" class="flex flex-col gap-3">
+                            <!-- Rows injected by JavaScript -->
                         </div>
 
-                        <!-- Quick Add Form -->
-                        <div class="bg-black/30 border border-slate-700 p-4 rounded-lg mb-6">
-                            <div class="flex justify-between items-center mb-3">
-                                <h4 class="text-sm font-bold text-emerald-400">⚡ Quick-Add New Players</h4>
-                                <button onclick="addDashPlayerRow()" class="text-xs font-bold bg-slate-700 hover:bg-slate-600 text-white py-1 px-3 rounded transition-colors">+ Add Row</button>
-                            </div>
-                            <div id="dash-new-players-container" class="flex flex-col gap-3"></div>
-                            <button id="dash-quick-add-btn" onclick="quickAddDashPlayersBatch()" class="w-full mt-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded transition text-sm">
-                                + Save All Players to Database & Add to Squad
-                            </button>
-                        </div>
+                        <button id="dash-quick-add-btn" onclick="quickAddDashPlayersBatch()" class="w-full mt-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded transition text-sm">
+                            + Save All Players to Database & Add to Squad
+                        </button>
+                    </div>
 
+                    <!-- Checkbox List -->
+                    <div>
                         <div class="flex justify-between items-center mb-3">
                             <h4 class="text-sm font-bold text-white">Active Tournament Squad</h4>
-                            <button id="dash-sync-squad-btn" onclick="syncDashSquad()" class="text-xs py-1 px-4 rounded font-bold text-white bg-blue-600 hover:bg-blue-500 transition shadow-lg">💾 Save Checked Players</button>
+                            <span class="text-xs text-slate-400 italic">Checked players are in the squad</span>
                         </div>
+                        
                         <div id="dash-squad-list" class="bg-slate-900 border border-slate-800 p-4 rounded-lg min-h-[150px]">
                             <div class="text-slate-500 italic text-center p-4">Select a team to view players.</div>
                         </div>
                     </div>
+                </div>
 
+                <!-- Footer -->
+                <div class="p-6 border-t border-slate-700 bg-slate-900 sticky bottom-0 z-10 flex gap-4">
+                    <button onclick="closeDashModal('dash-squad-modal')" class="flex-1 py-3 rounded-lg font-bold text-slate-300 bg-slate-800 hover:bg-slate-700 transition">Close</button>
+                    <button id="dash-sync-squad-btn" onclick="syncDashSquad()" class="flex-[2] py-3 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-500 transition shadow-lg">💾 Save Squad Changes</button>
                 </div>
             </div>
         </div>
@@ -971,16 +1002,27 @@
             else if (format === 'One Day') input.value = 50;
         }
 
+        // 🔥 FIX: Check session FIRST, then load tournaments with admin_id filter
         async function loadTournamentsForList() {
             const container = document.getElementById('dash-tourney-list-container');
-            const { data, error } = await db.from('tournaments').select('tournament_id, name, format, start_date, config').order('created_at', {ascending: false}).limit(5);
+            container.innerHTML = '<div class="text-slate-500 italic text-center py-4">Loading your tournaments...</div>';
+            
+            let query = db.from('tournaments')
+                          .select('tournament_id, name, format, start_date, config')
+                          .order('created_at', {ascending: false});
+                          
+            // Crucial: Only load tournaments this admin owns, just like the old advanced builder did!
+            if (typeof isSuperAdmin !== 'undefined' && !isSuperAdmin && currentAdminId) {
+                query = query.eq('admin_id', currentAdminId);
+            }
+            
+            const { data, error } = await query;
             
             if (error || !data || data.length === 0) { 
-                container.innerHTML = '<div class="text-slate-500 italic">No recent tournaments found. Use the Advanced Builder to create one.</div>'; 
+                container.innerHTML = '<div class="text-slate-500 italic text-center py-4">No recent tournaments found. Create one above!</div>'; 
                 return; 
             }
 
-            // Keep local cache up to date for the new manage button
             cachedDashTournaments = data;
 
             container.innerHTML = data.map(t => `
@@ -989,10 +1031,10 @@
                         <span class="text-2xl">🏆</span>
                         <div>
                             <div class="font-bold text-slate-100 text-lg">${t.name}</div>
-                            <div class="text-xs text-slate-400 font-bold mt-1">${t.format}</div>
+                            <div class="text-xs text-slate-400 font-bold mt-1">${t.format || 'Custom'}</div>
                         </div>
                     </div>
-                    <button onclick="openEditTourneyModal('${t.tournament_id}')" class="text-sm font-bold text-slate-300 bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded border border-slate-600 transition">
+                    <button onclick="openEditTourneyModal('${t.tournament_id}')" class="text-sm font-bold text-slate-300 bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded border border-slate-600 transition shadow">
                         Manage
                     </button>
                 </div>
@@ -1111,8 +1153,16 @@
 
         async function loadDashTournaments() {
             const select = document.getElementById('sch-tourney');
-            const { data, error } = await db.from('tournaments').select('tournament_id, name, format, start_date, config').order('created_at', {ascending: false});
+            
+            // 🔥 Match exactly what loadTournamentsForList does for security
+            let query = db.from('tournaments').select('tournament_id, name').order('created_at', {ascending: false});
+            if (typeof isSuperAdmin !== 'undefined' && !isSuperAdmin && currentAdminId) {
+                query = query.eq('admin_id', currentAdminId);
+            }
+            
+            const { data, error } = await query;
             if (error || !data) { select.innerHTML = '<option value="">Error loading tournaments</option>'; return; }
+            
             cachedDashTournaments = data;
             select.innerHTML = '<option value="">-- Choose a Tournament --</option>' + data.map(t => `<option value="${t.tournament_id}|${t.name}">${t.name}</option>`).join('');
         }
@@ -1472,12 +1522,11 @@
         async function openEditTourneyModal(tourneyId) {
             editCurrentTourneyId = tourneyId;
             document.getElementById('edit-tourney-title').innerText = "Loading...";
-            switchEditTab('details'); // Default tab
+            switchEditTab('details'); 
             
             if (cachedDashTeams.length === 0) loadDashTeams();
             openDashModal('edit-tourney-modal');
 
-            // 1. Fetch Details
             const { data: tData } = await db.from('tournaments').select('*').eq('tournament_id', tourneyId).single();
             if (tData) {
                 document.getElementById('edit-tourney-title').innerText = tData.name;
@@ -1486,7 +1535,6 @@
                 if(tData.start_date) document.getElementById('edit-t-date').value = tData.start_date.split('T')[0];
             }
 
-            // 2. Fetch Matches
             loadEditTourneyMatches();
         }
 
@@ -1500,16 +1548,12 @@
 
             if(!newName) { alert("Tournament name required."); btn.innerText = "💾 Save Details"; btn.disabled = false; return; }
 
-            const { error } = await db.from('tournaments').update({
-                name: newName, format: newFormat, start_date: newDate
-            }).eq('tournament_id', editCurrentTourneyId);
+            const { error } = await db.from('tournaments').update({ name: newName, format: newFormat, start_date: newDate }).eq('tournament_id', editCurrentTourneyId);
 
-            if(error) {
-                alert("Error: " + error.message);
-            } else {
+            if(error) { alert("Error: " + error.message); } else {
                 document.getElementById('edit-tourney-title').innerText = newName;
                 btn.innerText = "✅ Saved!";
-                loadTournamentsForList(); // Update background dashboard list
+                loadTournamentsForList(); 
                 setTimeout(() => { btn.innerText = "💾 Save Details"; btn.disabled = false; }, 2000);
             }
         }
@@ -1518,7 +1562,7 @@
             const container = document.getElementById('edit-matches-list');
             container.innerHTML = '<div class="text-center p-4 text-slate-500 italic">Loading matches...</div>';
             
-            const { data: matches } = await db.from('matches').select('match_id, full_state, match_status').eq('tournament_id', editCurrentTourneyId);
+            const { data: matches } = await db.from('matches').select('match_id, full_state, match_status, team_a_id, team_b_id').eq('tournament_id', editCurrentTourneyId);
             
             if (!matches || matches.length === 0) {
                 container.innerHTML = '<div class="bg-black/20 p-4 border border-slate-700 rounded-lg text-slate-400 text-sm">No matches found in this tournament.</div>';
@@ -1529,13 +1573,13 @@
                 let fs = m.full_state || {};
                 let t1 = fs.team1 || fs.teams?.A?.name || 'TBD';
                 let t2 = fs.team2 || fs.teams?.B?.name || 'TBD';
-                let status = m.match_status || fs.match_status || 'upcoming';
                 
-                let badge = status === 'completed' 
-                    ? '<span class="bg-slate-700 text-white px-2 py-1 rounded text-xs">Completed</span>'
-                    : status === 'live'
-                    ? '<span class="bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold">Live</span>'
-                    : '<span class="bg-emerald-600/20 text-emerald-400 border border-emerald-600 px-2 py-1 rounded text-xs">Upcoming</span>';
+                // Fallback to team IDs if text name is missing
+                if (m.team_a_id && t1 === 'TBD') { let found = cachedDashTeams.find(ct => ct.team_id === m.team_a_id); if (found) t1 = found.name; }
+                if (m.team_b_id && t2 === 'TBD') { let found = cachedDashTeams.find(ct => ct.team_id === m.team_b_id); if (found) t2 = found.name; }
+
+                let status = m.match_status || fs.match_status || 'upcoming';
+                let badge = status === 'completed' ? '<span class="bg-slate-700 text-white px-2 py-1 rounded text-xs">Completed</span>' : status === 'live' ? '<span class="bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold">Live</span>' : '<span class="bg-emerald-600/20 text-emerald-400 border border-emerald-600 px-2 py-1 rounded text-xs">Upcoming</span>';
 
                 return `
                 <div class="flex justify-between items-center bg-black/20 p-3 rounded-lg border border-slate-700">
@@ -1556,18 +1600,12 @@
             if(!t1 || !t2) { alert("Both team names are required."); return; }
 
             const btn = document.getElementById('edit-add-match-btn');
-            const oldText = btn.innerText;
-            btn.innerText = "⏳ Pushing..."; btn.disabled = true;
+            const oldText = btn.innerText; btn.innerText = "⏳ Pushing..."; btn.disabled = true;
 
             try {
-                // Auto-create missing teams
                 let uniqueTeams = new Set([t1, t2]);
                 let newTeamsToDB = [];
-                uniqueTeams.forEach(tName => {
-                    if (!cachedDashTeams.some(ct => ct.name.toLowerCase() === tName.toLowerCase())) {
-                        newTeamsToDB.push({ name: tName });
-                    }
-                });
+                uniqueTeams.forEach(tName => { if (!cachedDashTeams.some(ct => ct.name.toLowerCase() === tName.toLowerCase())) { newTeamsToDB.push({ name: tName }); } });
 
                 if (newTeamsToDB.length > 0) {
                     const { data: insertedTeams, error: err } = await db.from('teams').insert(newTeamsToDB).select('team_id, name');
@@ -1581,33 +1619,20 @@
                 const format = document.getElementById('edit-t-format').value || "T20";
                 
                 const { error: mError } = await db.from('matches').insert([{
-                    match_id: matchId,
-                    tournament_id: editCurrentTourneyId,
-                    team_a_id: t1Obj ? t1Obj.team_id : null,
-                    team_b_id: t2Obj ? t2Obj.team_id : null,
+                    match_id: matchId, tournament_id: editCurrentTourneyId,
+                    team_a_id: t1Obj ? t1Obj.team_id : null, team_b_id: t2Obj ? t2Obj.team_id : null,
                     scorer_pin: Math.floor(1000 + Math.random() * 9000).toString(),
-                    full_state: {
-                        tournament: document.getElementById('edit-tourney-title').innerText,
-                        matchName: `${t1} vs ${t2}`, format: format, match_status: "upcoming",
-                        team1: t1, team2: t2, teams: { A: { name: t1, players: [] }, B: { name: t2, players: [] } }
-                    },
+                    full_state: { tournament: document.getElementById('edit-tourney-title').innerText, matchName: `${t1} vs ${t2}`, format: format, match_status: "upcoming", team1: t1, team2: t2, teams: { A: { name: t1, players: [] }, B: { name: t2, players: [] } } },
                     created_at: new Date(dateVal).toISOString()
                 }]);
 
                 if (mError) throw mError;
                 
-                document.getElementById('edit-m-t1').value = '';
-                document.getElementById('edit-m-t2').value = '';
-                loadEditTourneyMatches(); // Refresh the list
-                alert("✅ Match successfully added to this tournament!");
+                document.getElementById('edit-m-t1').value = ''; document.getElementById('edit-m-t2').value = '';
+                loadEditTourneyMatches(); alert("✅ Match successfully added to this tournament!");
 
-            } catch(e) {
-                alert("Error adding match: " + e.message);
-            } finally {
-                btn.innerText = oldText; btn.disabled = false;
-            }
+            } catch(e) { alert("Error adding match: " + e.message); } finally { btn.innerText = oldText; btn.disabled = false; }
         }
-
 
         // --- INJECTOR LOGIC ---
         async function submitInjection() {
@@ -1668,9 +1693,11 @@
         function generateUniqueMatchID(prefix) { return `${prefix}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`; }
         function generateUniquePin() { return Math.floor(1000 + Math.random() * 9000).toString(); }
 
+        // 🔥 FIX: Check session FIRST, then fetch data
         document.addEventListener('DOMContentLoaded', async () => { 
-            loadTournamentsForList();
             await checkAdminSession();
+            await loadTournamentsForList(); 
+            await loadDashTeams();
             await fetchAllMasterTeams();
             await loadExistingTournamentsList();
             initPoolsWorkspace("1"); 
