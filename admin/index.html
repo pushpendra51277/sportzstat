@@ -400,45 +400,19 @@
                         </select>
                     </div>
 
-                    <!-- Quick Add Form -->
+                    <!-- 🔥 NEW: Dynamic Bulk Add Players Form -->
                     <div class="bg-black/30 border border-slate-700 p-4 rounded-lg mb-6">
-                        <h4 class="text-sm font-bold text-emerald-400 mb-3">⚡ Quick-Add New Player</h4>
-                        <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
-                            <div class="md:col-span-2">
-                                <input type="text" id="dash-p-name" class="form-input text-sm py-2" placeholder="Full Name *">
-                            </div>
-                            <div>
-                                <select id="dash-p-role" class="form-input text-sm py-2">
-                                    <option value="Batter">Batter</option>
-                                    <option value="Bowler">Bowler</option>
-                                    <option value="All-Rounder">All-Rounder</option>
-                                    <option value="Wicket-Keeper">Wicket-Keeper</option>
-                                </select>
-                            </div>
-                            <div>
-                                <select id="dash-p-bat" class="form-input text-sm py-2">
-                                    <option value="Right-hand bat">RH Bat</option>
-                                    <option value="Left-hand bat">LH Bat</option>
-                                </select>
-                            </div>
-                            <div>
-                                <select id="dash-p-bowlarm" class="form-input text-sm py-2">
-                                    <option value="Right-arm">Right Arm</option>
-                                    <option value="Left-arm">Left Arm</option>
-                                    <option value="None">None</option>
-                                </select>
-                            </div>
-                            <div>
-                                <select id="dash-p-bowltype" class="form-input text-sm py-2">
-                                    <option value="Fast">Fast</option>
-                                    <option value="Medium">Medium</option>
-                                    <option value="Off-spin">Spin</option>
-                                    <option value="None">None</option>
-                                </select>
-                            </div>
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="text-sm font-bold text-emerald-400">⚡ Quick-Add New Players</h4>
+                            <button onclick="addDashPlayerRow()" class="text-xs font-bold bg-slate-700 hover:bg-slate-600 text-white py-1 px-3 rounded transition-colors">+ Add Row</button>
                         </div>
-                        <button id="dash-quick-add-btn" onclick="quickAddDashPlayer()" class="w-full mt-3 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded transition text-sm">
-                            + Save Player to Database & Add to Squad
+                        
+                        <div id="dash-new-players-container" class="flex flex-col gap-3">
+                            <!-- Rows injected by JavaScript -->
+                        </div>
+
+                        <button id="dash-quick-add-btn" onclick="quickAddDashPlayersBatch()" class="w-full mt-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded transition text-sm">
+                            + Save All Players to Database & Add to Squad
                         </button>
                     </div>
 
@@ -1280,7 +1254,11 @@
             closeDashModal('scheduler-modal');
             document.getElementById('dash-squad-modal').classList.add('active');
             document.getElementById('dash-squad-team-select').innerHTML = '<option value="">Loading teams...</option>';
-            document.getElementById('dash-squad-list').innerHTML = '<div class="text-slate-400 text-center p-4">Loading teams...</div>';
+            document.getElementById('dash-squad-list').innerHTML = '<div class="text-slate-500 italic text-center p-4">Select a team above to view players.</div>';
+            
+            // Reset the quick-add player form to have one empty row
+            document.getElementById('dash-new-players-container').innerHTML = '';
+            addDashPlayerRow();
             
             dashCurrentTourneyId = tourneyId;
             
@@ -1315,7 +1293,6 @@
                 selectHtml += `<option value="${t.team_id}|${t.name}">${t.name}</option>`;
             });
             document.getElementById('dash-squad-team-select').innerHTML = selectHtml;
-            document.getElementById('dash-squad-list').innerHTML = '<div class="text-slate-500 italic text-center p-4">Select a team above to view players.</div>';
         }
 
         async function handleDashTeamSelect() {
@@ -1339,7 +1316,7 @@
             currentDashSquadIds = squadData ? squadData.map(s => s.player_id) : [];
             
             if (rErr || !rosterData || rosterData.length === 0) {
-                listDiv.innerHTML = `<div class="bg-blue-900/20 border border-blue-500 p-4 rounded text-blue-300 text-sm">No players currently linked to <b>${currentDashTeamName}</b> in the master roster. Use the <b>Quick-Add New Player</b> form above to add players!</div>`;
+                listDiv.innerHTML = `<div class="bg-blue-900/20 border border-blue-500 p-4 rounded text-blue-300 text-sm">No players currently linked to <b>${currentDashTeamName}</b> in the master roster. Use the <b>Quick-Add New Players</b> form above to add players!</div>`;
                 return;
             }
 
@@ -1361,50 +1338,129 @@
             listDiv.innerHTML = html;
         }
 
-        async function quickAddDashPlayer() {
+        // 🔥 NEW: Function to add dynamic player rows
+        function addDashPlayerRow() {
+            const container = document.getElementById('dash-new-players-container');
+            const rowId = Date.now();
+            const div = document.createElement('div');
+            div.className = 'grid grid-cols-2 md:grid-cols-6 gap-3 items-center dash-player-row';
+            div.id = `dash-player-row-${rowId}`;
+            div.innerHTML = `
+                <div class="md:col-span-2">
+                    <input type="text" class="form-input text-sm py-2 dash-p-name" placeholder="Full Name *">
+                </div>
+                <div>
+                    <select class="form-input text-sm py-2 dash-p-role">
+                        <option value="Batter">Batter</option>
+                        <option value="Bowler">Bowler</option>
+                        <option value="All-Rounder">All-Rounder</option>
+                        <option value="Wicket-Keeper">Wicket-Keeper</option>
+                    </select>
+                </div>
+                <div>
+                    <select class="form-input text-sm py-2 dash-p-bat">
+                        <option value="Right-hand bat">RH Bat</option>
+                        <option value="Left-hand bat">LH Bat</option>
+                    </select>
+                </div>
+                <div>
+                    <select class="form-input text-sm py-2 dash-p-bowlarm">
+                        <option value="Right-arm">Right Arm</option>
+                        <option value="Left-arm">Left Arm</option>
+                        <option value="None">None</option>
+                    </select>
+                </div>
+                <div class="flex gap-2">
+                    <select class="form-input text-sm py-2 dash-p-bowltype flex-1">
+                        <option value="Fast">Fast</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Off-spin">Spin</option>
+                        <option value="None">None</option>
+                    </select>
+                    <button onclick="document.getElementById('dash-player-row-${rowId}').remove()" class="text-slate-500 hover:text-red-400 font-bold px-2 transition-colors">✕</button>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        // 🔥 NEW: Function to process all dynamic player rows at once
+        async function quickAddDashPlayersBatch() {
             if (!currentDashTeamId || !currentDashTeamName) {
                 alert("Please select a team from the dropdown first!");
                 return;
             }
 
-            const name = document.getElementById('dash-p-name').value.trim();
-            const role = document.getElementById('dash-p-role').value;
-            const bat = document.getElementById('dash-p-bat').value;
-            const bowlArm = document.getElementById('dash-p-bowlarm').value;
-            const bowlType = document.getElementById('dash-p-bowltype').value;
-
-            if (!name) { alert("Player Name is required."); return; }
+            const rows = document.querySelectorAll('.dash-player-row');
+            if (rows.length === 0) {
+                alert("Please add at least one player row.");
+                return;
+            }
 
             const btn = document.getElementById('dash-quick-add-btn');
             const oldText = btn.innerText;
-            btn.innerText = "⏳ Saving..."; btn.disabled = true;
+            btn.innerText = "⏳ Saving Players..."; 
+            btn.disabled = true;
 
             try {
-                // 1. Check if player exists in global DB or create new
-                const { data: existing } = await db.from('players').select('player_id').ilike('full_name', name);
-                let playerIdToUse;
+                let playersToInsert = [];
+                let existingPlayerIds = [];
 
-                if (existing && existing.length > 0) {
-                    playerIdToUse = existing[0].player_id;
-                } else {
-                    const { data: newP, error } = await db.from('players').insert([{ 
-                        full_name: name, playing_role: role, batting_style: bat, bowling_arm: bowlArm, bowling_type: bowlType 
-                    }]).select();
-                    if (error) throw error;
-                    playerIdToUse = newP[0].player_id;
+                // 1. Gather all valid rows and check for existing players
+                for (let row of rows) {
+                    const name = row.querySelector('.dash-p-name').value.trim();
+                    if (!name) continue; // Skip empty rows
+
+                    const role = row.querySelector('.dash-p-role').value;
+                    const bat = row.querySelector('.dash-p-bat').value;
+                    const bowlArm = row.querySelector('.dash-p-bowlarm').value;
+                    const bowlType = row.querySelector('.dash-p-bowltype').value;
+
+                    // Check if player already exists
+                    const { data: existing } = await db.from('players').select('player_id').ilike('full_name', name);
+                    
+                    if (existing && existing.length > 0) {
+                        existingPlayerIds.push(existing[0].player_id);
+                    } else {
+                        playersToInsert.push({ 
+                            full_name: name, playing_role: role, batting_style: bat, bowling_arm: bowlArm, bowling_type: bowlType 
+                        });
+                    }
                 }
 
-                // 2. Link to Team Roster and Tournament Squad
-                await db.from('team_rosters').upsert([{ team_name: currentDashTeamName, player_id: playerIdToUse }], {onConflict: 'team_name, player_id'});
-                await db.from('tournament_squads').upsert([{ tournament_id: dashCurrentTourneyId, team_id: currentDashTeamId, player_id: playerIdToUse }], {onConflict: 'tournament_id, team_id, player_id'});
+                if (playersToInsert.length === 0 && existingPlayerIds.length === 0) {
+                    alert("No valid player names found to add.");
+                    return;
+                }
 
-                document.getElementById('dash-p-name').value = '';
-                await handleDashTeamSelect(); // Refresh squad list
+                // 2. Insert new players
+                let newPlayerIds = [];
+                if (playersToInsert.length > 0) {
+                    const { data: newP, error } = await db.from('players').insert(playersToInsert).select('player_id');
+                    if (error) throw error;
+                    newPlayerIds = newP.map(p => p.player_id);
+                }
+
+                const allPlayerIdsToLink = [...existingPlayerIds, ...newPlayerIds];
+
+                // 3. Link to Team Roster and Tournament Squad
+                const rosterLinks = allPlayerIdsToLink.map(pid => ({ team_name: currentDashTeamName, player_id: pid }));
+                const squadLinks = allPlayerIdsToLink.map(pid => ({ tournament_id: dashCurrentTourneyId, team_id: currentDashTeamId, player_id: pid }));
+
+                await db.from('team_rosters').upsert(rosterLinks, {onConflict: 'team_name, player_id'});
+                await db.from('tournament_squads').upsert(squadLinks, {onConflict: 'tournament_id, team_id, player_id'});
+
+                // Reset form and reload squad list
+                document.getElementById('dash-new-players-container').innerHTML = '';
+                addDashPlayerRow(); // Add back one empty row
+                await handleDashTeamSelect(); // Refresh the checkbox list
+
+                alert(`✅ Successfully added ${allPlayerIdsToLink.length} player(s) to the squad!`);
 
             } catch (e) {
-                alert("Error adding player: " + e.message);
+                alert("Error adding players: " + e.message);
             } finally {
-                btn.innerText = oldText; btn.disabled = false;
+                btn.innerText = oldText; 
+                btn.disabled = false;
             }
         }
 
