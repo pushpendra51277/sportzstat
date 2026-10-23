@@ -328,7 +328,6 @@
                     <button onclick="closeDashModal('scheduler-modal')" class="text-slate-400 hover:text-red-400 text-2xl font-bold leading-none">&times;</button>
                 </div>
                 
-                <!-- Wrapper for easy Success State swapping -->
                 <div id="sch-modal-content-wrap" class="p-6 overflow-y-auto custom-scroll flex-grow">
                     <p class="text-slate-400 text-sm mb-4">Quickly schedule upcoming matches. New teams are added to the database automatically.</p>
                     
@@ -373,9 +372,7 @@
                             <h3 class="text-md font-bold text-emerald-400">Match Fixtures</h3>
                             <button onclick="addSchFixtureRow()" class="text-xs font-bold bg-slate-700 hover:bg-slate-600 text-white py-1 px-3 rounded transition-colors">+ Add Match</button>
                         </div>
-                        <div id="sch-fixtures-container" class="flex flex-col gap-3">
-                            <!-- Rows injected by JavaScript -->
-                        </div>
+                        <div id="sch-fixtures-container" class="flex flex-col gap-3"></div>
                         <p class="text-xs text-slate-500 mt-2 italic">Tip: Type any team name. If it's new, it will be saved to the database automatically.</p>
                     </div>
 
@@ -1220,6 +1217,8 @@
                             matchName: `${t1} vs ${t2}`,
                             format: format,
                             match_status: "upcoming",
+                            team1: t1,
+                            team2: t2,
                             teams: { A: { name: t1, players: [] }, B: { name: t2, players: [] } }
                         },
                         created_at: new Date(dateVal).toISOString()
@@ -1281,7 +1280,7 @@
             closeDashModal('scheduler-modal');
             document.getElementById('dash-squad-modal').classList.add('active');
             document.getElementById('dash-squad-team-select').innerHTML = '<option value="">Loading teams...</option>';
-            document.getElementById('dash-squad-list').innerHTML = '';
+            document.getElementById('dash-squad-list').innerHTML = '<div class="text-slate-400 text-center p-4">Loading teams...</div>';
             
             dashCurrentTourneyId = tourneyId;
             
@@ -1292,8 +1291,20 @@
             if(matches) {
                 matches.forEach(m => {
                     let fs = m.full_state || {};
-                    if(m.team_a_id && fs.team1) tMap.set(m.team_a_id, fs.team1);
-                    if(m.team_b_id && fs.team2) tMap.set(m.team_b_id, fs.team2);
+                    let t1Name = fs.team1 || fs.teams?.A?.name;
+                    let t2Name = fs.team2 || fs.teams?.B?.name;
+                    
+                    if (m.team_a_id && !t1Name) {
+                        let found = cachedDashTeams.find(ct => ct.team_id === m.team_a_id);
+                        if (found) t1Name = found.name;
+                    }
+                    if (m.team_b_id && !t2Name) {
+                        let found = cachedDashTeams.find(ct => ct.team_id === m.team_b_id);
+                        if (found) t2Name = found.name;
+                    }
+
+                    if(m.team_a_id && t1Name) tMap.set(m.team_a_id, t1Name);
+                    if(m.team_b_id && t2Name) tMap.set(m.team_b_id, t2Name);
                 });
             }
             
@@ -1304,6 +1315,7 @@
                 selectHtml += `<option value="${t.team_id}|${t.name}">${t.name}</option>`;
             });
             document.getElementById('dash-squad-team-select').innerHTML = selectHtml;
+            document.getElementById('dash-squad-list').innerHTML = '<div class="text-slate-500 italic text-center p-4">Select a team above to view players.</div>';
         }
 
         async function handleDashTeamSelect() {
@@ -1319,7 +1331,7 @@
             [currentDashTeamId, currentDashTeamName] = val.split('|');
             listDiv.innerHTML = '<div class="text-slate-400 text-center p-4">Loading players...</div>';
             
-            // Get master roster
+            // Get master roster for this team name
             const { data: rosterData, error: rErr } = await db.from('team_rosters').select('player_id, players(full_name, playing_role)').eq('team_name', currentDashTeamName);
             
             // Get current tournament squad
@@ -1327,7 +1339,7 @@
             currentDashSquadIds = squadData ? squadData.map(s => s.player_id) : [];
             
             if (rErr || !rosterData || rosterData.length === 0) {
-                listDiv.innerHTML = `<div class="bg-red-900/20 border border-red-500 p-4 rounded text-red-400 text-sm">No players found for <b>${currentDashTeamName}</b>. Use the Quick-Add form above to add players to the database!</div>`;
+                listDiv.innerHTML = `<div class="bg-blue-900/20 border border-blue-500 p-4 rounded text-blue-300 text-sm">No players currently linked to <b>${currentDashTeamName}</b> in the master roster. Use the <b>Quick-Add New Player</b> form above to add players!</div>`;
                 return;
             }
 
@@ -1368,6 +1380,7 @@
             btn.innerText = "⏳ Saving..."; btn.disabled = true;
 
             try {
+                // 1. Check if player exists in global DB or create new
                 const { data: existing } = await db.from('players').select('player_id').ilike('full_name', name);
                 let playerIdToUse;
 
@@ -1381,11 +1394,12 @@
                     playerIdToUse = newP[0].player_id;
                 }
 
+                // 2. Link to Team Roster and Tournament Squad
                 await db.from('team_rosters').upsert([{ team_name: currentDashTeamName, player_id: playerIdToUse }], {onConflict: 'team_name, player_id'});
                 await db.from('tournament_squads').upsert([{ tournament_id: dashCurrentTourneyId, team_id: currentDashTeamId, player_id: playerIdToUse }], {onConflict: 'tournament_id, team_id, player_id'});
 
                 document.getElementById('dash-p-name').value = '';
-                await handleDashTeamSelect(); // Refresh the checkbox list
+                await handleDashTeamSelect(); // Refresh squad list
 
             } catch (e) {
                 alert("Error adding player: " + e.message);
@@ -1401,24 +1415,23 @@
             let selectedIds = [];
             checkboxes.forEach(chk => { if(chk.checked) selectedIds.push(chk.value); });
 
-            if(selectedIds.length === 0) { alert("Please select at least one player to sync."); return; }
-
             const btn = document.getElementById('dash-sync-squad-btn');
             btn.innerText = "⏳ Syncing..."; btn.disabled = true;
 
             try {
                 await db.from('tournament_squads').delete().eq('tournament_id', dashCurrentTourneyId).eq('team_id', currentDashTeamId);
 
-                let payload = selectedIds.map(pid => ({
-                    tournament_id: dashCurrentTourneyId,
-                    team_id: currentDashTeamId,
-                    player_id: pid
-                }));
+                if (selectedIds.length > 0) {
+                    let payload = selectedIds.map(pid => ({
+                        tournament_id: dashCurrentTourneyId,
+                        team_id: currentDashTeamId,
+                        player_id: pid
+                    }));
+                    const { error } = await db.from('tournament_squads').insert(payload);
+                    if (error) throw error;
+                }
 
-                const { error } = await db.from('tournament_squads').insert(payload);
-                if (error) throw error;
-
-                btn.innerText = "✅ Saved!";
+                btn.innerText = "✅ Saved Successfully!";
                 setTimeout(() => { btn.innerText = "💾 Save Squad Changes"; btn.disabled = false; }, 2000);
 
             } catch(e) {
@@ -1999,7 +2012,7 @@
                     <td style="padding: 6px;"><select class="bp-role input-dark w-100" style="margin:bottom:0; font-size:0.8rem;"><option value="Batter" ${roleVal.toLowerCase().includes('bat') ? 'selected' : ''}>Batter</option><option value="Bowler" ${roleVal.toLowerCase().includes('bowl') ? 'selected' : ''}>Bowler</option><option value="All-Rounder" ${roleVal.toLowerCase().includes('all') ? 'selected' : ''}>All-Rounder</option><option value="Wicket-Keeper" ${roleVal.toLowerCase().includes('wk') || roleVal.toLowerCase().includes('keep') ? 'selected' : ''}>Wicket-Keeper</option></select></td>
                     <td style="padding: 6px;"><select class="bp-bat input-dark w-100" style="margin:bottom:0; font-size:0.8rem;"><option value="Right-hand bat" ${batStyleVal.toLowerCase().includes('right') ? 'selected' : ''}>Right-hand bat</option><option value="Left-hand bat" ${batStyleVal.toLowerCase().includes('left') ? 'selected' : ''}>Left-hand bat</option></select></td>
                     <td style="padding: 6px;"><select class="bp-barm input-dark w-100" style="margin:bottom:0; font-size:0.8rem;"><option value="Right-arm" ${bowlArmVal.toLowerCase().includes('right') ? 'selected' : ''}>Right-arm</option><option value="Left-arm" ${bowlArmVal.toLowerCase().includes('left') ? 'selected' : ''}>Left-arm</option><option value="None" ${bowlArmVal.toLowerCase().includes('none') ? 'selected' : ''}>None</option></select></td>
-                    <td style="padding: 6px;"><select class="bp-btype input-dark w-100" style="margin:bottom:0; font-size:0.8rem;"><option value="Fast" ${bowlTypeVal.toLowerCase() === 'fast' ? 'selected' : ''}>Fast</option><option value="Fast-Medium" ${bowlTypeVal.toLowerCase().includes('fast-med') ? 'selected' : ''}>Fast-Medium</option><option value="Medium" ${bowlTypeVal.toLowerCase() === 'medium' ? 'selected' : ''}>Medium</option><option value="Off-spin" ${bowlTypeVal.toLowerCase().includes('off') ? 'selected' : ''}>Off-spin</option><option value="Leg-spin" ${bowlTypeVal.toLowerCase().includes('leg') ? 'selected' : ''}>Leg-spin</option><option value="Orthodox" ${bowlTypeVal.toLowerCase().includes('ortho') ? 'selected' : ''}>Orthodox</option><option value="Wrist-spin" ${bowlTypeVal.toLowerCase().includes('wrist') ? 'selected' : ''}>Wrist-spin</option><option value="None" ${bowlTypeVal.toLowerCase().includes('none') ? 'selected' : ''}>None</option></select></td>
+                    <td style="padding: 6px;"><select class="bp-btype input-dark w-100" style="margin:bottom:0; font-size:0.8rem;"><option value="Fast" ${bowlTypeVal.toLowerCase() === 'fast' ? 'selected' : ''}>Fast</option><option value="Fast-Medium" ${bowlTypeVal.toLowerCase().includes('fast-med') ? 'selected' : ''}>Fast-Medium</option><option value="Medium" ${bowlTypeVal.toLowerCase().includes('medium') ? 'selected' : ''}>Medium</option><option value="Off-spin" ${bowlTypeVal.toLowerCase().includes('off') ? 'selected' : ''}>Off-spin</option><option value="Leg-spin" ${bowlTypeVal.toLowerCase().includes('leg') ? 'selected' : ''}>Leg-spin</option><option value="Orthodox" ${bowlTypeVal.toLowerCase().includes('ortho') ? 'selected' : ''}>Orthodox</option><option value="Wrist-spin" ${bowlTypeVal.toLowerCase().includes('wrist') ? 'selected' : ''}>Wrist-spin</option><option value="None" ${bowlTypeVal.toLowerCase().includes('none') ? 'selected' : ''}>None</option></select></td>
                     <td style="padding: 6px;"><input type="text" class="bp-reg input-dark w-100" value="${regVal}" placeholder="Opt. ID" style="margin:bottom:0; font-size:0.8rem; text-transform:uppercase;"></td>
                 `; tbody.appendChild(tr);
             }
