@@ -615,18 +615,36 @@
             const container = document.getElementById('sch-fixtures-container');
             const rowId = Date.now();
             const div = document.createElement('div');
-            div.className = 'flex items-center gap-2 bg-black/20 p-3 rounded-lg border border-slate-700 sch-fixture-row';
+            
+            // 🔥 FIXED: Responsive Grid Layout. Stacks on mobile, inline on md+ screens.
+            div.className = 'grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_auto] gap-3 items-center bg-black/20 p-4 rounded-lg border border-slate-700 sch-fixture-row relative';
             div.id = `sch-row-${rowId}`;
+            
             div.innerHTML = `
-                <input type="text" class="form-input text-sm flex-1 sch-t1" list="dash-teams-datalist" placeholder="Team 1 Name">
-                <span class="text-slate-500 font-bold text-xs">VS</span>
-                <input type="text" class="form-input text-sm flex-1 sch-t2" list="dash-teams-datalist" placeholder="Team 2 Name">
-                <input type="date" class="form-input text-sm w-36 sch-date" style="color-scheme: dark;">
-                <button onclick="document.getElementById('sch-row-${rowId}').remove()" class="text-slate-500 hover:text-red-400 font-bold px-2 transition-colors">✕</button>
+                <div class="w-full">
+                    <label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Team 1</label>
+                    <input type="text" class="form-input text-sm w-full sch-t1" list="dash-teams-datalist" placeholder="Team 1 Name">
+                </div>
+                
+                <div class="hidden md:flex justify-center text-slate-500 font-bold text-xs">VS</div>
+                <div class="flex md:hidden justify-center text-slate-500 font-bold text-xs py-1">VS</div>
+                
+                <div class="w-full">
+                    <label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Team 2</label>
+                    <input type="text" class="form-input text-sm w-full sch-t2" list="dash-teams-datalist" placeholder="Team 2 Name">
+                </div>
+                
+                <div class="w-full">
+                    <label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Date</label>
+                    <input type="date" class="form-input text-sm w-full md:w-36 sch-date" style="color-scheme: dark;">
+                </div>
+                
+                <div class="absolute top-2 right-2 md:relative md:top-auto md:right-auto">
+                    <button onclick="document.getElementById('sch-row-${rowId}').remove()" class="text-slate-500 hover:text-red-400 font-bold px-2 transition-colors">✕</button>
+                </div>
             `;
             container.appendChild(div);
         }
-
         async function submitScheduledFixtures() {
             const rows = document.querySelectorAll('.sch-fixture-row');
             if(rows.length === 0) { alert("Please add at least one match."); return; }
