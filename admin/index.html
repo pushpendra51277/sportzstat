@@ -47,6 +47,7 @@
         
         .form-input { width: 100%; padding: 12px; background: #020617; border: 1px solid #334155; color: white; border-radius: 8px; outline: none; transition: 0.2s; }
         .form-input:focus { border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
+        .form-input:disabled { opacity: 0.5; cursor: not-allowed; }
         .custom-scroll { overflow-y: auto; padding: 5px; }
     </style>
 </head>
@@ -171,7 +172,10 @@
                             <div>
                                 <label class="block text-sm font-bold text-slate-400 mb-1">Format</label>
                                 <select id="wiz-format" class="form-input" onchange="autoSetOvers(this.value, 'wiz-overs')">
-                                    <option value="T20">T20</option><option value="One Day">One Day</option><option value="T10">T10</option>
+                                    <option value="T20">T20</option>
+                                    <option value="One Day">One Day</option>
+                                    <option value="T10">T10</option>
+                                    <option value="Multi-Day">Multi-Day (Test / First Class)</option>
                                 </select>
                             </div>
                             <div>
@@ -245,7 +249,10 @@
                             <div>
                                 <label class="block text-sm font-bold text-slate-400 mb-1">Format</label>
                                 <select id="sch-format" class="form-input">
-                                    <option value="T20">T20</option><option value="One Day">One Day</option><option value="T10">T10</option>
+                                    <option value="T20">T20</option>
+                                    <option value="One Day">One Day</option>
+                                    <option value="T10">T10</option>
+                                    <option value="Multi-Day">Multi-Day (Test / First Class)</option>
                                 </select>
                             </div>
                         </div>
@@ -264,14 +271,12 @@
                     </div>
 
                     <!-- Success Area (Hidden initially) -->
-                    <div id="sch-success-area" class="hidden text-center py-8">
-                        <!-- Content injected via JS -->
-                    </div>
+                    <div id="sch-success-area" class="hidden text-center py-8"></div>
                 </div>
             </div>
         </div>
 
-        <!-- 🔥 NEW: EDIT TOURNAMENT MODAL (Quick Hub) -->
+        <!-- EDIT TOURNAMENT MODAL -->
         <div id="edit-tourney-modal" class="dash-modal-overlay">
             <div class="dash-modal-content bg-cardBg border border-amber-500 rounded-xl w-full max-w-4xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
                 <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-900 sticky top-0 z-10">
@@ -281,7 +286,7 @@
                     <button onclick="closeDashModal('edit-tourney-modal')" class="text-slate-400 hover:text-red-400 text-2xl font-bold leading-none">&times;</button>
                 </div>
                 
-                <!-- Simple 3-Tab Nav -->
+                <!-- 3-Tab Nav -->
                 <div class="flex border-b border-slate-700 bg-slate-900/50 px-6">
                     <button onclick="switchEditTab('details')" id="edit-tab-btn-details" class="edit-tab-btn active px-4 py-3 text-sm focus:outline-none">Details</button>
                     <button onclick="switchEditTab('fixtures')" id="edit-tab-btn-fixtures" class="edit-tab-btn px-4 py-3 text-sm focus:outline-none">Matches</button>
@@ -303,6 +308,7 @@
                                     <option value="T20">T20</option>
                                     <option value="One Day">One Day</option>
                                     <option value="T10">T10</option>
+                                    <option value="Multi-Day">Multi-Day (Test / First Class)</option>
                                 </select>
                             </div>
                             <div>
@@ -342,9 +348,9 @@
                         </div>
                     </div>
 
-                    <!-- 🔥 TAB 3: SQUADS (Fully Integrated Squad Manager) -->
+                    <!-- TAB 3: SQUADS -->
                     <div id="edit-tab-squads" class="edit-tab-content">
-                        <p class="text-slate-400 text-sm mb-6">Select a team from your recent fixtures to assign players to this tournament. New players added here are automatically saved to your master database.</p>
+                        <p class="text-slate-400 text-sm mb-6">Select a team from your tournament to assign players. New players added here are automatically saved to your master database.</p>
                         
                         <!-- Team Dropdown -->
                         <div class="mb-6">
@@ -390,12 +396,10 @@
     <!-- JAVASCRIPT LOGIC                                                          -->
     <!-- ========================================================================= -->
     <script>
-        // Supabase Initialization
         const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
         const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Core State
         let currentAdminId = null;
         let currentAdminAssociation = 'Independent';
         let isSuperAdmin = false;
@@ -405,8 +409,8 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             await checkAdminSession();
-            await loadTournamentsForList(); 
             await loadDashTeams(); 
+            await loadTournamentsForList(); 
         });
 
         async function checkAdminSession() {
@@ -489,18 +493,24 @@
                 document.getElementById('wiz-team1').value = '';
                 document.getElementById('wiz-team2').value = '';
                 document.getElementById('wiz-tname').value = '';
+                document.getElementById('wiz-format').value = 'T20';
+                autoSetOvers('T20', 'wiz-overs');
                 document.getElementById('wiz-submit-btn').innerText = '🚀 CREATE MATCH';
             }
         }
         
         function closeDashModal(id) { 
             document.getElementById(id).classList.remove('active'); 
-            if(id === 'scheduler-modal') {
-                setTimeout(resetSchedulerModal, 300);
-            }
-            if(id === 'edit-tourney-modal') {
-                setTimeout(() => switchEditTab('details'), 300); 
-            }
+            if(id === 'scheduler-modal') setTimeout(resetSchedulerModal, 300);
+            if(id === 'edit-tourney-modal') setTimeout(() => switchEditTab('details'), 300); 
+        }
+
+        function autoSetOvers(format, targetId) {
+            let input = document.getElementById(targetId);
+            if (format === 'T20') { input.value = 20; input.disabled = false; } 
+            else if (format === 'T10') { input.value = 10; input.disabled = false; } 
+            else if (format === 'One Day') { input.value = 50; input.disabled = false; } 
+            else if (format === 'Multi-Day') { input.value = ''; input.disabled = true; input.placeholder = "Unlimited"; }
         }
 
         // --- WIZARD LOGIC ---
@@ -510,11 +520,9 @@
             for(let i=1; i<=3; i++) {
                 let p = document.getElementById('wiz-prog-' + i);
                 if(i <= step) {
-                    p.classList.remove('bg-slate-700', 'text-slate-400');
-                    p.classList.add('bg-blue-500', 'text-white');
+                    p.classList.remove('bg-slate-700', 'text-slate-400'); p.classList.add('bg-blue-500', 'text-white');
                 } else {
-                    p.classList.add('bg-slate-700', 'text-slate-400');
-                    p.classList.remove('bg-blue-500', 'text-white');
+                    p.classList.add('bg-slate-700', 'text-slate-400'); p.classList.remove('bg-blue-500', 'text-white');
                 }
             }
         }
@@ -531,7 +539,8 @@
             const scorerPin = Math.floor(1000 + Math.random() * 9000).toString();
             const tName = document.getElementById('wiz-tname').value.trim() || "Independent Match";
             const format = document.getElementById('wiz-format').value;
-            const overs = parseInt(document.getElementById('wiz-overs').value) || 20;
+            const overs = format === 'Multi-Day' ? 999 : (parseInt(document.getElementById('wiz-overs').value) || 20);
+            const bQuota = format === 'Multi-Day' ? 999 : Math.ceil(overs/5);
             const venue = document.getElementById('wiz-venue').value || "";
 
             let uniqueTeams = new Set([t1, t2]);
@@ -552,7 +561,7 @@
             const fullStatePayload = {
                 tournament: tName, matchName: `${t1} vs ${t2}`, format: format, match_status: "upcoming", venue: venue, team1: t1, team2: t2,
                 teams: { A: { name: t1, players: [] }, B: { name: t2, players: [] } },
-                matchSettings: { maxOvers: overs, bowlerQuota: Math.ceil(overs/5) },
+                matchSettings: { maxOvers: overs, bowlerQuota: bQuota },
                 current: { runs:0, wkts:0, balls:0, sIdx:null, nsIdx:null, bIdx:null, fow:[], overHistory:[], recentBalls:[], currentOverLog:[], extras:{w:0,nb:0,b:0,lb:0} },
                 inningsSummaries: []
             };
@@ -615,36 +624,18 @@
             const container = document.getElementById('sch-fixtures-container');
             const rowId = Date.now();
             const div = document.createElement('div');
-            
-            // 🔥 FIXED: Responsive Grid Layout. Stacks on mobile, inline on md+ screens.
             div.className = 'grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_auto] gap-3 items-center bg-black/20 p-4 rounded-lg border border-slate-700 sch-fixture-row relative';
             div.id = `sch-row-${rowId}`;
-            
             div.innerHTML = `
-                <div class="w-full">
-                    <label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Team 1</label>
-                    <input type="text" class="form-input text-sm w-full sch-t1" list="dash-teams-datalist" placeholder="Team 1 Name">
-                </div>
-                
-                <div class="hidden md:flex justify-center text-slate-500 font-bold text-xs">VS</div>
-                <div class="flex md:hidden justify-center text-slate-500 font-bold text-xs py-1">VS</div>
-                
-                <div class="w-full">
-                    <label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Team 2</label>
-                    <input type="text" class="form-input text-sm w-full sch-t2" list="dash-teams-datalist" placeholder="Team 2 Name">
-                </div>
-                
-                <div class="w-full">
-                    <label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Date</label>
-                    <input type="date" class="form-input text-sm w-full md:w-36 sch-date" style="color-scheme: dark;">
-                </div>
-                
-                <div class="absolute top-2 right-2 md:relative md:top-auto md:right-auto">
-                    <button onclick="document.getElementById('sch-row-${rowId}').remove()" class="text-slate-500 hover:text-red-400 font-bold px-2 transition-colors">✕</button>
-                </div>
+                <div class="w-full"><label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Team 1</label><input type="text" class="form-input text-sm w-full sch-t1" list="dash-teams-datalist" placeholder="Team 1 Name"></div>
+                <div class="hidden md:flex justify-center text-slate-500 font-bold text-xs">VS</div><div class="flex md:hidden justify-center text-slate-500 font-bold text-xs py-1">VS</div>
+                <div class="w-full"><label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Team 2</label><input type="text" class="form-input text-sm w-full sch-t2" list="dash-teams-datalist" placeholder="Team 2 Name"></div>
+                <div class="w-full"><label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Date</label><input type="date" class="form-input text-sm w-full md:w-36 sch-date" style="color-scheme: dark;"></div>
+                <div class="absolute top-2 right-2 md:relative md:top-auto md:right-auto"><button onclick="document.getElementById('sch-row-${rowId}').remove()" class="text-slate-500 hover:text-red-400 font-bold px-2 transition-colors">✕</button></div>
             `;
             container.appendChild(div);
         }
+
         async function submitScheduledFixtures() {
             const rows = document.querySelectorAll('.sch-fixture-row');
             if(rows.length === 0) { alert("Please add at least one match."); return; }
@@ -688,6 +679,8 @@
                     let tourneyVal = document.getElementById('sch-tourney').value;
                     if(!tourneyVal) throw new Error("Please select an existing tournament.");
                     [finalTourneyId, finalTourneyName] = tourneyVal.split('|');
+                    const existingTourn = cachedDashTournaments.find(t => t.tournament_id === finalTourneyId);
+                    if(existingTourn) format = existingTourn.format;
                 } else {
                     finalTourneyName = document.getElementById('sch-new-tname').value.trim();
                     let tTier = document.getElementById('sch-new-tier').value;
@@ -703,6 +696,9 @@
                     if (tData && tData.length > 0) finalTourneyId = tData[0].tournament_id;
                 }
 
+                const overs = format === 'Multi-Day' ? 999 : (format === 'One Day' ? 50 : (format === 'T10' ? 10 : 20));
+                const bQuota = format === 'Multi-Day' ? 999 : Math.ceil(overs/5);
+
                 for(let row of rows) {
                     let t1 = row.querySelector('.sch-t1').value.trim();
                     let t2 = row.querySelector('.sch-t2').value.trim();
@@ -715,7 +711,11 @@
                         match_id: 'M-' + crypto.randomUUID().split('-')[0].toUpperCase(),
                         tournament_id: finalTourneyId, team_a_id: t1Obj ? t1Obj.team_id : null, team_b_id: t2Obj ? t2Obj.team_id : null,
                         scorer_pin: Math.floor(1000 + Math.random() * 9000).toString(),
-                        full_state: { tournament: finalTourneyName, matchName: `${t1} vs ${t2}`, format: format, match_status: "upcoming", team1: t1, team2: t2, teams: { A: { name: t1, players: [] }, B: { name: t2, players: [] } } },
+                        full_state: {
+                            tournament: finalTourneyName, matchName: `${t1} vs ${t2}`, format: format, match_status: "upcoming", team1: t1, team2: t2,
+                            teams: { A: { name: t1, players: [] }, B: { name: t2, players: [] } },
+                            matchSettings: { maxOvers: overs, bowlerQuota: bQuota }
+                        },
                         created_at: new Date(dateVal).toISOString()
                     });
                 }
@@ -772,7 +772,6 @@
             document.getElementById(`edit-tab-${tabName}`).classList.add('active');
             document.getElementById(`edit-tab-btn-${tabName}`).classList.add('active');
             
-            // 🔥 FIXED: Direct binding to the squad setup
             if(tabName === 'squads') setupSquadManagerForCurrentTourney();
         }
 
@@ -781,7 +780,7 @@
             document.getElementById('edit-tourney-title').innerText = "Loading...";
             switchEditTab('details'); 
             
-            if (cachedDashTeams.length === 0) loadDashTeams();
+            if (cachedDashTeams.length === 0) await loadDashTeams();
             
             document.getElementById('edit-tourney-modal').classList.add('active');
 
@@ -870,11 +869,19 @@
                 const matchId = 'M-' + crypto.randomUUID().split('-')[0].toUpperCase();
                 const format = document.getElementById('edit-t-format').value || "T20";
                 
+                const overs = format === 'Multi-Day' ? 999 : (format === 'One Day' ? 50 : (format === 'T10' ? 10 : 20));
+                const bQuota = format === 'Multi-Day' ? 999 : Math.ceil(overs/5);
+
                 const { error: mError } = await db.from('matches').insert([{
                     match_id: matchId, tournament_id: editCurrentTourneyId,
                     team_a_id: t1Obj ? t1Obj.team_id : null, team_b_id: t2Obj ? t2Obj.team_id : null,
                     scorer_pin: Math.floor(1000 + Math.random() * 9000).toString(),
-                    full_state: { tournament: document.getElementById('edit-tourney-title').innerText, matchName: `${t1} vs ${t2}`, format: format, match_status: "upcoming", team1: t1, team2: t2, teams: { A: { name: t1, players: [] }, B: { name: t2, players: [] } } },
+                    full_state: { 
+                        tournament: document.getElementById('edit-tourney-title').innerText, 
+                        matchName: `${t1} vs ${t2}`, format: format, match_status: "upcoming", team1: t1, team2: t2, 
+                        teams: { A: { name: t1, players: [] }, B: { name: t2, players: [] } },
+                        matchSettings: { maxOvers: overs, bowlerQuota: bQuota }
+                    },
                     created_at: new Date(dateVal).toISOString()
                 }]);
 
@@ -885,32 +892,61 @@
             } catch(e) { alert("Error adding match: " + e.message); } finally { btn.innerText = oldText; btn.disabled = false; }
         }
 
-        // --- SQUAD MANAGER LOGIC ---
+        // --- BULLETPROOF SQUAD MANAGER LOGIC ---
         let dashTourneyTeams = []; 
         let currentDashTeamId = null;
         let currentDashTeamName = null;
         let currentDashSquadIds = []; 
 
-        // 🔥 FIXED: Renamed and bound directly to the Squads tab in the Edit Modal
         async function setupSquadManagerForCurrentTourney() {
             document.getElementById('dash-squad-team-select').innerHTML = '<option value="">Loading teams...</option>';
             document.getElementById('dash-squad-list').innerHTML = '<div class="text-slate-500 italic text-center p-4">Select a team above to view players.</div>';
             document.getElementById('dash-new-players-container').innerHTML = ''; 
             addDashPlayerRow();
             
-            const { data: matches } = await db.from('matches').select('team_a_id, team_b_id, full_state').eq('tournament_id', editCurrentTourneyId);
+            if (cachedDashTeams.length === 0) await loadDashTeams();
+
+            // 🔥 MULTI-LAYER FALLBACK TEAM EXTRACTION
             let tMap = new Map();
+
+            // 1. Check matches linked to this tournament
+            const { data: matches } = await db.from('matches').select('team_a_id, team_b_id, full_state').eq('tournament_id', editCurrentTourneyId);
             if(matches) {
                 matches.forEach(m => {
                     let fs = m.full_state || {};
-                    let t1Name = fs.team1 || fs.teams?.A?.name; let t2Name = fs.team2 || fs.teams?.B?.name;
-                    if (m.team_a_id && !t1Name) { let found = cachedDashTeams.find(ct => ct.team_id === m.team_a_id); if (found) t1Name = found.name; }
-                    if (m.team_b_id && !t2Name) { let found = cachedDashTeams.find(ct => ct.team_id === m.team_b_id); if (found) t2Name = found.name; }
-                    if(m.team_a_id && t1Name) tMap.set(m.team_a_id, t1Name);
-                    if(m.team_b_id && t2Name) tMap.set(m.team_b_id, t2Name);
+                    let t1Name = fs.team1 || fs.teams?.A?.name; 
+                    let t2Name = fs.team2 || fs.teams?.B?.name;
+                    
+                    if (m.team_a_id) {
+                        let found = cachedDashTeams.find(ct => ct.team_id === m.team_a_id);
+                        if (found) { tMap.set(found.team_id, found.name); }
+                        else if (t1Name) { tMap.set(m.team_a_id, t1Name); }
+                    }
+                    if (m.team_b_id) {
+                        let found = cachedDashTeams.find(ct => ct.team_id === m.team_b_id);
+                        if (found) { tMap.set(found.team_id, found.name); }
+                        else if (t2Name) { tMap.set(m.team_b_id, t2Name); }
+                    }
                 });
             }
+
+            // 2. Check tournament_squads table directly for any pre-assigned teams
+            const { data: squads } = await db.from('tournament_squads').select('team_id, teams(name)').eq('tournament_id', editCurrentTourneyId);
+            if (squads) {
+                squads.forEach(s => {
+                    if (s.team_id && s.teams && s.teams.name) {
+                        tMap.set(s.team_id, s.teams.name);
+                    }
+                });
+            }
+
             dashTourneyTeams = Array.from(tMap, ([team_id, name]) => ({ team_id, name }));
+            
+            if (dashTourneyTeams.length === 0) {
+                document.getElementById('dash-squad-team-select').innerHTML = '<option value="">No teams found in this tournament yet. Add a match first!</option>';
+                return;
+            }
+
             let selectHtml = '<option value="">-- Select a Team --</option>';
             dashTourneyTeams.forEach(t => { selectHtml += `<option value="${t.team_id}|${t.name}">${t.name}</option>`; });
             document.getElementById('dash-squad-team-select').innerHTML = selectHtml;
@@ -994,7 +1030,8 @@
                 await db.from('team_rosters').upsert(rosterLinks, {onConflict: 'team_name, player_id'});
                 await db.from('tournament_squads').upsert(squadLinks, {onConflict: 'tournament_id, team_id, player_id'});
 
-                document.getElementById('dash-new-players-container').innerHTML = ''; addDashPlayerRow(); await handleDashTeamSelect(); 
+                document.getElementById('dash-new-players-container').innerHTML = ''; addDashPlayerRow(); 
+                await handleDashTeamSelect(); 
                 alert(`✅ Successfully added ${allPlayerIdsToLink.length} player(s) to the squad!`);
 
             } catch (e) { alert("Error adding players: " + e.message); } finally { btn.innerText = oldText; btn.disabled = false; }
@@ -1013,10 +1050,9 @@
                     let payload = selectedIds.map(pid => ({ tournament_id: editCurrentTourneyId, team_id: currentDashTeamId, player_id: pid }));
                     const { error } = await db.from('tournament_squads').insert(payload); if (error) throw error;
                 }
-                btn.innerText = "✅ Saved Successfully!"; setTimeout(() => { btn.innerText = "💾 Save Checked Players"; btn.disabled = false; }, 2000);
-            } catch(e) { alert("Error syncing squad: " + e.message); btn.innerText = "💾 Save Checked Players"; btn.disabled = false; }
+                btn.innerText = "✅ Saved Successfully!"; setTimeout(() => { btn.innerText = "💾 Save Squad Changes"; btn.disabled = false; }, 2000);
+            } catch(e) { alert("Error syncing squad: " + e.message); btn.innerText = "💾 Save Squad Changes"; btn.disabled = false; }
         }
-
     </script>
 </body>
 </html>
