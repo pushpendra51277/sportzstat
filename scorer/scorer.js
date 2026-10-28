@@ -2094,12 +2094,13 @@ async function confirmManualMatchEnd() {
     finalState.fan_portal_summary = fps;
 
     try {
-        await db.from('matches').update({ full_state: finalState }).eq('match_id', state.matchId);
+        // 🔥 FIXED: Changed 'db' to 'supabaseClient'
+        await supabaseClient.from('matches').update({ full_state: finalState }).eq('match_id', state.matchId);
 
         var completedPayload = { inningsSummaries: state.inningsSummaries, fan_portal_summary: fps };
-        await db.from('completed_matches').upsert({ match_id: state.matchId, final_data: JSON.stringify(completedPayload) }, { onConflict: 'match_id' });
+        await supabaseClient.from('completed_matches').upsert({ match_id: state.matchId, final_data: JSON.stringify(completedPayload) }, { onConflict: 'match_id' });
         
-        await db.from('live_matches').delete().eq('match_id', state.matchId);
+        await supabaseClient.from('live_matches').delete().eq('match_id', state.matchId);
 
         if (typeof logCareerStats === 'function') {
             await logCareerStats();
@@ -2117,3 +2118,4 @@ async function confirmManualMatchEnd() {
         }
     }
 }
+
