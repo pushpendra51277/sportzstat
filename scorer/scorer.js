@@ -408,27 +408,20 @@ async function logCareerStats() {
 
     finalState.fan_portal_summary = fps;
 
-    // 1. Save standard JSON state
     try { await supabaseClient.from('matches').update({ full_state: finalState }).eq('match_id', state.matchId); } catch (e) {}
 
     var completedPayload = { inningsSummaries: state.inningsSummaries, fan_portal_summary: fps };
     try { await supabaseClient.from('completed_matches').upsert({ match_id: state.matchId, final_data: JSON.stringify(completedPayload) }, { onConflict: 'match_id' }); } catch (e) {}
     try { await supabaseClient.from('live_matches').delete().eq('match_id', state.matchId); } catch (e) {}
 
-    // ==========================================
-    // 🔥 NEW: SECURE CAREER STATS TO PERMANENT LEDGER
-    // ==========================================
     try {
         let statsPayload = [];
         
         const processTeamStats = async (teamKey, teamName) => {
             let players = state.teams[teamKey].players;
-            
-            // Fetch exact player UUIDs from Master DB
             let names = players.map(p => p.name);
             let { data: dbPlayers } = await supabaseClient.from('players').select('player_id, full_name').in('full_name', names);
             
-            // Get Team UUID (Assuming activeMatch has team IDs, fallback to null if independent)
             let teamUUID = null;
             if (activeMatch && activeMatch.team_a_id && teamKey === 'A') teamUUID = activeMatch.team_a_id;
             if (activeMatch && activeMatch.team_b_id && teamKey === 'B') teamUUID = activeMatch.team_b_id;
@@ -449,7 +442,6 @@ async function logCareerStats() {
                         oversBowledNumeric = parseFloat(Math.floor(p.o / 6) + "." + (p.o % 6));
                     }
 
-                    // Auto-Calculate Advanced Milestones
                     let runsScored = p.r || 0;
                     let wktsTaken = p.w || 0;
                     let isHalfCentury = (runsScored >= 50 && runsScored < 100) ? 1 : 0;
@@ -458,12 +450,11 @@ async function logCareerStats() {
                     let is5W = (wktsTaken >= 5) ? 1 : 0;
 
                     statsPayload.push({
-                        stat_id: crypto.randomUUID ? crypto.randomUUID() : undefined, // Let Supabase auto-generate if missing
+                        stat_id: crypto.randomUUID ? crypto.randomUUID() : undefined,
                         player_id: pid,
                         match_id: state.matchId,
                         team_id: teamUUID,
                         
-                        // Batting
                         runs_scored: runsScored,
                         balls_faced: p.b || 0,
                         fours: p.f || 0,
@@ -472,16 +463,14 @@ async function logCareerStats() {
                         half_centuries: isHalfCentury,
                         centuries: isCentury,
                         
-                        // Bowling
                         overs_bowled: oversBowledNumeric,
                         maidens_bowled: p.m || 0,
                         runs_conceded: p.rc || 0,
                         wickets_taken: wktsTaken,
                         four_wicket_hauls: is4W,
                         five_wicket_hauls: is5W,
-                        hat_tricks: 0, // Hat-tricks require ball-by-ball analysis
+                        hat_tricks: 0,
                         
-                        // Fielding
                         catches: p.catches || 0,
                         stumpings: p.stumpings || 0,
                         run_outs: p.runouts || 0
@@ -494,7 +483,6 @@ async function logCareerStats() {
         await processTeamStats('B', state.teams.B.name);
 
         if (statsPayload.length > 0) {
-            // Push securely to the unbreakable ledger using exact column names
             await supabaseClient.from('player_match_stats').upsert(statsPayload, { onConflict: 'player_id, match_id' });
             console.log("✅ Career stats securely locked into player_match_stats ledger!");
         }
@@ -1499,7 +1487,7 @@ function updateUI() {
         
         var badgesHtml = cur.currentOverLog.map(getBadgeHtml).join('');
         el('activeBowlerProgress').innerHTML = badgesHtml;
-        if(el('mainCurrentOverProgress')) el('mainCurrentOverProgress').innerHTML = badgesHtml; // 🔥 Syncs to Main Display
+        if(el('mainCurrentOverProgress')) el('mainCurrentOverProgress').innerHTML = badgesHtml;
         
         var totalRuns = (actB.rc || 0);
         var miniBowlHtml = '<div style="display:flex; justify-content:flex-end; align-items:center; width:100%; margin-bottom:2px;"><div style="flex: 0 0 auto; margin-right:4px;">⚾</div><div style="color:white; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex: 0 1 auto; text-align:right;">' + actB.name + '</div></div><div style="color:var(--text-muted); font-size:0.75rem; text-align:right; white-space:nowrap;">' + formatOver(actB.o) + '-' + actB.m + '-' + totalRuns + '-<span class="text-danger" style="font-weight:bold;">' + actB.w + '</span></div>';
@@ -1508,7 +1496,7 @@ function updateUI() {
         el('activeBowlerNameRight').innerText = "Select...";
         el('activeBowlerNameRight').title = "";
         el('activeBowlerProgress').innerHTML = "";
-        if(el('mainCurrentOverProgress')) el('mainCurrentOverProgress').innerHTML = ""; // 🔥 Clears Main Display
+        if(el('mainCurrentOverProgress')) el('mainCurrentOverProgress').innerHTML = "";
         el('miniLiveBowler').innerHTML = '<div style="color: var(--text-muted); font-style:italic;">Select Bowler...</div>';
     }
 
@@ -2033,5 +2021,99 @@ function saveSuperfixChanges() {
 
     if (superfixOpenedFromSummary) {
         setTimeout(showMatchSummary, 150);
+    }
+}
+
+
+// ==========================================
+// 🔥 NEW: MULTI-DAY MANUAL MATCH END LOGIC
+// ==========================================
+
+function initiateManualMatchEnd() {
+    let defaultResultText = "Match drawn by mutual agreement";
+    
+    let totalA = 0; let totalB = 0;
+    if (state.inningsSummaries) {
+        state.inningsSummaries.forEach(function(summary) {
+            if (summary.batTeam === state.teams.A.name) totalA += (summary.runs || 0);
+            if (summary.batTeam === state.teams.B.name) totalB += (summary.runs || 0);
+        });
+    }
+    if (state.current.batTeam === state.teams.A.name) totalA += state.current.runs;
+    if (state.current.batTeam === state.teams.B.name) totalB += state.current.runs;
+
+    if (totalA > totalB) {
+        defaultResultText = `Match drawn. ${state.teams.A.name} lead by ${totalA - totalB} runs.`;
+    } else if (totalB > totalA) {
+        defaultResultText = `Match drawn. ${state.teams.B.name} lead by ${totalB - totalA} runs.`;
+    } else {
+        defaultResultText = "Match drawn. Scores level.";
+    }
+
+    var html = '<p style="font-size:0.85rem; color:#94a3b8; margin-bottom:15px;">' +
+        'You are about to permanently close this match. Edit the result text below as needed for the Fan Portal:' +
+        '</p>' +
+        '<label style="display:block; text-align:left; color:#cbd5e1; font-size:0.85rem; font-weight:bold; margin-bottom:5px;">Official Result Text:</label>' +
+        '<textarea id="manual-result-input" class="modal-input w-100" rows="3" style="resize:none;">' + defaultResultText + '</textarea>' +
+        '<p style="font-size:0.75rem; color:#f59e0b; margin-top:15px; text-align:center;">' +
+        '⚠️ Warning: Once confirmed, the engine will lock permanently.' +
+        '</p>';
+
+    showModal("🛑 End Match Manually", html, confirmManualMatchEnd, false, "450px", "END MATCH & SAVE TO CLOUD");
+    var confirmBtn = el('modalConfirmBtn');
+    if (confirmBtn) confirmBtn.style.background = "#ef4444";
+}
+
+async function confirmManualMatchEnd() {
+    var inputEl = el('manual-result-input');
+    var finalResultText = inputEl ? inputEl.value.trim() : "Match Drawn";
+    if (!finalResultText) {
+        alert("You must enter a result text.");
+        return;
+    }
+
+    var confirmBtn = el('modalConfirmBtn');
+    if (confirmBtn) {
+        confirmBtn.innerText = "Syncing to Cloud...";
+        confirmBtn.disabled = true;
+    }
+
+    deduplicateInningsSummaries();
+    var fps = buildFanPortalSummary();
+    fps.result = finalResultText;
+
+    state.match_status = "completed";
+    state.matchResult = finalResultText;
+
+    var finalState = JSON.parse(JSON.stringify(state, function(key, value) {
+        return value instanceof Set ? Array.from(value) : value;
+    }));
+    finalState.match_status = 'completed';
+    finalState.team1 = state.teams.A.name;
+    finalState.team2 = state.teams.B.name;
+    finalState.fan_portal_summary = fps;
+
+    try {
+        await db.from('matches').update({ full_state: finalState }).eq('match_id', state.matchId);
+
+        var completedPayload = { inningsSummaries: state.inningsSummaries, fan_portal_summary: fps };
+        await db.from('completed_matches').upsert({ match_id: state.matchId, final_data: JSON.stringify(completedPayload) }, { onConflict: 'match_id' });
+        
+        await db.from('live_matches').delete().eq('match_id', state.matchId);
+
+        if (typeof logCareerStats === 'function') {
+            await logCareerStats();
+        }
+
+        closeModal();
+        alert("✅ Match Successfully Ended & Saved!");
+        window.location.reload();
+
+    } catch (e) {
+        alert("Error saving match result: " + e.message);
+        if (confirmBtn) {
+            confirmBtn.innerText = "END MATCH & SAVE TO CLOUD";
+            confirmBtn.disabled = false;
+        }
     }
 }
