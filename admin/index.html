@@ -20,8 +20,16 @@
     </script>
     
     <style>
-        body { margin: 0; background-color: #0f172a; color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow-x: hidden; }
-        * { box-sizing: border-box; }
+        body { 
+            margin: 0; 
+            background-color: #0f172a; 
+            color: white; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            overflow-x: hidden; 
+        }
+        * { 
+            box-sizing: border-box; 
+        }
         
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
@@ -29,10 +37,30 @@
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
         /* Dashboard Modals */
-        .dash-modal-overlay { opacity: 0; pointer-events: none; transition: opacity 0.2s ease-in-out; z-index: 1000; position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; padding: 1rem; }
-        .dash-modal-overlay.active { opacity: 1; pointer-events: auto; }
-        .dash-modal-content { transform: scale(0.95); transition: transform 0.2s ease-in-out; }
-        .dash-modal-overlay.active .dash-modal-content { transform: scale(1); }
+        .dash-modal-overlay { 
+            opacity: 0; 
+            pointer-events: none; 
+            transition: opacity 0.2s ease-in-out; 
+            z-index: 1000; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0,0,0,0.8); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 1rem; 
+        }
+        .dash-modal-overlay.active { 
+            opacity: 1; 
+            pointer-events: auto; 
+        }
+        .dash-modal-content { 
+            transform: scale(0.95); 
+            transition: transform 0.2s ease-in-out; 
+        }
+        .dash-modal-overlay.active .dash-modal-content { 
+            transform: scale(1); 
+        }
         
         .wizard-step { display: none; }
         .wizard-step.active { display: block; animation: dashFadeIn 0.3s ease; }
@@ -45,10 +73,28 @@
 
         @keyframes dashFadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
-        .form-input { width: 100%; padding: 12px; background: #020617; border: 1px solid #334155; color: white; border-radius: 8px; outline: none; transition: 0.2s; }
-        .form-input:focus { border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
-        .form-input:disabled { opacity: 0.5; cursor: not-allowed; }
-        .custom-scroll { overflow-y: auto; padding: 5px; }
+        .form-input { 
+            width: 100%; 
+            padding: 12px; 
+            background: #020617; 
+            border: 1px solid #334155; 
+            color: white; 
+            border-radius: 8px; 
+            outline: none; 
+            transition: 0.2s; 
+        }
+        .form-input:focus { 
+            border-color: #38bdf8; 
+            box-shadow: 0 0 0 2px rgba(56,189,248,0.2); 
+        }
+        .form-input:disabled { 
+            opacity: 0.5; 
+            cursor: not-allowed; 
+        }
+        .custom-scroll { 
+            overflow-y: auto; 
+            padding: 5px; 
+        }
     </style>
 </head>
 <body>
@@ -145,6 +191,7 @@
                         <div id="wiz-prog-2" class="w-8 h-8 rounded-full bg-slate-700 text-slate-400 flex items-center justify-center font-bold ring-4 ring-cardBg transition-colors">2</div>
                         <div id="wiz-prog-3" class="w-8 h-8 rounded-full bg-slate-700 text-slate-400 flex items-center justify-center font-bold ring-4 ring-cardBg transition-colors">3</div>
                     </div>
+                    
                     <!-- Step 1 -->
                     <div id="wiz-step-1" class="wizard-step active">
                         <h3 class="text-lg font-bold text-accentBlue mb-4">Who is playing today?</h3>
@@ -165,6 +212,7 @@
                         </div>
                         <button onclick="nextWizardStep(2)" class="w-full mt-8 py-3 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-500 transition">Next: Match Rules ➔</button>
                     </div>
+                    
                     <!-- Step 2 -->
                     <div id="wiz-step-2" class="wizard-step">
                         <h3 class="text-lg font-bold text-accentBlue mb-4">Match Rules & Setup</h3>
@@ -192,6 +240,7 @@
                             <button onclick="createWizardMatch()" id="wiz-submit-btn" class="flex-[2] py-3 rounded-lg font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 transition">🚀 CREATE MATCH</button>
                         </div>
                     </div>
+                    
                     <!-- Step 3 -->
                     <div id="wiz-step-3" class="wizard-step text-center">
                         <div class="text-5xl mb-4">🎉</div>
@@ -239,20 +288,27 @@
                                 <label class="block text-sm font-bold text-slate-400 mb-1">New Tournament Name *</label>
                                 <input type="text" id="sch-new-tname" class="form-input" placeholder="e.g. Winter Cup 2026">
                             </div>
+                            
+                            <!-- 🔥 Custom Overs Field for Tournaments! -->
                             <div>
+                                <label class="block text-sm font-bold text-slate-400 mb-1">Format</label>
+                                <select id="sch-format" class="form-input" onchange="autoSetOvers(this.value, 'sch-overs')">
+                                    <option value="T20">T20</option>
+                                    <option value="One Day">One Day</option>
+                                    <option value="T10">T10</option>
+                                    <option value="Multi-Day">Multi-Day (Test)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-400 mb-1">Overs Per Innings</label>
+                                <input type="number" id="sch-overs" class="form-input" value="20">
+                            </div>
+
+                            <div class="col-span-2">
                                 <label class="block text-sm font-bold text-slate-400 mb-1">Tournament Tier</label>
                                 <select id="sch-new-tier" class="form-input">
                                     <option value="Local">Tier 2: Local / Club / Practice</option>
                                     <option value="Inter-Division">Tier 1: Inter-Division / Elite</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-bold text-slate-400 mb-1">Format</label>
-                                <select id="sch-format" class="form-input">
-                                    <option value="T20">T20</option>
-                                    <option value="One Day">One Day</option>
-                                    <option value="T10">T10</option>
-                                    <option value="Multi-Day">Multi-Day (Test / First Class)</option>
                                 </select>
                             </div>
                         </div>
@@ -271,7 +327,9 @@
                     </div>
 
                     <!-- Success Area (Hidden initially) -->
-                    <div id="sch-success-area" class="hidden text-center py-8"></div>
+                    <div id="sch-success-area" class="hidden text-center py-8">
+                        <!-- Content injected via JS -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -302,9 +360,11 @@
                                 <label class="block text-sm font-bold text-slate-400 mb-1">Tournament Name *</label>
                                 <input type="text" id="edit-t-name" class="form-input">
                             </div>
+                            
+                            <!-- 🔥 Custom Overs Edit Field -->
                             <div>
                                 <label class="block text-sm font-bold text-slate-400 mb-1">Format</label>
-                                <select id="edit-t-format" class="form-input">
+                                <select id="edit-t-format" class="form-input" onchange="autoSetOvers(this.value, 'edit-t-overs')">
                                     <option value="T20">T20</option>
                                     <option value="One Day">One Day</option>
                                     <option value="T10">T10</option>
@@ -312,6 +372,11 @@
                                 </select>
                             </div>
                             <div>
+                                <label class="block text-sm font-bold text-slate-400 mb-1">Default Overs Per Innings</label>
+                                <input type="number" id="edit-t-overs" class="form-input" value="20">
+                            </div>
+                            
+                            <div class="col-span-2">
                                 <label class="block text-sm font-bold text-slate-400 mb-1">Start Date</label>
                                 <input type="date" id="edit-t-date" class="form-input" style="color-scheme: dark;">
                             </div>
@@ -348,7 +413,7 @@
                         </div>
                     </div>
 
-                    <!-- TAB 3: SQUADS -->
+                    <!-- TAB 3: SQUADS (Fully Integrated Squad Manager) -->
                     <div id="edit-tab-squads" class="edit-tab-content">
                         <p class="text-slate-400 text-sm mb-6">Select a team from your tournament to assign players. New players added here are automatically saved to your master database.</p>
                         
@@ -396,10 +461,12 @@
     <!-- JAVASCRIPT LOGIC                                                          -->
     <!-- ========================================================================= -->
     <script>
+        // Supabase Initialization
         const SUPABASE_URL = "https://cavkoylkbcyhsifrsjyd.supabase.co"; 
         const SUPABASE_KEY = "sb_publishable_wklRlSZbzArKFCq31Ugnrw_JWAJkS4K"; 
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // Core State
         let currentAdminId = null;
         let currentAdminAssociation = 'Independent';
         let isSuperAdmin = false;
@@ -471,7 +538,7 @@
                         <span class="text-2xl">🏆</span>
                         <div>
                             <div class="font-bold text-slate-100 text-lg">${t.name}</div>
-                            <div class="text-xs text-slate-400 font-bold mt-1">${t.format || 'Custom'}</div>
+                            <div class="text-xs text-slate-400 font-bold mt-1">${t.format || 'Custom'} (${t.config?.defaultOvers || 20} Ov)</div>
                         </div>
                     </div>
                     <button onclick="openEditTourneyModal('${t.tournament_id}')" class="text-sm font-bold text-slate-300 bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded border border-slate-600 transition shadow">
@@ -501,16 +568,26 @@
         
         function closeDashModal(id) { 
             document.getElementById(id).classList.remove('active'); 
-            if(id === 'scheduler-modal') setTimeout(resetSchedulerModal, 300);
-            if(id === 'edit-tourney-modal') setTimeout(() => switchEditTab('details'), 300); 
+            if(id === 'scheduler-modal') {
+                setTimeout(resetSchedulerModal, 300);
+            }
+            if(id === 'edit-tourney-modal') {
+                setTimeout(() => switchEditTab('details'), 300); 
+            }
         }
 
+        // 🔥 HELPER: Dynamically disable/hide the "Overs" field for Multi-Day
         function autoSetOvers(format, targetId) {
             let input = document.getElementById(targetId);
-            if (format === 'T20') { input.value = 20; input.disabled = false; } 
-            else if (format === 'T10') { input.value = 10; input.disabled = false; } 
-            else if (format === 'One Day') { input.value = 50; input.disabled = false; } 
-            else if (format === 'Multi-Day') { input.value = ''; input.disabled = true; input.placeholder = "Unlimited"; }
+            if (format === 'T20') {
+                input.value = 20; input.disabled = false;
+            } else if (format === 'T10') {
+                input.value = 10; input.disabled = false;
+            } else if (format === 'One Day') {
+                input.value = 50; input.disabled = false;
+            } else if (format === 'Multi-Day') {
+                input.value = ''; input.disabled = true; input.placeholder = "Unlimited";
+            }
         }
 
         // --- WIZARD LOGIC ---
@@ -520,9 +597,11 @@
             for(let i=1; i<=3; i++) {
                 let p = document.getElementById('wiz-prog-' + i);
                 if(i <= step) {
-                    p.classList.remove('bg-slate-700', 'text-slate-400'); p.classList.add('bg-blue-500', 'text-white');
+                    p.classList.remove('bg-slate-700', 'text-slate-400');
+                    p.classList.add('bg-blue-500', 'text-white');
                 } else {
-                    p.classList.add('bg-slate-700', 'text-slate-400'); p.classList.remove('bg-blue-500', 'text-white');
+                    p.classList.add('bg-slate-700', 'text-slate-400');
+                    p.classList.remove('bg-blue-500', 'text-white');
                 }
             }
         }
@@ -539,8 +618,11 @@
             const scorerPin = Math.floor(1000 + Math.random() * 9000).toString();
             const tName = document.getElementById('wiz-tname').value.trim() || "Independent Match";
             const format = document.getElementById('wiz-format').value;
-            const overs = format === 'Multi-Day' ? 999 : (parseInt(document.getElementById('wiz-overs').value) || 20);
+            
+            const oversInput = document.getElementById('wiz-overs').value;
+            const overs = format === 'Multi-Day' ? 999 : (parseInt(oversInput) || 20);
             const bQuota = format === 'Multi-Day' ? 999 : Math.ceil(overs/5);
+            
             const venue = document.getElementById('wiz-venue').value || "";
 
             let uniqueTeams = new Set([t1, t2]);
@@ -559,7 +641,12 @@
             let t2Obj = cachedDashTeams.find(ct => ct.name.toLowerCase() === t2.toLowerCase());
 
             const fullStatePayload = {
-                tournament: tName, matchName: `${t1} vs ${t2}`, format: format, match_status: "upcoming", venue: venue, team1: t1, team2: t2,
+                tournament: tName,
+                matchName: `${t1} vs ${t2}`,
+                format: format,
+                match_status: "upcoming",
+                venue: venue,
+                team1: t1, team2: t2,
                 teams: { A: { name: t1, players: [] }, B: { name: t2, players: [] } },
                 matchSettings: { maxOvers: overs, bowlerQuota: bQuota },
                 current: { runs:0, wkts:0, balls:0, sIdx:null, nsIdx:null, bIdx:null, fow:[], overHistory:[], recentBalls:[], currentOverLog:[], extras:{w:0,nb:0,b:0,lb:0} },
@@ -567,17 +654,25 @@
             };
 
             const { error } = await db.from('matches').insert([{
-                match_id: matchId, scorer_pin: scorerPin, team_a_id: t1Obj ? t1Obj.team_id : null, team_b_id: t2Obj ? t2Obj.team_id : null, full_state: fullStatePayload, created_at: new Date().toISOString()
+                match_id: matchId,
+                scorer_pin: scorerPin,
+                team_a_id: t1Obj ? t1Obj.team_id : null,
+                team_b_id: t2Obj ? t2Obj.team_id : null,
+                full_state: fullStatePayload,
+                created_at: new Date().toISOString()
             }]);
 
             btn.innerText = "🚀 CREATE MATCH"; btn.disabled = false;
+
             if (error) { alert("Error creating match: " + error.message); return; }
 
             finalMatchId = matchId;
             const baseUrl = window.location.href.substring(0, window.location.href.indexOf('/admin'));
+            
+            const oversText = format === 'Multi-Day' ? "Multi-Day (Unlimited Overs)" : `${overs} Overs`;
             const link = `${baseUrl}/scorer/live.html?match=${matchId}&pin=${scorerPin}`;
             
-            document.getElementById('wiz-full-invite-text').innerText = `🏏 Match: ${t1} vs ${t2}\n🔗 ${link}\n🔐 PIN: ${scorerPin}`;
+            document.getElementById('wiz-full-invite-text').innerText = `🏏 Match: ${t1} vs ${t2}\nFormat: ${oversText}\n🔗 ${link}\n🔐 PIN: ${scorerPin}`;
             nextWizardStep(3);
         }
 
@@ -624,14 +719,33 @@
             const container = document.getElementById('sch-fixtures-container');
             const rowId = Date.now();
             const div = document.createElement('div');
+            
+            // 🔥 FIXED: Responsive Grid Layout for mobile stacking
             div.className = 'grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_auto] gap-3 items-center bg-black/20 p-4 rounded-lg border border-slate-700 sch-fixture-row relative';
             div.id = `sch-row-${rowId}`;
+            
             div.innerHTML = `
-                <div class="w-full"><label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Team 1</label><input type="text" class="form-input text-sm w-full sch-t1" list="dash-teams-datalist" placeholder="Team 1 Name"></div>
-                <div class="hidden md:flex justify-center text-slate-500 font-bold text-xs">VS</div><div class="flex md:hidden justify-center text-slate-500 font-bold text-xs py-1">VS</div>
-                <div class="w-full"><label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Team 2</label><input type="text" class="form-input text-sm w-full sch-t2" list="dash-teams-datalist" placeholder="Team 2 Name"></div>
-                <div class="w-full"><label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Date</label><input type="date" class="form-input text-sm w-full md:w-36 sch-date" style="color-scheme: dark;"></div>
-                <div class="absolute top-2 right-2 md:relative md:top-auto md:right-auto"><button onclick="document.getElementById('sch-row-${rowId}').remove()" class="text-slate-500 hover:text-red-400 font-bold px-2 transition-colors">✕</button></div>
+                <div class="w-full">
+                    <label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Team 1</label>
+                    <input type="text" class="form-input text-sm w-full sch-t1" list="dash-teams-datalist" placeholder="Team 1 Name">
+                </div>
+                
+                <div class="hidden md:flex justify-center text-slate-500 font-bold text-xs">VS</div>
+                <div class="flex md:hidden justify-center text-slate-500 font-bold text-xs py-1">VS</div>
+                
+                <div class="w-full">
+                    <label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Team 2</label>
+                    <input type="text" class="form-input text-sm w-full sch-t2" list="dash-teams-datalist" placeholder="Team 2 Name">
+                </div>
+                
+                <div class="w-full">
+                    <label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Date</label>
+                    <input type="date" class="form-input text-sm w-full md:w-36 sch-date" style="color-scheme: dark;">
+                </div>
+                
+                <div class="absolute top-2 right-2 md:relative md:top-auto md:right-auto">
+                    <button onclick="document.getElementById('sch-row-${rowId}').remove()" class="text-slate-500 hover:text-red-400 font-bold px-2 transition-colors">✕</button>
+                </div>
             `;
             container.appendChild(div);
         }
@@ -646,6 +760,7 @@
             let finalTourneyId = null;
             let finalTourneyName = "";
             let format = "T20";
+            let tourneyOvers = 20;
             let matchesToInsert = [];
             let uniqueTeamsInBatch = new Set();
 
@@ -679,24 +794,34 @@
                     let tourneyVal = document.getElementById('sch-tourney').value;
                     if(!tourneyVal) throw new Error("Please select an existing tournament.");
                     [finalTourneyId, finalTourneyName] = tourneyVal.split('|');
+                    
                     const existingTourn = cachedDashTournaments.find(t => t.tournament_id === finalTourneyId);
-                    if(existingTourn) format = existingTourn.format;
+                    if(existingTourn) {
+                        format = existingTourn.format;
+                        tourneyOvers = existingTourn.config?.defaultOvers || (format === 'One Day' ? 50 : 20);
+                    }
+                    
                 } else {
                     finalTourneyName = document.getElementById('sch-new-tname').value.trim();
                     let tTier = document.getElementById('sch-new-tier').value;
                     format = document.getElementById('sch-format').value;
+                    tourneyOvers = parseInt(document.getElementById('sch-overs').value, 10) || 20;
                     if(!finalTourneyName) throw new Error("New Tournament Name is required.");
 
                     const { data: tData, error: tError } = await db.from('tournaments').insert([{
-                        name: finalTourneyName, format: format, start_date: new Date().toISOString().split('T')[0],
-                        host: currentAdminAssociation, admin_id: currentAdminId, config: { winPoints: 2, tier: tTier }
+                        name: finalTourneyName,
+                        format: format,
+                        start_date: new Date().toISOString().split('T')[0],
+                        host: currentAdminAssociation,
+                        admin_id: currentAdminId,
+                        config: { winPoints: 2, tier: tTier, defaultOvers: tourneyOvers }
                     }]).select();
 
                     if (tError) throw tError;
                     if (tData && tData.length > 0) finalTourneyId = tData[0].tournament_id;
                 }
 
-                const overs = format === 'Multi-Day' ? 999 : (format === 'One Day' ? 50 : (format === 'T10' ? 10 : 20));
+                const overs = format === 'Multi-Day' ? 999 : tourneyOvers;
                 const bQuota = format === 'Multi-Day' ? 999 : Math.ceil(overs/5);
 
                 for(let row of rows) {
@@ -788,7 +913,13 @@
             if (tData) {
                 document.getElementById('edit-tourney-title').innerText = tData.name;
                 document.getElementById('edit-t-name').value = tData.name;
-                document.getElementById('edit-t-format').value = tData.format;
+                document.getElementById('edit-t-format').value = tData.format || 'T20';
+                
+                // 🔥 LOAD CUSTOM OVERS INTO DETAILS TAB
+                const cOvers = tData.config?.defaultOvers || (tData.format === 'One Day' ? 50 : 20);
+                document.getElementById('edit-t-overs').value = cOvers;
+                autoSetOvers(tData.format, 'edit-t-overs');
+                
                 if(tData.start_date) document.getElementById('edit-t-date').value = tData.start_date.split('T')[0];
             }
             loadEditTourneyMatches();
@@ -801,10 +932,22 @@
             const newName = document.getElementById('edit-t-name').value.trim();
             const newFormat = document.getElementById('edit-t-format').value;
             const newDate = document.getElementById('edit-t-date').value;
+            const newOvers = parseInt(document.getElementById('edit-t-overs').value, 10) || 20;
 
             if(!newName) { alert("Tournament name required."); btn.innerText = "💾 Save Details"; btn.disabled = false; return; }
 
-            const { error } = await db.from('tournaments').update({ name: newName, format: newFormat, start_date: newDate }).eq('tournament_id', editCurrentTourneyId);
+            // 🔥 SAVE CUSTOM OVERS INTO CONFIG
+            const { data: oldT } = await db.from('tournaments').select('config').eq('tournament_id', editCurrentTourneyId).single();
+            let newConfig = oldT?.config || {};
+            newConfig.defaultOvers = newOvers;
+
+            const { error } = await db.from('tournaments').update({ 
+                name: newName, 
+                format: newFormat, 
+                start_date: newDate, 
+                config: newConfig 
+            }).eq('tournament_id', editCurrentTourneyId);
+            
             if(error) { alert("Error: " + error.message); } else {
                 document.getElementById('edit-tourney-title').innerText = newName;
                 btn.innerText = "✅ Saved!"; loadTournamentsForList(); 
@@ -867,9 +1010,13 @@
                 let t2Obj = cachedDashTeams.find(ct => ct.name.toLowerCase() === t2.toLowerCase());
 
                 const matchId = 'M-' + crypto.randomUUID().split('-')[0].toUpperCase();
-                const format = document.getElementById('edit-t-format').value || "T20";
                 
-                const overs = format === 'Multi-Day' ? 999 : (format === 'One Day' ? 50 : (format === 'T10' ? 10 : 20));
+                // Get format and custom overs from the database for this specific tournament
+                const { data: tInfo } = await db.from('tournaments').select('format, config').eq('tournament_id', editCurrentTourneyId).single();
+                let format = tInfo ? tInfo.format : document.getElementById('edit-t-format').value;
+                let tourneyOvers = (tInfo && tInfo.config && tInfo.config.defaultOvers) ? tInfo.config.defaultOvers : 20;
+
+                const overs = format === 'Multi-Day' ? 999 : tourneyOvers;
                 const bQuota = format === 'Multi-Day' ? 999 : Math.ceil(overs/5);
 
                 const { error: mError } = await db.from('matches').insert([{
@@ -906,7 +1053,6 @@
             
             if (cachedDashTeams.length === 0) await loadDashTeams();
 
-            // 🔥 MULTI-LAYER FALLBACK TEAM EXTRACTION
             let tMap = new Map();
 
             // 1. Check matches linked to this tournament
@@ -930,7 +1076,7 @@
                 });
             }
 
-            // 2. Check tournament_squads table directly for any pre-assigned teams
+            // 2. Check tournament_squads table directly
             const { data: squads } = await db.from('tournament_squads').select('team_id, teams(name)').eq('tournament_id', editCurrentTourneyId);
             if (squads) {
                 squads.forEach(s => {
@@ -985,14 +1131,14 @@
 
         function addDashPlayerRow() {
             const container = document.getElementById('dash-new-players-container'); const rowId = Date.now();
-            const div = document.createElement('div'); div.className = 'grid grid-cols-2 md:grid-cols-6 gap-3 items-center dash-player-row'; div.id = `dash-player-row-${rowId}`;
+            const div = document.createElement('div'); div.className = 'grid grid-cols-2 md:grid-cols-6 gap-3 items-center dash-player-row relative'; div.id = `dash-player-row-${rowId}`;
             div.innerHTML = `
-                <div class="md:col-span-2"><input type="text" class="form-input text-sm py-2 dash-p-name" placeholder="Full Name *"></div>
-                <div><select class="form-input text-sm py-2 dash-p-role"><option value="Batter">Batter</option><option value="Bowler">Bowler</option><option value="All-Rounder">All-Rounder</option><option value="Wicket-Keeper">Wicket-Keeper</option></select></div>
-                <div><select class="form-input text-sm py-2 dash-p-bat"><option value="Right-hand bat">RH Bat</option><option value="Left-hand bat">LH Bat</option></select></div>
-                <div><select class="form-input text-sm py-2 dash-p-bowlarm"><option value="Right-arm">Right Arm</option><option value="Left-arm">Left Arm</option><option value="None">None</option></select></div>
-                <div class="flex gap-2"><select class="form-input text-sm py-2 dash-p-bowltype flex-1"><option value="Fast">Fast</option><option value="Medium">Medium</option><option value="Off-spin">Spin</option><option value="None">None</option></select>
-                <button onclick="document.getElementById('dash-player-row-${rowId}').remove()" class="text-slate-500 hover:text-red-400 font-bold px-2 transition-colors">✕</button></div>
+                <div class="md:col-span-2"><label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Name</label><input type="text" class="form-input text-sm py-2 dash-p-name" placeholder="Full Name *"></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Role</label><select class="form-input text-sm py-2 dash-p-role"><option value="Batter">Batter</option><option value="Bowler">Bowler</option><option value="All-Rounder">All-Rounder</option><option value="Wicket-Keeper">Wicket-Keeper</option></select></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Bat</label><select class="form-input text-sm py-2 dash-p-bat"><option value="Right-hand bat">RH Bat</option><option value="Left-hand bat">LH Bat</option></select></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Bowl Arm</label><select class="form-input text-sm py-2 dash-p-bowlarm"><option value="Right-arm">Right Arm</option><option value="Left-arm">Left Arm</option><option value="None">None</option></select></div>
+                <div class="flex gap-2 w-full"><div class="flex-1"><label class="block text-xs font-bold text-slate-500 mb-1 md:hidden">Bowl Type</label><select class="form-input text-sm py-2 dash-p-bowltype w-full"><option value="Fast">Fast</option><option value="Medium">Medium</option><option value="Off-spin">Spin</option><option value="None">None</option></select></div>
+                <button onclick="document.getElementById('dash-player-row-${rowId}').remove()" class="text-slate-500 hover:text-red-400 font-bold px-2 transition-colors mt-5 md:mt-0">✕</button></div>
             `;
             container.appendChild(div);
         }
