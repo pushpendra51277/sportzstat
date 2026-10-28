@@ -419,6 +419,7 @@ async function logCareerStats() {
         
         const processTeamStats = async (teamKey, teamName) => {
             let players = state.teams[teamKey].players;
+            
             let names = players.map(p => p.name);
             let { data: dbPlayers } = await supabaseClient.from('players').select('player_id, full_name').in('full_name', names);
             
@@ -889,13 +890,25 @@ function openManualRun() {
     });
 }
 
+// 🔥 UPDATED NO-BALL BOUNDARY LOGIC
 function openExtra(type) {
     if (state.current.bIdx === null) return openSelector('bowler', "Select Bowler");
     modalContext = { action: 'extra', type: type };
     var defVal = (type === 'B' || type === 'LB') ? 1 : 0;
-    var html = '<label class="text-primary">Extra Runs:</label><input type="number" id="exR" value="' + defVal + '" class="modal-input w-100">';
+    
+    var html = '<label class="text-primary">Runs Scored (Off bat or byes):</label><input type="number" id="exR" value="' + defVal + '" class="modal-input w-100">';
+    
     if (type === 'NB') {
-        html += '<select id="nbT" class="modal-input w-100 mt-5"><option value="bat">Off the Bat</option><option value="bye">Byes</option><option value="legbye">Leg Byes</option></select>';
+        html += '<select id="nbT" class="modal-input w-100 mt-5" onchange="document.getElementById(\'nbBoundaryWrap\').style.display = (this.value===\'bat\') ? \'block\' : \'none\'"><option value="bat">Off the Bat</option><option value="bye">Byes</option><option value="legbye">Leg Byes</option></select>';
+        
+        html += '<div id="nbBoundaryWrap" style="display:block; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px solid #334155; margin-top:10px;">' +
+                '<label class="text-primary" style="font-size:0.8rem; display:block; margin-bottom:5px;">Boundary Included?</label>' +
+                '<select id="nbBound" class="modal-input w-100" style="margin-bottom:0;">' +
+                '<option value="none">No Boundary (Running)</option>' +
+                '<option value="4">Yes - Boundary 4</option>' +
+                '<option value="6">Yes - Boundary 6</option>' +
+                '</select>' +
+                '</div>';
     }
     showModal((type === 'W' ? 'WIDE' : (type === 'NB' ? 'NO BALL' : type)) + " Entry", html, processExtraSubmit);
 }
@@ -906,6 +919,7 @@ function processExtraSubmit() {
     var cur = state.current, ex = parseInt(el('exR').value, 10) || 0, b = getBowlTeam().players[cur.bIdx], s = getBatTeam().players[cur.sIdx], typ = modalContext.type, lbl = '';
     cur.bowlersInCurrentOver.add(cur.bIdx);
     var runsBat = 0, runsExt = 0, exLabel = '';
+    var logType = 'extra'; 
 
     if (typ === 'W') {
         var t = ex + 1;
@@ -915,8 +929,20 @@ function processExtraSubmit() {
         var nt = el('nbT').value;
         cur.runs += 1; cur.extras.nb += 1; b.rc += 1; b.nb += 1; cur.runsInThisOver += 1; cur.currPartnership.runs += (1 + ex);
         runsExt = 1; exLabel = 'No-Ball';
+        
         if (nt === 'bat' && ex > 0) {
             s.r += ex; b.rc += ex; cur.runs += ex; cur.runsInThisOver += ex; runsBat = ex;
+            
+            var nbBound = el('nbBound') ? el('nbBound').value : 'none';
+            if (nbBound === '4') { 
+                s.f++; 
+                logType = 'four'; 
+            }
+            if (nbBound === '6') { 
+                s.s++; 
+                logType = 'six';  
+            }
+            
         } else if (ex > 0) {
             cur.runs += ex; runsExt += ex;
             if (nt === 'bye') { cur.extras.b += ex; b.byes += ex; } else { cur.extras.lb += ex; b.legbyes += ex; }
@@ -932,15 +958,17 @@ function processExtraSubmit() {
         cur.isFreeHit = false;
     }
 
-    cur.currentOverLog.push({ label: lbl, type: 'extra' });
+    cur.currentOverLog.push({ label: lbl, type: logType });
     logBallEvent(s, b, runsBat, runsExt, exLabel, false, null, null);
     if (ex % 2 !== 0) manualRotate();
+    
     if (checkTargetReached()) {
         finalizeOver(true);
         closeModal();
         setTimeout(endInnings, 100);
         return;
     }
+    
     closeModal();
     updateUI();
     checkAutoOverPrompt();
@@ -2024,7 +2052,6 @@ function saveSuperfixChanges() {
     }
 }
 
-
 // ==========================================
 // 🔥 NEW: MULTI-DAY MANUAL MATCH END LOGIC
 // ==========================================
@@ -2094,7 +2121,6 @@ async function confirmManualMatchEnd() {
     finalState.fan_portal_summary = fps;
 
     try {
-        // 🔥 FIXED: Changed 'db' to 'supabaseClient'
         await supabaseClient.from('matches').update({ full_state: finalState }).eq('match_id', state.matchId);
 
         var completedPayload = { inningsSummaries: state.inningsSummaries, fan_portal_summary: fps };
@@ -2118,4 +2144,3 @@ async function confirmManualMatchEnd() {
         }
     }
 }
-
